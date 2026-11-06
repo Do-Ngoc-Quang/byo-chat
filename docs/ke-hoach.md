@@ -28,16 +28,16 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 - [ ] (hoãn) Chép PoC vào `poc/` (bỏ `target/`, `node_modules/`); giai đoạn 1 cần mã nguồn `poc/mls`, `poc/exporter` thì chép riêng hai thư mục đó khi nâng lên `chatcore/`
 
 ## Giai đoạn 1 — Proto, CI, `chatcore`
-- [ ] `proto/chat/v1/`: `common.proto`, `ws.proto`, `services.proto` từ spec; `buf lint` sạch
-- [ ] CI `proto.yml`: `buf lint` và `buf breaking`
+- [x] `proto/chat/v1/`: `common.proto`, `ws.proto`, `services.proto`, `payload.proto` từ spec; `buf lint` sạch (ADR 0002)
+- [x] CI `proto.yml`: `buf lint` và `buf breaking` (chưa chạy trên GitHub; `breaking` bỏ qua tới khi `main` có proto)
 - [ ] Sinh mã Go, Rust, Dart vào `gen/` (không commit)
-- [ ] `chatcore/`: Rust workspace; nâng mã từ `poc/mls`, `poc/exporter`
-- [ ] Test: bất biến 1-5 (spec mục 8), mô phỏng nhiều thiết bị với server giả
-- [ ] Test: ca recovery, resync, scale 1.000 thiết bị, exporter
-- [ ] Test vector RFC 9420 cho OpenMLS
-- [ ] Kiểm thử thuộc tính cho mã hóa/giải mã Protobuf
-- [ ] CI `chatcore.yml`: `cargo test --release`; build WASM bằng `wasm-pack`
-- [ ] Mốc hiệu năng: kiểm không tệ hơn số đo mốc
+- [x] `chatcore/`: Rust workspace (viết lại theo spec vì `poc/` chưa có mã; xem notes)
+- [x] Test: bất biến 1-5 (spec mục 8), mô phỏng nhiều thiết bị với server giả
+- [x] Test: ca recovery, resync, scale 1.000 thiết bị, exporter
+- [ ] Test vector RFC 9420 cho OpenMLS (job CI `rfc9420-vectors` đã viết, chưa kiểm; lệnh có thể phải sửa)
+- [x] Kiểm thử thuộc tính cho mã hóa/giải mã Protobuf
+- [ ] CI `chatcore.yml`: có `cargo test --release` (Linux, Windows) và `cargo check` WASM; còn thiếu crate `wasm/` + `wasm-pack`, chưa chạy trên GitHub
+- [x] Mốc hiệu năng: kiểm không tệ hơn số đo mốc (`tests/scale.rs`, Linux: 90 KB, tạo 44 ms, nhận 14 ms)
 - [ ] Xóa `poc/` (sau khi nâng xong)
 
 ## Giai đoạn 2 — Server tối thiểu

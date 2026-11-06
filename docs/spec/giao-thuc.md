@@ -2,7 +2,7 @@
 
 Nov 3, 2026 · @Quang
 
-**Phiên bản:** 1.0.0
+**Phiên bản:** 1.0.1
 
 ## 1. Phạm vi và phiên bản
 
@@ -89,7 +89,7 @@ Các quy ước này áp dụng cho mọi thông điệp, ở cả WebSocket l�
 
 ## 4. Định nghĩa Protobuf
 
-Ba file cùng package `chat.v1`, quản lý bằng buf: `common.proto` và `ws.proto` (khung WebSocket) ở mục 4.1, `services.proto` (Connect RPC) ở mục 4.2. Các trường `bytes` mang định danh là 16 byte nhị phân theo mục 2.
+Bốn file cùng package `chat.v1`, quản lý bằng buf: `common.proto` và `ws.proto` (khung WebSocket) ở mục 4.1, `services.proto` (Connect RPC) ở mục 4.2, `payload.proto` (nội dung bên trong MLS) ở mục 7.3. `CallKind` nằm trong `common.proto` vì cả `ws.proto` và `services.proto` dùng; số trường không đổi. Các trường `bytes` mang định danh là 16 byte nhị phân theo mục 2.
 
 ### 4.1 `common.proto` và `ws.proto`
 
@@ -113,6 +113,8 @@ enum EntryKind {
   ENTRY_KIND_WELCOME = 3;   // chỉ nằm trong hộp thư của thiết bị nhận
   ENTRY_KIND_PROPOSAL = 4;
 }
+
+enum CallKind { CALL_KIND_UNSPECIFIED = 0; CALL_KIND_AUDIO = 1; CALL_KIND_VIDEO = 2; }
 
 enum ErrorCode {
   ERROR_CODE_UNSPECIFIED = 0;
@@ -140,25 +142,25 @@ message Member { bytes account_id = 1; Role role = 2; }
 
 // ---------------- ws.proto ----------------
 message ClientFrame {
+  reserved 13, 14;  // đã xem và typing đi trong SendMessage
   uint64 req_id = 1;
   oneof body {
     Hello hello = 10;
     SendMessage send = 11;
     Ack ack = 12;
-    // 13, 14: dành riêng (đã xem và typing đi trong SendMessage)
     PresenceSub presence_sub = 15;
     Ping ping = 16;
   }
 }
 
 message ServerFrame {
+  reserved 14;
   uint64 req_id = 1;           // 0 nếu là sự kiện chủ động từ server
   oneof body {
     Welcome welcome = 10;
     SendResult send_result = 11;
     Deliver deliver = 12;
     DeliveredReceipt receipt = 13;
-    // 14: dành riêng
     PresenceEvent presence = 15;
     Error error = 16;
     Pong pong = 17;
@@ -401,7 +403,7 @@ service CallService {
   rpc JoinCall(JoinCallRequest) returns (CallTicket);
   rpc EndCall(EndCallRequest) returns (EndCallResponse);
 }
-enum CallKind { CALL_KIND_UNSPECIFIED = 0; CALL_KIND_AUDIO = 1; CALL_KIND_VIDEO = 2; }
+// CallKind: xem common.proto (mục 4.1)
 message StartCallRequest { bytes conv_id = 1; CallKind kind = 2; }
 message JoinCallRequest { bytes call_id = 1; }
 message CallTicket { bytes call_id = 1; string livekit_url = 2; string token = 3; uint64 mls_epoch = 4; }
