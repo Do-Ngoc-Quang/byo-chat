@@ -1,0 +1,115 @@
+syntax = "proto3";
+package chat.v1;
+
+import "chat/v1/common.proto";
+
+message ClientFrame {
+  reserved 13, 14; // đã xem và typing đi trong SendMessage
+  uint64 req_id = 1;
+  oneof body {
+    Hello hello = 10;
+    SendMessage send = 11;
+    Ack ack = 12;
+    PresenceSub presence_sub = 15;
+    Ping ping = 16;
+  }
+}
+
+message ServerFrame {
+  reserved 14;
+  uint64 req_id = 1; // 0 nếu là sự kiện chủ động từ server
+  oneof body {
+    Welcome welcome = 10;
+    SendResult send_result = 11;
+    Deliver deliver = 12;
+    DeliveredReceipt receipt = 13;
+    PresenceEvent presence = 15;
+    Error error = 16;
+    Pong pong = 17;
+    SyncDone sync_done = 18;
+    IncomingCall incoming_call = 19; // cuộc gọi đến khi app đang mở (6.10)
+  }
+}
+
+message Hello {
+  uint32 proto_version = 1;
+  bytes device_id = 2;
+  string access_token = 3;
+  bytes inbox_cursor = 4; // inbox_id cuối đã ack; rỗng = từ đầu
+  Platform platform = 5;
+  string app_version = 6;
+}
+
+message Welcome {
+  uint32 negotiated_version = 1;
+  bytes session_id = 2;
+  uint32 heartbeat_ms = 3; // khởi điểm 25000
+  uint32 window = 4; // số Deliver chưa ack tối đa
+  uint32 max_frame_bytes = 5;
+  uint64 server_time_ms = 6;
+}
+
+// Chỉ dành cho tin APPLICATION. Commit, Welcome, Proposal đi qua ConversationService.
+message SendMessage {
+  bytes conv_id = 1;
+  bytes client_msg_id = 2;
+  uint64 mls_epoch = 3; // phải bằng epoch hiện tại của hội thoại
+  bytes ciphertext = 4;
+  bool ephemeral = 5; // true: không ghi hộp thư (typing)
+}
+
+message SendResult {
+  bytes client_msg_id = 1;
+  bytes message_id = 2;
+  uint64 seq = 3;
+  uint64 server_ts_ms = 4;
+  bool duplicate = 5;
+}
+
+message Deliver {
+  bytes inbox_id = 1; // rỗng nếu ephemeral
+  bytes conv_id = 2;
+  uint64 seq = 3; // 0 nếu ephemeral
+  EntryKind kind = 4;
+  bytes sender_device_id = 5;
+  uint64 mls_epoch = 6;
+  bytes ciphertext = 7;
+  uint64 server_ts_ms = 8;
+}
+
+message Ack {
+  repeated bytes inbox_ids = 1;
+}
+message SyncDone {
+  bytes last_inbox_id = 1;
+}
+
+// Chỉ gửi cho hội thoại 1-1 và nhóm tối đa 50 tài khoản.
+message DeliveredReceipt {
+  bytes conv_id = 1;
+  uint64 seq = 2;
+  bytes device_id = 3;
+}
+
+message PresenceSub {
+  repeated bytes account_ids = 1;
+  bool unsubscribe = 2;
+}
+message PresenceEvent {
+  bytes account_id = 1;
+  bool online = 2;
+  uint64 last_seen_ms = 3;
+}
+message Ping {
+  uint64 nonce = 1;
+}
+message Pong {
+  uint64 nonce = 1;
+}
+message IncomingCall {
+  bytes call_id = 1;
+  bytes conv_id = 2;
+  CallKind kind = 3;
+  bytes caller_account_id = 4;
+  uint64 started_ms = 5;
+}

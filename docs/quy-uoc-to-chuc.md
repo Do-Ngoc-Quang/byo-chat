@@ -20,7 +20,6 @@ server/              Go (cmd/<dịch vụ>/, internal/, go.mod)
 app/                 Flutter
 infra/               Terraform, k8s/Argo CD
 dev/                 docker-compose.yml, scripts/
-poc/                 đóng băng, chỉ đọc
 ```
 
 ## Quy tắc
@@ -30,7 +29,7 @@ poc/                 đóng băng, chỉ đọc
 4. **Giao thức:** chỉ `proto/` và `docs/spec/giao-thuc.md` định nghĩa trường và luồng. Phần khác không tự định nghĩa lại.
 5. **Quyết định và tiến độ:** quyết định kiến trúc vào `docs/decisions/` (ADR, không sửa sau khi chấp nhận). Tiến độ và việc cần làm chỉ ở `docs/ke-hoach.md`. Ghi chú phiên vào `docs/notes.md`.
 6. **Mỗi thư mục cấp một** có `README.md` ngắn: mục đích, lệnh build/test, liên kết spec.
-7. **`poc/`:** chỉ đọc. Khi nâng mã vào `chatcore/` hoặc `server/`, ghi nguồn gốc trong README của nơi nhận. Xóa `poc/` sau khi hoàn thành bước 1 của lộ trình (lịch sử git vẫn còn).
+7. **`poc/`:** đã xóa (ADR 0003). Kết quả PoC nằm ở `docs/spec/giao-thuc.md` mục 8.
 8. **Không commit:** `target/`, `node_modules/`, `build/`, `.dart_tool/`, `gen/`, `.env`, log, khóa/secret.
 9. **CI:** workflow đặt tên theo phần (`proto.yml`, `chatcore.yml`, `server.yml`, `app.yml`), chạy lệnh ghi trong `CLAUDE.md`.
 10. **Git:** xem mục "Quy trình git" bên dưới.

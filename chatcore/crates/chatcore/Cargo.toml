@@ -1,0 +1,27 @@
+[package]
+name = "chatcore"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+openmls = "=0.8.1"
+openmls_rust_crypto = "=0.5.1"
+openmls_basic_credential = "=0.5.0"
+openmls_traits = "=0.5.0"
+tls_codec = { version = "0.4", features = ["derive"] }
+prost = "0.13"
+
+[dev-dependencies]
+proptest = "1"
+
+[build-dependencies]
+prost-build = "0.13"
+protoc-bin-vendored = "3"
+
+# WASM (Web): getrandom cần backend JS; openmls có feature "js".
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+js-sys = "0.3"
+wasm-bindgen = "=0.2.100"
+openmls = { version = "=0.8.1", features = ["js"] }

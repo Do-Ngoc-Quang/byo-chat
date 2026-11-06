@@ -13,7 +13,7 @@ Một người phát triển. Trả lời tiếng Việt, ngắn, gạch đầu 
 - Server: Go; WebSocket + Protobuf (`chat.v1`) + Connect RPC; NATS JetStream; Aurora PostgreSQL; DynamoDB; Valkey; Cloudflare R2; LiveKit (SFrame).
 - MLS: cipher suite `MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519`.
 
-## Quy tắc bất biến (đã kiểm chứng bằng PoC, xem `poc/`)
+## Quy tắc bất biến (đã kiểm chứng bằng PoC, xem `docs/spec/giao-thuc.md` mục 8)
 - Server chỉ chuyển ciphertext (ngoại lệ duy nhất: ảnh đại diện công khai). Ciphertext có TTL 30 ngày.
 - Server từ chối `SendMessage` sai epoch (`EPOCH_MISMATCH`); client không giữ khóa epoch cũ.
 - Commit và Welcome đi qua `SubmitCommit`, không qua `SendMessage`. Con trỏ hộp thư ghi qua hàng đợi bền, idempotent theo `(conv_id, seq)`.
@@ -30,14 +30,16 @@ Một người phát triển. Trả lời tiếng Việt, ngắn, gạch đầu 
 - `app/`: `flutter analyze && flutter test`
 
 ## Thứ tự làm (theo mục 16 của tài liệu chính)
-1. Proto + CI + `chatcore` (nâng từ `poc/mls`, `poc/exporter`; biến ca recovery, resync, scale, exporter thành test).
+1. Proto + CI + `chatcore` (viết lại theo spec, `poc/` đã xóa; biến ca recovery, resync, scale, exporter thành test).
 2. Server tối thiểu: gateway, Message Service, hộp thư (DynamoDB local, Postgres trong Docker).
 3. Lát cắt dọc: đăng nhập, chat 1-1 có E2EE trên Android và Web.
 4. Nhóm, đa thiết bị, backup. 5. Media. 6. Gọi video (bắt đầu sau khi chat ổn định).
-Chưa kiểm chứng, làm ở cổng tương ứng: MLS trên máy ARM thật, video trên Flutter Android và Safari, kích thước Welcome, Commit thêm 1 thiết bị, ngưỡng payload push FCM.
+Môi trường: KHÔNG có máy thật, chỉ mô phỏng (emulator, Chrome/Node headless, CI). Mục cần máy thật là "hoãn, cần thiết bị thật": ghi rõ giới hạn của kiểm thử mô phỏng, không dùng để chặn "xong" của giai đoạn.
+Chưa kiểm chứng, làm ở cổng tương ứng (cần thiết bị thật thì hoãn): MLS trên máy ARM thật, video trên Flutter Android và Safari, kích thước Welcome, Commit thêm 1 thiết bị, ngưỡng payload push FCM.
 
 ## Quy trình làm việc
 - Tiến độ và checklist: `docs/ke-hoach.md` (nơi duy nhất). Đầu phiên đọc, cuối phiên tick; không theo dõi việc ở chỗ khác.
+- Git: KHÔNG tự commit hay push; chỉ làm khi người dùng bảo (kể cả khi hook nhắc). Làm từng bước nhỏ, sửa file xong thì báo.
 - Git: không push vào `main`; làm trên nhánh, tạo PR vào `main` (quy ước ở `docs/quy-uoc-to-chuc.md`, mục "Quy trình git").
 - Mỗi phiên một mục tiêu nhỏ. Cuối phiên ghi quyết định và việc dở vào `docs/notes.md`; quyết định kiến trúc vào `docs/decisions/`.
 - Số phiên bản tài liệu: đổi phạm vi đổi số đầu; thêm thiết kế đổi số giữa; làm rõ đổi số cuối.

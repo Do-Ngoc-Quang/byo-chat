@@ -1,0 +1,44 @@
+name: proto
+on:
+  pull_request:
+    paths: ["proto/**", "server/go.mod", ".github/workflows/proto.yml"]
+  push:
+    branches: [main]
+    paths: ["proto/**", "server/go.mod", ".github/workflows/proto.yml"]
+jobs:
+  buf:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: proto } }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # buf breaking cần lịch sử git của main
+      - uses: bufbuild/buf-setup-action@v1
+        with: { version: "1.47.2" }
+      - run: buf lint
+      - run: buf format -d --exit-code
+      # Không có main để so (PR đầu tiên thêm proto): bỏ qua breaking.
+      - name: buf breaking
+        run: |
+          if git cat-file -e origin/main:proto/chat/v1/common.proto 2>/dev/null; then
+            buf breaking --against "../.git#branch=origin/main,subdir=proto"
+          else
+            echo "main chưa có proto: bỏ qua buf breaking"
+          fi
+  generate:
+    # Sinh Go (+Connect) và Dart; Go phải qua go vet. Mã sinh không commit.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-setup-action@v1
+        with: { version: "1.47.2" }
+      - uses: actions/setup-go@v5
+        with: { go-version-file: server/go.mod }
+      - run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.5
+          go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.18.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - run: buf generate
+        working-directory: proto
+      - run: go mod tidy && go vet ./...
+        working-directory: server
+      - run: test -n "$(find app/gen -name '*.pb.dart')"

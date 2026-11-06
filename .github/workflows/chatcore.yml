@@ -1,0 +1,70 @@
+name: chatcore
+on:
+  pull_request:
+    paths: ["chatcore/**", "proto/**", "dev/scripts/chatcore-android-test.sh", ".github/workflows/chatcore.yml"]
+  push:
+    branches: [main]
+    paths: ["chatcore/**", "proto/**", ".github/workflows/chatcore.yml"]
+jobs:
+  test:
+    strategy:
+      matrix: { os: [ubuntu-latest, windows-latest] }   # cổng giai đoạn 1: Windows
+    runs-on: ${{ matrix.os }}
+    defaults: { run: { working-directory: chatcore } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: chatcore }
+      - run: cargo test --release   # gồm test hiệu năng so với mốc (tests/scale.rs)
+  wasm:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: chatcore } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: wasm32-unknown-unknown }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: chatcore }
+      - run: cargo install wasm-bindgen-cli --version 0.2.100 --locked   # khớp wasm-bindgen =0.2.100
+      # Bất biến, recovery, scale trên WASM (Node/V8), cùng kịch bản với native.
+      - run: cargo test --release --target wasm32-unknown-unknown -p chatcore-wasm
+        env:
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
+      # Cùng test trong Chrome headless (chromedriver có sẵn trên runner). CHƯA chạy trên GitHub.
+      - run: |
+          # CHROMEWEBDRIVER là biến của runner (không đọc được qua ${{ env.* }}), nên đọc trong shell.
+          export CHROMEDRIVER="$CHROMEWEBDRIVER/chromedriver"
+          test -x "$CHROMEDRIVER" || { echo "không thấy chromedriver: $CHROMEDRIVER"; exit 1; }
+          cargo test --release --target wasm32-unknown-unknown -p chatcore-wasm --features browser --test scenarios
+        env:
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
+      - run: cargo install wasm-pack --locked
+      - run: wasm-pack build wasm --release --target web
+  rfc9420-vectors:
+    # Test vector RFC 9420 chạy bằng bộ KAT của chính OpenMLS ở đúng phiên bản đã ghim.
+    # Đã xác nhận trên CI: 1381 test qua.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { repository: openmls/openmls, ref: openmls-v0.8.1 }
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --release -p openmls --lib kat
+  android:
+    # Binary test biên dịch bằng NDK, chạy trong emulator x86_64 (như PoC). CHƯA chạy trên GitHub.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: chatcore }
+      - name: Bật KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          script: dev/scripts/chatcore-android-test.sh x86_64

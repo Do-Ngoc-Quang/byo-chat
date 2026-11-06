@@ -27,7 +27,6 @@ Hệ thống chat mã hóa đầu cuối (E2EE, giao thức MLS) có gọi video
 | [`app/`](app) | Ứng dụng Flutter |
 | [`infra/`](infra) | Terraform, k8s/Argo CD |
 | [`dev/`](dev) | Môi trường dev cục bộ (docker-compose) |
-| [`poc/`](poc) | Các bản thử nghiệm đã kiểm chứng thiết kế (đóng băng) |
 
 ## Kiểm tra mã
 Các lệnh sẽ dùng được dần khi có mã:
