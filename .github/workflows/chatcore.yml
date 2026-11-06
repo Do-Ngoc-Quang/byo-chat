@@ -32,10 +32,13 @@ jobs:
         env:
           CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
       # Cùng test trong Chrome headless (chromedriver có sẵn trên runner). CHƯA chạy trên GitHub.
-      - run: cargo test --release --target wasm32-unknown-unknown -p chatcore-wasm --features browser --test scenarios
+      - run: |
+          # CHROMEWEBDRIVER là biến của runner (không đọc được qua ${{ env.* }}), nên đọc trong shell.
+          export CHROMEDRIVER="$CHROMEWEBDRIVER/chromedriver"
+          test -x "$CHROMEDRIVER" || { echo "không thấy chromedriver: $CHROMEDRIVER"; exit 1; }
+          cargo test --release --target wasm32-unknown-unknown -p chatcore-wasm --features browser --test scenarios
         env:
           CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
-          CHROMEDRIVER: ${{ env.CHROMEWEBDRIVER }}/chromedriver
       - run: cargo install wasm-pack --locked
       - run: wasm-pack build wasm --release --target web
   rfc9420-vectors:
