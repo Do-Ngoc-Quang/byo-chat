@@ -51,6 +51,7 @@ flutter analyze && flutter test
 - [Thiết kế chính 1.3.0](docs/spec/thiet-ke-chinh.md) — kiến trúc, mô hình dữ liệu, lộ trình
 - [Đặc tả giao thức 1.0.0](docs/spec/giao-thuc.md) — nguồn duy nhất cho Protobuf và luồng MLS
 - [Màn hình 1.0.0](docs/spec/man-hinh.md) — 18 màn hình, điều hướng, trạng thái
+- [Kế hoạch và tiến độ](docs/ke-hoach.md)
 - [Quy ước tổ chức repo](docs/quy-uoc-to-chuc.md)
 - [Quyết định kiến trúc](docs/decisions/README.md)
 - [Nhật ký phiên làm việc](docs/notes.md)

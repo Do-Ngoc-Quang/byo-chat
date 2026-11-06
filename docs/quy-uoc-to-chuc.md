@@ -9,6 +9,7 @@ README.md  CLAUDE.md  .gitignore
 docs/
   README.md          mục lục
   quy-uoc-to-chuc.md file này
+  ke-hoach.md        kế hoạch, checklist, tiến độ (nơi duy nhất)
   spec/              thiet-ke-chinh.md, giao-thuc.md, man-hinh.md
   decisions/         ADR: NNNN-ten-ngan.md
   notes.md           nhật ký phiên làm việc
@@ -27,7 +28,7 @@ poc/                 đóng băng, chỉ đọc
 2. **Phiên bản tài liệu:** không đưa số phiên bản vào tên file. Ghi dòng `**Phiên bản:** x.y.z` ngay dưới tiêu đề. Quy tắc đánh số giữ như `CLAUDE.md`.
 3. **Mã sinh từ proto:** không commit. Sinh khi build vào `gen/` trong từng phần (`chatcore/`, `server/`, `app/`), đã gitignore.
 4. **Giao thức:** chỉ `proto/` và `docs/spec/giao-thuc.md` định nghĩa trường và luồng. Phần khác không tự định nghĩa lại.
-5. **Quyết định:** quyết định kiến trúc vào `docs/decisions/` (ADR, không sửa sau khi chấp nhận). Việc dở và ghi chú phiên vào `docs/notes.md`.
+5. **Quyết định và tiến độ:** quyết định kiến trúc vào `docs/decisions/` (ADR, không sửa sau khi chấp nhận). Tiến độ và việc cần làm chỉ ở `docs/ke-hoach.md`. Ghi chú phiên vào `docs/notes.md`.
 6. **Mỗi thư mục cấp một** có `README.md` ngắn: mục đích, lệnh build/test, liên kết spec.
 7. **`poc/`:** chỉ đọc. Khi nâng mã vào `chatcore/` hoặc `server/`, ghi nguồn gốc trong README của nơi nhận. Xóa `poc/` sau khi hoàn thành bước 1 của lộ trình (lịch sử git vẫn còn).
 8. **Không commit:** `target/`, `node_modules/`, `build/`, `.dart_tool/`, `gen/`, `.env`, log, khóa/secret.

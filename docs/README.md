@@ -4,6 +4,7 @@
 - [spec/thiet-ke-chinh.md](spec/thiet-ke-chinh.md) (1.3.0) — kiến trúc, stack, mô hình dữ liệu, lộ trình, quyết định kiến trúc
 - [spec/giao-thuc.md](spec/giao-thuc.md) (1.0.0) — Protobuf, luồng MLS, mã lỗi, kế hoạch PoC (nguồn DUY NHẤT cho giao thức)
 - [spec/man-hinh.md](spec/man-hinh.md) (1.0.0) — 18 màn hình, điều hướng, trạng thái, truy vết RPC
+- [ke-hoach.md](ke-hoach.md) — kế hoạch, checklist, tiến độ
 - [decisions/](decisions/README.md) — quyết định kiến trúc (ADR)
 - [notes.md](notes.md) — nhật ký phiên làm việc
 - ui/ — giao diện: mỗi tệp *.dc.html là một màn (Mobile 390x844, Desktop 1280x800); canvas.json là vị trí các màn
