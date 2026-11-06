@@ -1,0 +1,40 @@
+name: chatcore
+on:
+  pull_request:
+    paths: ["chatcore/**", "proto/**", ".github/workflows/chatcore.yml"]
+  push:
+    branches: [main]
+    paths: ["chatcore/**", "proto/**", ".github/workflows/chatcore.yml"]
+jobs:
+  test:
+    strategy:
+      matrix: { os: [ubuntu-latest, windows-latest] }   # cổng giai đoạn 1: Windows
+    runs-on: ${{ matrix.os }}
+    defaults: { run: { working-directory: chatcore } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: chatcore }
+      - run: cargo test --release   # gồm test hiệu năng so với mốc (tests/scale.rs)
+  wasm:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: chatcore } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: wasm32-unknown-unknown }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: chatcore }
+      - run: cargo check --release --target wasm32-unknown-unknown -p chatcore
+      # TODO: thêm crate chatcore/wasm và `wasm-pack build --target web` + test trong trình duyệt.
+  rfc9420-vectors:
+    # Test vector RFC 9420 chạy bằng bộ KAT của chính OpenMLS ở đúng phiên bản đã ghim.
+    # CHƯA kiểm cục bộ (xem docs/notes.md); nếu lệnh sai thì sửa ở đây.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with: { repository: openmls/openmls, ref: openmls-v0.8.1 }
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --release -p openmls --lib kat

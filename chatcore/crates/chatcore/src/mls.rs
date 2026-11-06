@@ -66,12 +66,18 @@ impl Device {
 
     /// Thêm các thiết bị bằng một Commit; áp dụng ngay cho chính mình.
     pub fn add(&self, g: &mut MlsGroup, kps: &[KeyPackage]) -> Result<CommitOut> {
+        if kps.len() > MAX_DEVICES_PER_COMMIT {
+            return Err(format!("quá {MAX_DEVICES_PER_COMMIT} thiết bị mỗi Commit").into());
+        }
+        if g.members().count() + kps.len() > MAX_DEVICES_PER_GROUP {
+            return Err(format!("quá {MAX_DEVICES_PER_GROUP} thiết bị mỗi nhóm").into());
+        }
         let (commit, welcome, gi) = g.add_members(&self.provider, &self.signer, kps)?;
         g.merge_pending_commit(&self.provider)?;
         Ok(CommitOut {
             commit: commit.tls_serialize_detached()?,
             welcome: Some(welcome.tls_serialize_detached()?),
-            group_info: gi.ok_or("no group info")?.tls_serialize_detached()?,
+            group_info: MlsMessageOut::from(gi.ok_or("no group info")?).tls_serialize_detached()?,
         })
     }
 
@@ -134,7 +140,7 @@ impl Device {
         Ok(CommitOut {
             commit: commit.tls_serialize_detached()?,
             welcome: welcome.map(|w| w.tls_serialize_detached()).transpose()?,
-            group_info: gi.ok_or("no group info")?.tls_serialize_detached()?,
+            group_info: MlsMessageOut::from(gi.ok_or("no group info")?).tls_serialize_detached()?,
         })
     }
 
@@ -146,7 +152,7 @@ impl Device {
         Ok(CommitOut {
             commit: commit.tls_serialize_detached()?,
             welcome: welcome.map(|w| w.tls_serialize_detached()).transpose()?,
-            group_info: gi.ok_or("no group info")?.tls_serialize_detached()?,
+            group_info: MlsMessageOut::from(gi.ok_or("no group info")?).tls_serialize_detached()?,
         })
     }
 
@@ -158,3 +164,7 @@ impl Device {
             .collect()
     }
 }
+
+/// Giới hạn bất biến (CLAUDE.md): tối đa 50 thiết bị mỗi Commit, 1.000 thiết bị mỗi nhóm.
+pub const MAX_DEVICES_PER_COMMIT: usize = 50;
+pub const MAX_DEVICES_PER_GROUP: usize = 1000;
