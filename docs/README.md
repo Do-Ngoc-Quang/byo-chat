@@ -1,8 +1,11 @@
-# Tài liệu thiết kế (đã chốt)
+# Tài liệu
 
-- thiet-ke-chinh-1.3.0.md — kiến trúc, stack, mô hình dữ liệu, lộ trình, quyết định kiến trúc
-- dac-ta-giao-thuc-1.0.0.md — Protobuf, luồng MLS, mã lỗi, kế hoạch PoC (nguồn DUY NHẤT cho giao thức)
-- man-hinh-1.0.0.md — 18 màn hình, điều hướng, trạng thái, truy vết RPC
+- [quy-uoc-to-chuc.md](quy-uoc-to-chuc.md) — quy ước đặt file (nguồn duy nhất)
+- [spec/thiet-ke-chinh.md](spec/thiet-ke-chinh.md) (1.3.0) — kiến trúc, stack, mô hình dữ liệu, lộ trình, quyết định kiến trúc
+- [spec/giao-thuc.md](spec/giao-thuc.md) (1.0.0) — Protobuf, luồng MLS, mã lỗi, kế hoạch PoC (nguồn DUY NHẤT cho giao thức)
+- [spec/man-hinh.md](spec/man-hinh.md) (1.0.0) — 18 màn hình, điều hướng, trạng thái, truy vết RPC
+- [decisions/](decisions/README.md) — quyết định kiến trúc (ADR)
+- [notes.md](notes.md) — nhật ký phiên làm việc
 - ui/ — giao diện: mỗi tệp *.dc.html là một màn (Mobile 390x844, Desktop 1280x800); canvas.json là vị trí các màn
 
 Ghi chú:

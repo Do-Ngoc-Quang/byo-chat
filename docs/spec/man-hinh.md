@@ -2,6 +2,8 @@
 
 2026-11-03 · Quang
 
+**Phiên bản:** 1.0.0
+
 ## 1. Phạm vi và quy ước
 
 Tài liệu này chốt 18 màn hình của ứng dụng chat cá nhân và nhóm nhỏ trên mobile (Android; iOS để sau) và desktop/web, làm căn cứ để vẽ giao diện và viết mã. Phiên bản hiện tại là 1.0.0, chốt cùng đặc tả giao thức 1.0.0 (06/11/2026).

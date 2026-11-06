@@ -4,3 +4,4 @@ build/
 .dart_tool/
 *.log
 .env
+gen/

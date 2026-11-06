@@ -20,12 +20,14 @@ Hệ thống chat mã hóa đầu cuối (E2EE, giao thức MLS) có gọi video
 ## Cấu trúc thư mục
 | Thư mục | Nội dung |
 |---|---|
-| [`docs/`](docs/README.md) | Thiết kế chính, đặc tả giao thức, màn hình, giao diện |
+| [`docs/`](docs/README.md) | Thiết kế chính, đặc tả giao thức, màn hình, giao diện, ADR |
 | [`proto/`](proto) | Định nghĩa Protobuf `chat.v1` (kiểm tra bằng `buf`) |
 | [`chatcore/`](chatcore) | Lõi Rust: MLS, mã hóa, xuất ra WASM/FFI |
 | [`server/`](server) | Backend Go: gateway, Message Service, hộp thư |
 | [`app/`](app) | Ứng dụng Flutter |
-| [`poc/`](poc) | Các bản thử nghiệm đã kiểm chứng thiết kế |
+| [`infra/`](infra) | Terraform, k8s/Argo CD |
+| [`dev/`](dev) | Môi trường dev cục bộ (docker-compose) |
+| [`poc/`](poc) | Các bản thử nghiệm đã kiểm chứng thiết kế (đóng băng) |
 
 ## Kiểm tra mã
 Các lệnh sẽ dùng được dần khi có mã:
@@ -46,9 +48,11 @@ flutter analyze && flutter test
 ```
 
 ## Tài liệu
-- [Thiết kế chính 1.3.0](docs/thiet-ke-chinh-1.3.0.md) — kiến trúc, mô hình dữ liệu, lộ trình
-- [Đặc tả giao thức 1.0.0](docs/dac-ta-giao-thuc-1.0.0.md) — nguồn duy nhất cho Protobuf và luồng MLS
-- [Màn hình 1.0.0](docs/man-hinh-1.0.0.md) — 18 màn hình, điều hướng, trạng thái
-- [Ghi chú quyết định](docs/NOTES.md)
+- [Thiết kế chính 1.3.0](docs/spec/thiet-ke-chinh.md) — kiến trúc, mô hình dữ liệu, lộ trình
+- [Đặc tả giao thức 1.0.0](docs/spec/giao-thuc.md) — nguồn duy nhất cho Protobuf và luồng MLS
+- [Màn hình 1.0.0](docs/spec/man-hinh.md) — 18 màn hình, điều hướng, trạng thái
+- [Quy ước tổ chức repo](docs/quy-uoc-to-chuc.md)
+- [Quyết định kiến trúc](docs/decisions/README.md)
+- [Nhật ký phiên làm việc](docs/notes.md)
 
 Hướng dẫn cho Claude Code nằm ở [`CLAUDE.md`](CLAUDE.md).

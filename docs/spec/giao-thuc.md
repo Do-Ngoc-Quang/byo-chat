@@ -2,6 +2,8 @@
 
 Nov 3, 2026 · @Quang
 
+**Phiên bản:** 1.0.0
+
 ## 1. Phạm vi và phiên bản
 
 Tài liệu này đặc tả giao thức giữa client và server, cùng các luồng MLS chi tiết, cho hệ thống trong tài liệu "Thiết kế hệ thống Chat đa nền tảng: E2EE và gọi video" (bản 1.3.0, gọi là *tài liệu chính*). Phiên bản hiện tại là **1.0.0**: các PoC bắt buộc đã đạt (mục 8), đủ để bắt đầu phát triển; các điểm mở còn lại ở mục 9 xử lý trong giai đoạn phát triển, không chặn.

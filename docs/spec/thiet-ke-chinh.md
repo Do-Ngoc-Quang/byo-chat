@@ -2,6 +2,8 @@
 
 Nov 3, 2026 · @Quang
 
+**Phiên bản:** 1.3.0
+
 ## 1. Tóm tắt điều hành
 
 Hệ thống dùng một lõi Rust chung cho mã hóa và đồng bộ, backend Go trên Kubernetes và LiveKit cho gọi video. Server chỉ chuyển ciphertext, nên một người vẫn vận hành được và hệ thống mở rộng ngang không có trần cố định.

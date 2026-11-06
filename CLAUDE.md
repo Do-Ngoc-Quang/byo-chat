@@ -3,8 +3,9 @@
 Một người phát triển. Trả lời tiếng Việt, ngắn, gạch đầu dòng. Code trước, chú thích 2–3 dòng mỗi đoạn.
 
 ## Nguồn sự thật (đọc trước khi code)
-- `docs/` — thiet-ke-chinh-1.3.0.md (kiến trúc), dac-ta-giao-thuc-1.0.0.md (Protobuf, luồng MLS), man-hinh-1.0.0.md, ui/ (giao diện HTML).
-- Spec giao thức là nguồn DUY NHẤT cho trường Protobuf và luồng MLS. Muốn đổi: sửa spec trước, ghi vào `docs/NOTES.md`, rồi mới sửa code.
+- `docs/spec/` — thiet-ke-chinh.md (kiến trúc), giao-thuc.md (Protobuf, luồng MLS), man-hinh.md; `docs/ui/` (giao diện HTML).
+- Chỗ đặt file: `docs/quy-uoc-to-chuc.md` là nguồn duy nhất. Tạo file/thư mục mới phải theo đó; đổi bố cục thì sửa quy ước và thêm ADR trong `docs/decisions/`.
+- Spec giao thức là nguồn DUY NHẤT cho trường Protobuf và luồng MLS. Muốn đổi: sửa spec trước, ghi ADR vào `docs/decisions/` và `docs/notes.md`, rồi mới sửa code.
 - Phạm vi đã chốt, KHÔNG mở rộng: Android, Web, desktop. iOS để sau (thiết kế giữ nguyên, không làm). Không bot, kênh, stories, thanh toán, tìm kiếm phía server.
 
 ## Stack
@@ -36,6 +37,6 @@ Một người phát triển. Trả lời tiếng Việt, ngắn, gạch đầu 
 Chưa kiểm chứng, làm ở cổng tương ứng: MLS trên máy ARM thật, video trên Flutter Android và Safari, kích thước Welcome, Commit thêm 1 thiết bị, ngưỡng payload push FCM.
 
 ## Quy trình làm việc
-- Mỗi phiên một mục tiêu nhỏ. Cuối phiên ghi quyết định và việc dở vào `docs/NOTES.md`.
+- Mỗi phiên một mục tiêu nhỏ. Cuối phiên ghi quyết định và việc dở vào `docs/notes.md`; quyết định kiến trúc vào `docs/decisions/`.
 - Số phiên bản tài liệu: đổi phạm vi đổi số đầu; thêm thiết kế đổi số giữa; làm rõ đổi số cuối.
 - Số đo hiệu năng mốc (Windows native): 1.000 thiết bị, Commit cuối 92 KB, tạo 33 ms, nhận 11 ms. Android emulator chậm ~3 lần khi tạo; WASM ~5 lần. Test hiệu năng không được tệ hơn mốc đáng kể.
