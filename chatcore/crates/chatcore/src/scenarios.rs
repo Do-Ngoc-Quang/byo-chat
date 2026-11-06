@@ -292,7 +292,7 @@ pub mod scale {
         assert_eq!(creator.sframe_key(&g, b"c").unwrap(), devs[0].sframe_key(&recv, b"c").unwrap());
         log(&format!("commit cuối: {} KB, tạo {last_create} ms, nhận {last_recv} ms", last_size / 1024));
         if !cfg!(debug_assertions) {
-            let k = if cfg!(target_arch = "wasm32") { 3 } else { 1 }; // WASM chậm ~5 lần mốc native (CLAUDE.md)
+            let k = if cfg!(target_arch = "wasm32") { 3 } else if cfg!(target_os = "android") { 2 } else { 1 }; // CLAUDE.md: WASM ~5 lần, emulator Android ~3 lần so với Windows
             assert!(last_size < 120 * 1024, "Commit {last_size} B (mốc 92 KB)");
             assert!(last_create < 170 * k, "tạo {last_create} ms (mốc 33 ms)");
             assert!(last_recv < 60 * k, "nhận {last_recv} ms (mốc 11 ms)");
