@@ -1,10 +1,10 @@
 name: proto
 on:
   pull_request:
-    paths: ["proto/**", ".github/workflows/proto.yml"]
+    paths: ["proto/**", "server/go.mod", ".github/workflows/proto.yml"]
   push:
     branches: [main]
-    paths: ["proto/**", ".github/workflows/proto.yml"]
+    paths: ["proto/**", "server/go.mod", ".github/workflows/proto.yml"]
 jobs:
   buf:
     runs-on: ubuntu-latest
@@ -24,3 +24,21 @@ jobs:
           else
             echo "main chưa có proto: bỏ qua buf breaking"
           fi
+  generate:
+    # Sinh Go (+Connect) và Dart; Go phải qua go vet. Mã sinh không commit.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-setup-action@v1
+        with: { version: "1.47.2" }
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.23" }
+      - run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.5
+          go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.18.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - run: buf generate
+        working-directory: proto
+      - run: go mod tidy && go vet ./...
+        working-directory: server
+      - run: test -n "$(find app/gen -name '*.pb.dart')"

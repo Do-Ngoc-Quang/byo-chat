@@ -15,3 +15,4 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - OpenMLS ghim 0.8.1 (có 0.9.2); API `into_verifiable_group_info` chỉ có ở test-utils, dùng `MlsMessageIn::extract()`.
 - Chưa làm/chưa kiểm: crate `wasm/` + `wasm-pack`, test trên Android; kiểm WASM chỉ mới `cargo check`; sinh mã Go/Dart vào `gen/`.
 - CI trên PR xanh cả 5 job (buf, test Ubuntu/Windows, wasm check, rfc9420-vectors: 1381 test qua). Windows đã chạy được, gồm test hiệu năng.
+- Sinh mã: `proto/buf.gen.yaml` (managed mode, `go_package_prefix` = `github.com/Do-Ngoc-Quang/byo-chat/server/gen`). Tạo `server/go.mod` tối thiểu để `go vet` mã sinh. Dart dùng plugin remote BSR, không truy cập được từ sandbox nên chưa kiểm cục bộ.

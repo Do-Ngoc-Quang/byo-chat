@@ -30,7 +30,7 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 ## Giai đoạn 1 — Proto, CI, `chatcore`
 - [x] `proto/chat/v1/`: `common.proto`, `ws.proto`, `services.proto`, `payload.proto` từ spec; `buf lint` sạch (ADR 0002)
 - [x] CI `proto.yml`: `buf lint` và `buf breaking` (đã xanh trên GitHub; `breaking` bỏ qua tới khi `main` có proto)
-- [ ] Sinh mã Go, Rust, Dart vào `gen/` (không commit)
+- [x] Sinh mã Go, Rust, Dart vào `gen/` (không commit): Rust qua `build.rs`; Go+Connect qua `buf generate` (đã `go vet` cục bộ); Dart qua plugin remote của BSR, chỉ kiểm được trên CI (job `generate`)
 - [x] `chatcore/`: Rust workspace (viết lại theo spec vì `poc/` chưa có mã; xem notes)
 - [x] Test: bất biến 1-5 (spec mục 8), mô phỏng nhiều thiết bị với server giả
 - [x] Test: ca recovery, resync, scale 1.000 thiết bị, exporter
