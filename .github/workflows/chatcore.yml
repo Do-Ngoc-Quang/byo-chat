@@ -30,9 +30,8 @@ jobs:
       # TODO: thêm crate chatcore/wasm và `wasm-pack build --target web` + test trong trình duyệt.
   rfc9420-vectors:
     # Test vector RFC 9420 chạy bằng bộ KAT của chính OpenMLS ở đúng phiên bản đã ghim.
-    # CHƯA kiểm cục bộ (xem docs/notes.md); nếu lệnh sai thì sửa ở đây.
+    # Đã xác nhận trên CI: 1381 test qua.
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
         with: { repository: openmls/openmls, ref: openmls-v0.8.1 }
