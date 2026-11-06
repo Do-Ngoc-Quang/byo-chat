@@ -38,6 +38,7 @@ Chưa kiểm chứng, làm ở cổng tương ứng: MLS trên máy ARM thật, 
 
 ## Quy trình làm việc
 - Tiến độ và checklist: `docs/ke-hoach.md` (nơi duy nhất). Đầu phiên đọc, cuối phiên tick; không theo dõi việc ở chỗ khác.
+- Git: không push vào `main`; làm trên nhánh, tạo PR vào `main` (quy ước ở `docs/quy-uoc-to-chuc.md`, mục "Quy trình git").
 - Mỗi phiên một mục tiêu nhỏ. Cuối phiên ghi quyết định và việc dở vào `docs/notes.md`; quyết định kiến trúc vào `docs/decisions/`.
 - Số phiên bản tài liệu: đổi phạm vi đổi số đầu; thêm thiết kế đổi số giữa; làm rõ đổi số cuối.
 - Số đo hiệu năng mốc (Windows native): 1.000 thiết bị, Commit cuối 92 KB, tạo 33 ms, nhận 11 ms. Android emulator chậm ~3 lần khi tạo; WASM ~5 lần. Test hiệu năng không được tệ hơn mốc đáng kể.

@@ -8,8 +8,8 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 ## Tổng quan
 | # | Giai đoạn | Cổng nghiệm thu (đề xuất) | Trạng thái |
 |---|---|---|---|
-| 0 | PoC | Bốn PoC đạt tiêu chí (trừ mục chưa kiểm) | Xong, còn 2 mục chưa kiểm |
-| 1 | Proto, CI, `chatcore` | 5 bất biến đúng trên Windows, WASM, Android; `buf breaking` chạy trong CI; test hiệu năng không tệ hơn mốc | Chưa bắt đầu |
+| 0 | PoC | Bốn PoC đạt tiêu chí (trừ mục chưa kiểm) | Xong; 3 mục còn lại tạm hoãn (pending) |
+| 1 | Proto, CI, `chatcore` | 5 bất biến đúng trên Windows, WASM, Android; `buf breaking` chạy trong CI; test hiệu năng không tệ hơn mốc | Đang làm |
 | 2 | Server tối thiểu | Gateway và Message Service chạy cục bộ; `SendMessage` từ chối `EPOCH_MISMATCH`; con trỏ hộp thư idempotent; qua kiểm thử chèn lỗi | Chưa bắt đầu |
 | 3 | Lát cắt dọc | Đăng nhập và chat 1-1 E2EE giữa Android và Web, đầu cuối | Chưa bắt đầu |
 | 4 | Nhóm, đa thiết bị, backup | Nhóm, thêm thiết bị bằng External Commit, khôi phục có và không có backup; 5 bất biến đúng | Chưa bắt đầu |
@@ -23,9 +23,9 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 - [x] Gọi video E2EE trên Chrome với xoay khóa
 - [x] Tải gateway: 10.000 kết nối, p95 0,33 ms, 67 MB
 - [x] SQLite trên OPFS và cầu nối Dart-JavaScript trong Flutter Web
-- [ ] MLS trên máy ARM thật
-- [ ] Video trên Flutter Android và Safari
-- [ ] Chép PoC vào `poc/` (bỏ `target/`, `node_modules/`)
+- [ ] (hoãn) MLS trên máy ARM thật
+- [ ] (hoãn) Video trên Flutter Android và Safari
+- [ ] (hoãn) Chép PoC vào `poc/` (bỏ `target/`, `node_modules/`); giai đoạn 1 cần mã nguồn `poc/mls`, `poc/exporter` thì chép riêng hai thư mục đó khi nâng lên `chatcore/`
 
 ## Giai đoạn 1 — Proto, CI, `chatcore`
 - [ ] `proto/chat/v1/`: `common.proto`, `ws.proto`, `services.proto` từ spec; `buf lint` sạch
