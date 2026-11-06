@@ -7,4 +7,5 @@ Lõi Rust (OpenMLS 0.8, cipher suite `MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed255
 - `src/scenarios.rs`: kịch bản dùng chung cho native (`tests/`) và WASM (`wasm/tests/`). `wasm/`: crate `chatcore-wasm` (cầu nối wasm-bindgen, hiện chỉ có khung).
 - Test: bất biến 1-5 (`invariants`), recovery/resync/exporter (`recovery`), 1.000 thiết bị so với mốc (`scale`), thuộc tính Protobuf (`proto_props`).
 - Lệnh: `cargo test --release`; WASM: `cargo install wasm-bindgen-cli --version 0.2.100 --locked` rồi `CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER=wasm-bindgen-test-runner cargo test --release --target wasm32-unknown-unknown -p chatcore-wasm`; build: `wasm-pack build wasm --target web`.
+- Android: `dev/scripts/chatcore-android-test.sh [x86_64|aarch64]` biên dịch test bằng NDK, đẩy vào emulator qua `adb` và chạy (CI job `android`).
 - Nguồn gốc: viết theo spec, không nâng từ mã PoC (`poc/` đã xóa); kết quả khớp số đo PoC.

@@ -37,6 +37,7 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 - [x] Test vector RFC 9420 cho OpenMLS (job CI `rfc9420-vectors`, 1381 test qua)
 - [x] Kiểm thử thuộc tính cho mã hóa/giải mã Protobuf
 - [ ] CI `chatcore.yml`: có `cargo test --release` (Linux, Windows, đã xanh), test WASM trên Node (`chatcore/wasm`, 11 kịch bản qua cục bộ) và `wasm-pack build --target web` (CHƯA chạy; chưa test trong Chrome)
+- [ ] Android: job CI `android` (emulator x86_64, `dev/scripts/chatcore-android-test.sh`) đã viết, CHƯA chạy; mới `cargo check` được cho x86_64/aarch64-linux-android. Máy ARM thật vẫn hoãn
 - [x] Mốc hiệu năng: kiểm không tệ hơn số đo mốc (`tests/scale.rs`, Linux: 90 KB, tạo 44 ms, nhận 14 ms)
 - [x] Xóa `poc/` (ADR 0003)
 
