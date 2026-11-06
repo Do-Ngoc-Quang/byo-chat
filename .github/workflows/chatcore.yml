@@ -26,8 +26,14 @@ jobs:
         with: { targets: wasm32-unknown-unknown }
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: chatcore }
-      - run: cargo check --release --target wasm32-unknown-unknown -p chatcore
-      # TODO: thêm crate chatcore/wasm và `wasm-pack build --target web` + test trong trình duyệt.
+      - run: cargo install wasm-bindgen-cli --version 0.2.100 --locked   # khớp wasm-bindgen =0.2.100
+      # Bất biến, recovery, scale trên WASM (Node/V8), cùng kịch bản với native.
+      - run: cargo test --release --target wasm32-unknown-unknown -p chatcore-wasm
+        env:
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
+      - run: cargo install wasm-pack --locked
+      - run: wasm-pack build wasm --release --target web
+      # TODO: chạy cùng test trong Chrome headless.
   rfc9420-vectors:
     # Test vector RFC 9420 chạy bằng bộ KAT của chính OpenMLS ở đúng phiên bản đã ghim.
     # Đã xác nhận trên CI: 1381 test qua.
