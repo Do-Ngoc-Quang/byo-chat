@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Desktop · Trò chuyện mới</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:100%;height:100%;min-height:800px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:#F7F8FA;color:#14171F;font-family:Inter,system-ui,sans-serif;overflow:hidden;position:relative"><div style="position:absolute;inset:0;background:rgba(20,23,31,0.45)"></div><div role="dialog" aria-label="Trò chuyện mới" style="position:relative;width:480px;background:#FFFFFF;border-radius:24px;padding:28px 28px 20px 28px;box-sizing:border-box"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px"><h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.3px;line-height:1.2">Trò chuyện mới</h1><button aria-label="Đóng" style="width:44px;height:44px;border-radius:22px;border:none;background:#F0F2F5;color:#14171F;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div style="height:44px;border-radius:22px;background:#F0F2F5;display:flex;align-items:center;gap:10px;padding:0 16px;color:#5B6270;font-size:15px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>Nhập số điện thoại hoặc email</div><div style="margin-top:12px"><div style="display:flex;align-items:center;gap:12px;height:60px;color:{{accent}};font-size:15px;font-weight:600"><div style="width:44px;height:44px;border-radius:22px;background:#EEF2FF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 5a3 3 0 0 1 0 6M18 20a6 6 0 0 0-3-5"/></svg></div>Tạo nhóm mới</div><div style="margin-top:8px;font-size:13px;font-weight:600;color:#5B6270">Danh bạ</div><div style="display:flex;align-items:center;gap:12px;height:64px"><div style="width:44px;height:44px;border-radius:22px;background:#D1FAE5;color:#065F46;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;flex-shrink:0">BT</div><div><div style="font-size:15px;font-weight:600">Bảo Trân</div><div style="font-size:13px;color:#5B6270">Đang hoạt động</div></div></div><div style="display:flex;align-items:center;gap:12px;height:64px"><div style="width:44px;height:44px;border-radius:22px;background:#FDE68A;color:#78350F;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;flex-shrink:0">GĐ</div><div><div style="font-size:15px;font-weight:600">Gia đình</div><div style="font-size:13px;color:#5B6270">Nhóm</div></div></div><div style="display:flex;align-items:center;gap:12px;height:64px"><div style="width:44px;height:44px;border-radius:22px;background:#E5E7EB;color:#374151;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;flex-shrink:0">HN</div><div><div style="font-size:15px;font-weight:600">Hoàng Nam</div><div style="font-size:13px;color:#5B6270">Hoạt động hôm qua</div></div></div><div style="display:flex;align-items:center;gap:12px;height:64px"><div style="width:44px;height:44px;border-radius:22px;background:#DBEAFE;color:#1E40AF;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;flex-shrink:0">LP</div><div><div style="font-size:15px;font-weight:600">Lan Phương</div><div style="font-size:13px;color:#5B6270">Hoạt động 2 giờ trước</div></div></div><div style="display:flex;align-items:center;gap:12px;height:64px"><div style="width:44px;height:44px;border-radius:22px;background:#DBEAFE;color:#1E40AF;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;flex-shrink:0">MA</div><div><div style="font-size:15px;font-weight:600">Minh Anh</div><div style="font-size:13px;color:#5B6270">Đang hoạt động</div></div></div></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2563EB","options":["#2563EB","#0F766E","#7C3AED"]},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#2563EB' };
+}
+}
+</script>
+</body>
+</html>

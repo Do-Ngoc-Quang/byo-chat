@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Danh sách chat</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #14171F; font-family: Inter, system-ui, sans-serif; overflow: hidden">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 8px 20px">
+<h1 style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.3px">Tin nhắn</h1>
+<button aria-label="Soạn tin mới" style="width: 44px; height: 44px; border-radius: 22px; border: none; background: #F0F2F5; color: #14171F; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>
+</div>
+<div style="padding: 8px 20px 12px 20px">
+<div style="height: 44px; border-radius: 22px; background: #F0F2F5; display: flex; align-items: center; gap: 10px; padding: 0 16px; color: #5B6270; font-size: 15px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>Tìm trong cuộc trò chuyện</div>
+</div>
+<div style="display: flex; gap: 8px; padding: 0 20px 8px 20px">
+<span style="height: 36px; padding: 0 16px; border-radius: 18px; background: #14171F; color: #FFFFFF; font-size: 14px; font-weight: 500; display: flex; align-items: center">Tất cả</span>
+<span style="height: 36px; padding: 0 16px; border-radius: 18px; background: #F0F2F5; color: #14171F; font-size: 14px; font-weight: 500; display: flex; align-items: center">Chưa đọc</span>
+<span style="height: 36px; padding: 0 16px; border-radius: 18px; background: #F0F2F5; color: #14171F; font-size: 14px; font-weight: 500; display: flex; align-items: center">Nhóm</span>
+</div>
+<div style="flex-grow: 1; min-height: 0; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 12px; padding: 0 20px; height: 72px; background: #F7F8FA">
+<div style="width: 48px; height: 48px; border-radius: 24px; background: #DBEAFE; color: #1E40AF; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; flex-shrink: 0">MA</div>
+<div style="flex-grow: 1; min-width: 0">
+<div style="display: flex; justify-content: space-between; gap: 8px"><span style="font-weight: 600; font-size: 16px">Minh Anh</span><span style="font-size: 12px; color: {{accent}}; font-weight: 600">09:41</span></div>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 2px"><span style="font-size: 14px; color: #14171F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Mai mình gặp lúc 9 giờ nhé</span><span style="min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 10px; background: {{accent}}; color: #FFFFFF; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">2</span></div>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 0 20px; height: 72px">
+<div style="width: 48px; height: 48px; border-radius: 24px; background: #FDE68A; color: #78350F; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; flex-shrink: 0">GĐ</div>
+<div style="flex-grow: 1; min-width: 0">
+<div style="display: flex; justify-content: space-between; gap: 8px"><span style="font-weight: 600; font-size: 16px">Gia đình</span><span style="font-size: 12px; color: #5B6270">09:12</span></div>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 2px"><span style="font-size: 14px; color: #5B6270; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Mẹ: Cuối tuần về ăn cơm nha con</span></div>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 0 20px; height: 72px">
+<div style="width: 48px; height: 48px; border-radius: 24px; background: #D1FAE5; color: #065F46; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; flex-shrink: 0">BT</div>
+<div style="flex-grow: 1; min-width: 0">
+<div style="display: flex; justify-content: space-between; gap: 8px"><span style="font-weight: 600; font-size: 16px">Bảo Trân</span><span style="font-size: 12px; color: #5B6270">Hôm qua</span></div>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 2px"><span style="font-size: 14px; color: #5B6270; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Bạn: Đã gửi ảnh</span></div>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 0 20px; height: 72px">
+<div style="width: 48px; height: 48px; border-radius: 24px; background: #FCE7F3; color: #9D174D; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; flex-shrink: 0">TK</div>
+<div style="flex-grow: 1; min-width: 0">
+<div style="display: flex; justify-content: space-between; gap: 8px"><span style="font-weight: 600; font-size: 16px">Team Thiết kế</span><span style="font-size: 12px; color: #5B6270">Hôm qua</span></div>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 2px"><span style="font-size: 14px; color: #5B6270; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Hà: Mình đã cập nhật bản phác thảo mới</span></div>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 0 20px; height: 72px">
+<div style="width: 48px; height: 48px; border-radius: 24px; background: #E5E7EB; color: #374151; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; flex-shrink: 0">HN</div>
+<div style="flex-grow: 1; min-width: 0">
+<div style="display: flex; justify-content: space-between; gap: 8px"><span style="font-weight: 600; font-size: 16px">Hoàng Nam</span><span style="font-size: 12px; color: #5B6270">Thứ hai</span></div>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 2px"><span style="font-size: 14px; color: #5B6270; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Cuộc gọi video · 12 phút</span></div>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 0 20px; height: 72px">
+<div style="width: 48px; height: 48px; border-radius: 24px; background: #DBEAFE; color: #1E40AF; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; flex-shrink: 0">LP</div>
+<div style="flex-grow: 1; min-width: 0">
+<div style="display: flex; justify-content: space-between; gap: 8px"><span style="font-weight: 600; font-size: 16px">Lan Phương</span><span style="font-size: 12px; color: #5B6270">Thứ hai</span></div>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 2px"><span style="font-size: 14px; color: #5B6270; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Cảm ơn bạn nhiều nhé!</span></div>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 0 20px; height: 72px">
+<div style="width: 48px; height: 48px; border-radius: 24px; background: #FDE68A; color: #78350F; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; flex-shrink: 0">CL</div>
+<div style="flex-grow: 1; min-width: 0">
+<div style="display: flex; justify-content: space-between; gap: 8px"><span style="font-weight: 600; font-size: 16px">CLB Chạy bộ</span><span style="font-size: 12px; color: #5B6270">Chủ nhật</span></div>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 2px"><span style="font-size: 14px; color: #5B6270; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Quang: Sáng mai tập trung 5:30 ở công viên</span></div>
+</div>
+</div>
+</div>
+<div style="display: flex; border-top: 1px solid #E4E6EB; height: 64px; flex-shrink: 0">
+<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: {{accent}}; font-size: 12px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>Tin nhắn</div>
+<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #5B6270; font-size: 12px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>Cuộc gọi</div>
+<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #5B6270; font-size: 12px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Cài đặt</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2563EB","options":["#2563EB","#0F766E","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#2563EB' };
+}
+}
+</script>
+</body>
+</html>

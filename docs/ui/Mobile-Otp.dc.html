@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Nhập mã</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:#FFFFFF;color:#14171F;font-family:Inter,system-ui,sans-serif;overflow:hidden;position:relative"><div style="padding:12px 12px 4px 8px"><button aria-label="Quay lại" style="width:44px;height:44px;border:none;background:transparent;color:#14171F;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button></div><div style="flex-grow:1;padding:48px 24px 0 24px;display:flex;flex-direction:column"><div style="width:52px;height:52px;border-radius:14px;background:{{accent}};color:#FFFFFF;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><div style="margin-top:24px"><h1 style="margin:0;font-size:28px;font-weight:600;letter-spacing:-0.3px;line-height:1.2">Nhập mã xác nhận</h1><p style="margin:8px 0 0 0;font-size:15px;line-height:1.5;color:#5B6270;">Mã gồm 6 số đã được gửi tới +84 912 345 678.</p></div>
+<div style="margin-top:28px;display:flex;gap:8px"><span style="flex:1;height:60px;border-radius:12px;background:#EEF2FF;border:1px solid #E4E6EB;color:#3730A3;font-size:26px;font-weight:600;display:flex;align-items:center;justify-content:center">5</span><span style="flex:1;height:60px;border-radius:12px;background:#EEF2FF;border:1px solid #E4E6EB;color:#3730A3;font-size:26px;font-weight:600;display:flex;align-items:center;justify-content:center">2</span><span style="flex:1;height:60px;border-radius:12px;background:#EEF2FF;border:1px solid #E4E6EB;color:#3730A3;font-size:26px;font-weight:600;display:flex;align-items:center;justify-content:center">0</span><span style="flex:1;height:60px;border-radius:12px;background:#EEF2FF;border:1px solid #E4E6EB;color:#3730A3;font-size:26px;font-weight:600;display:flex;align-items:center;justify-content:center">7</span><span style="flex:1;height:60px;border-radius:12px;background:#FFFFFF;border:2px solid {{accent}};color:#3730A3;font-size:26px;font-weight:600;display:flex;align-items:center;justify-content:center"></span><span style="flex:1;height:60px;border-radius:12px;background:#FFFFFF;border:1px solid #E4E6EB;color:#3730A3;font-size:26px;font-weight:600;display:flex;align-items:center;justify-content:center"></span></div>
+<div style="margin-top:16px;font-size:14px;color:#5B6270">Gửi lại mã sau 00:42</div>
+<div style="margin-top:24px"><button style="height:52px;width:100%;border-radius:26px;border:none;background:{{accent}};color:#FFFFFF;font-size:16px;font-weight:600;font-family:inherit">Xác nhận</button></div>
+<div style="margin-top:12px;text-align:center"><button style="height:44px;border:none;background:transparent;color:{{accent}};font-size:15px;font-weight:600;font-family:inherit">Đổi số điện thoại</button></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2563EB","options":["#2563EB","#0F766E","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#2563EB' };
+}
+}
+</script>
+</body>
+</html>

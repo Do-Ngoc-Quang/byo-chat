@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thiết bị đã liên kết</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:#FFFFFF;color:#14171F;font-family:Inter,system-ui,sans-serif;overflow:hidden;position:relative"><div style="padding:12px 12px 4px 8px"><button aria-label="Quay lại" style="width:44px;height:44px;border:none;background:transparent;color:#14171F;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button></div><div style="padding:8px 24px 0 24px"><h1 style="margin:0;font-size:28px;font-weight:600;letter-spacing:-0.3px;line-height:1.2">Thiết bị đã liên kết</h1><p style="margin:8px 0 0 0;font-size:15px;line-height:1.5;color:#5B6270;">Gỡ những thiết bị bạn không còn sử dụng.</p></div><div style="padding:24px 24px 0 24px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;background:#F7F8FA;border:1px solid #E4E6EB"><div style="width:44px;height:44px;border-radius:12px;background:#EEF2FF;color:#3730A3;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></div><div style="flex-grow:1;min-width:0"><div style="font-size:15px;font-weight:600">iPhone 15</div><div style="font-size:13px;color:#5B6270;margin-top:2px">Đang hoạt động · Hà Nội</div></div><span style="height:24px;white-space:nowrap;flex-shrink:0;padding:0 10px;border-radius:12px;background:#DCFCE7;color:#166534;font-size:12px;font-weight:600;display:flex;align-items:center">Thiết bị này</span></div><div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;background:#F7F8FA;border:1px solid #E4E6EB"><div style="width:44px;height:44px;border-radius:12px;background:#EEF2FF;color:#3730A3;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div><div style="flex-grow:1;min-width:0"><div style="font-size:15px;font-weight:600">Chrome trên Windows</div><div style="font-size:13px;color:#5B6270;margin-top:2px">Hoạt động 2 giờ trước · Hà Nội</div></div><button style="height:36px;padding:0 14px;border-radius:18px;border:1px solid #D5D8DE;background:#FFFFFF;color:#B91C1C;font-size:13px;font-weight:600;font-family:inherit">Gỡ</button></div><div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;background:#F7F8FA;border:1px solid #E4E6EB"><div style="width:44px;height:44px;border-radius:12px;background:#EEF2FF;color:#3730A3;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div><div style="flex-grow:1;min-width:0"><div style="font-size:15px;font-weight:600">Ứng dụng macOS</div><div style="font-size:13px;color:#5B6270;margin-top:2px">Hoạt động hôm qua · TP.HCM</div></div><button style="height:36px;padding:0 14px;border-radius:18px;border:1px solid #D5D8DE;background:#FFFFFF;color:#B91C1C;font-size:13px;font-weight:600;font-family:inherit">Gỡ</button></div></div><div style="flex-grow:1"></div><div style="padding:0 24px 32px 24px"><button style="height:52px;width:100%;border-radius:26px;border:none;background:{{accent}};color:#FFFFFF;font-size:16px;font-weight:600;font-family:inherit">Liên kết thiết bị mới</button></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2563EB","options":["#2563EB","#0F766E","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#2563EB' };
+}
+}
+</script>
+</body>
+</html>
