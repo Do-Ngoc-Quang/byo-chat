@@ -34,7 +34,8 @@ Một người phát triển. Trả lời tiếng Việt, ngắn, gạch đầu 
 2. Server tối thiểu: gateway, Message Service, hộp thư (DynamoDB local, Postgres trong Docker).
 3. Lát cắt dọc: đăng nhập, chat 1-1 có E2EE trên Android và Web.
 4. Nhóm, đa thiết bị, backup. 5. Media. 6. Gọi video (bắt đầu sau khi chat ổn định).
-Chưa kiểm chứng, làm ở cổng tương ứng: MLS trên máy ARM thật, video trên Flutter Android và Safari, kích thước Welcome, Commit thêm 1 thiết bị, ngưỡng payload push FCM.
+Môi trường: KHÔNG có máy thật, chỉ mô phỏng (emulator, Chrome/Node headless, CI). Mục cần máy thật là "hoãn, cần thiết bị thật": ghi rõ giới hạn của kiểm thử mô phỏng, không dùng để chặn "xong" của giai đoạn.
+Chưa kiểm chứng, làm ở cổng tương ứng (cần thiết bị thật thì hoãn): MLS trên máy ARM thật, video trên Flutter Android và Safari, kích thước Welcome, Commit thêm 1 thiết bị, ngưỡng payload push FCM.
 
 ## Quy trình làm việc
 - Tiến độ và checklist: `docs/ke-hoach.md` (nơi duy nhất). Đầu phiên đọc, cuối phiên tick; không theo dõi việc ở chỗ khác.
