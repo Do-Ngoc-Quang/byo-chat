@@ -33,7 +33,16 @@ poc/                 đóng băng, chỉ đọc
 7. **`poc/`:** chỉ đọc. Khi nâng mã vào `chatcore/` hoặc `server/`, ghi nguồn gốc trong README của nơi nhận. Xóa `poc/` sau khi hoàn thành bước 1 của lộ trình (lịch sử git vẫn còn).
 8. **Không commit:** `target/`, `node_modules/`, `build/`, `.dart_tool/`, `gen/`, `.env`, log, khóa/secret.
 9. **CI:** workflow đặt tên theo phần (`proto.yml`, `chatcore.yml`, `server.yml`, `app.yml`), chạy lệnh ghi trong `CLAUDE.md`.
-10. **Tạo thư mục mới** ở cấp một hoặc thêm loại file mới: cập nhật file này trước.
+10. **Git:** xem mục "Quy trình git" bên dưới.
+11. **Tạo thư mục mới** ở cấp một hoặc thêm loại file mới: cập nhật file này trước.
+
+## Quy trình git
+- `main` luôn ở trạng thái dùng được; không push trực tiếp.
+- Mọi thay đổi đi qua nhánh rồi PR vào `main`. Mỗi PR một mục tiêu nhỏ (khớp mục tiêu phiên làm việc).
+- Tên nhánh: `loai/ten-ngan`, kebab-case; loại là `feat`, `fix`, `docs`, `chore`, `refactor`, `test`. Ví dụ `feat/proto-common`, `docs/ke-hoach`. Phiên cloud của Claude có thể dùng nhánh do hệ thống cấp (`claude/...`).
+- Thông điệp commit: dòng đầu ngắn, mệnh lệnh, tiếng Anh hoặc tiếng Việt thống nhất trong một PR; phần thân nêu lý do.
+- PR phải: CI xanh (khi đã có), cập nhật `docs/ke-hoach.md` nếu hoàn thành đầu việc, thêm ADR nếu đổi kiến trúc hoặc quy ước.
+- Sau khi merge: xóa nhánh; nhánh tiếp theo tách từ `main` mới nhất.
 
 ## Ngoại lệ: `docs/ui/`
 Giữ phẳng, không chia thư mục con: `canvas.json` tham chiếu từng màn bằng tên file (`Main.dc.html` là màn danh sách chat mobile, `Mobile-*`, `Desktop-*`). Đổi tên hoặc di chuyển sẽ làm hỏng canvas. Chỉ đổi khi công cụ thiết kế cập nhật cùng lúc.
