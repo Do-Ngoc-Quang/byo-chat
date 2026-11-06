@@ -31,9 +31,13 @@ jobs:
       - run: cargo test --release --target wasm32-unknown-unknown -p chatcore-wasm
         env:
           CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
+      # Cùng test trong Chrome headless (chromedriver có sẵn trên runner). CHƯA chạy trên GitHub.
+      - run: cargo test --release --target wasm32-unknown-unknown -p chatcore-wasm --features browser --test scenarios
+        env:
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
+          CHROMEDRIVER: ${{ env.CHROMEWEBDRIVER }}/chromedriver
       - run: cargo install wasm-pack --locked
       - run: wasm-pack build wasm --release --target web
-      # TODO: chạy cùng test trong Chrome headless.
   rfc9420-vectors:
     # Test vector RFC 9420 chạy bằng bộ KAT của chính OpenMLS ở đúng phiên bản đã ghim.
     # Đã xác nhận trên CI: 1381 test qua.

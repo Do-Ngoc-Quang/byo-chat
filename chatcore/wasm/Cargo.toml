@@ -7,6 +7,9 @@ publish.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+browser = []   # chạy test trong trình duyệt thay vì Node
+
 [dependencies]
 chatcore = { path = "../crates/chatcore" }
 wasm-bindgen = "=0.2.100"

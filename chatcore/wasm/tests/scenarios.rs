@@ -1,6 +1,8 @@
 //! Chạy lại các kịch bản bất biến / recovery / scale trên WASM (node và trình duyệt).
 use chatcore::scenarios::{invariants as i, recovery as r, scale as s};
 use wasm_bindgen_test::*;
+#[cfg(feature = "browser")]
+wasm_bindgen_test_configure!(run_in_browser);
 
 #[wasm_bindgen_test] fn inv1() { i::inv1_same_epoch_and_exporter_after_mixed_commits(); }
 #[wasm_bindgen_test] fn inv2() { i::inv2_concurrent_commits_only_one_wins(); }
