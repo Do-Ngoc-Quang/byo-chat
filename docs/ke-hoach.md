@@ -11,7 +11,7 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 | # | Giai đoạn | Cổng nghiệm thu (đề xuất) | Trạng thái |
 |---|---|---|---|
 | 0 | PoC | Bốn PoC đạt tiêu chí (trừ mục chưa kiểm) | Xong; 3 mục còn lại tạm hoãn (pending) |
-| 1 | Proto, CI, `chatcore` | 5 bất biến đúng trên Windows, WASM, Android (emulator là đủ); `buf breaking` chạy trong CI; test hiệu năng không tệ hơn mốc | Gần xong; chờ merge PR và `buf breaking` chạy lần đầu |
+| 1 | Proto, CI, `chatcore` | 5 bất biến đúng trên Windows, WASM, Android (emulator là đủ); `buf breaking` chạy trong CI; test hiệu năng không tệ hơn mốc | Xong (PR #3 đã merge; mục cần thiết bị thật hoãn, xem bên dưới) |
 | 2 | Server tối thiểu | Gateway và Message Service chạy cục bộ; `SendMessage` từ chối `EPOCH_MISMATCH`; con trỏ hộp thư idempotent; qua kiểm thử chèn lỗi | Chưa bắt đầu |
 | 3 | Lát cắt dọc | Đăng nhập và chat 1-1 E2EE giữa Android và Web, đầu cuối | Chưa bắt đầu |
 | 4 | Nhóm, đa thiết bị, backup | Nhóm, thêm thiết bị bằng External Commit, khôi phục có và không có backup; 5 bất biến đúng | Chưa bắt đầu |

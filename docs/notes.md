@@ -25,3 +25,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Không dùng máy thật; mọi thứ chạy mô phỏng: emulator Android x86_64 (trang 4 KB), Chrome/Node headless, runner GitHub Actions. Số đo hiệu năng từ môi trường này không so trực tiếp với mốc Windows native, chỉ dùng để bắt suy giảm lớn.
 - Quy tắc: mục cần thiết bị thật (MLS trên ARM thật, Flutter trên Android/Safari thật, trang 16 KB, ngưỡng payload FCM thật, đo pin/mạng) ghi "hoãn, cần thiết bị thật" trong `ke-hoach.md`, nêu rõ giới hạn của kiểm thử mô phỏng, và không chặn "xong" của giai đoạn. Mô phỏng được thì làm (ví dụ aarch64 qua emulator ARM nếu CI có).
 - Áp dụng ngay: cổng giai đoạn 1 chỉ cần emulator; điểm hở còn lại là `buf breaking` chưa chạy thật (không liên quan thiết bị) và merge PR #3.
+
+## Kết thúc giai đoạn 1 (06/11/2026)
+- PR #3 đã merge vào `main`; CI xanh đủ 7 job. `buf breaking --against origin/main` chạy thật cục bộ sau merge: qua.
+- Việc hoãn, cần thiết bị thật (không chặn): MLS trên ARM thật, trang 16 KB, aarch64, video Flutter Android/Safari. Chưa in số đo hiệu năng WASM/Android (chỉ kiểm ngưỡng).
+- Giai đoạn kế: 2 (server tối thiểu). Nhánh mới tách từ `main` mới nhất.
