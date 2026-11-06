@@ -1,0 +1,14 @@
+version: v2
+# Chỉ Go + Connect cho server (không cần plugin remote Dart). Dùng: cd proto && buf generate --template buf.gen.server.yaml
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/Do-Ngoc-Quang/byo-chat/server/gen
+plugins:
+  - local: protoc-gen-go
+    out: ../server/gen
+    opt: paths=source_relative
+  - local: protoc-gen-connect-go
+    out: ../server/gen
+    opt: paths=source_relative

@@ -30,3 +30,13 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - PR #3 đã merge vào `main`; CI xanh đủ 7 job. `buf breaking --against origin/main` chạy thật cục bộ sau merge: qua.
 - Việc hoãn, cần thiết bị thật (không chặn): MLS trên ARM thật, trang 16 KB, aarch64, video Flutter Android/Safari. Chưa in số đo hiệu năng WASM/Android (chỉ kiểm ngưỡng).
 - Giai đoạn kế: 2 (server tối thiểu). Nhánh mới tách từ `main` mới nhất.
+
+## Phiên giai đoạn 2 (server tối thiểu, 06/11/2026)
+- Nhánh `feat/server-phase2`. Chưa commit/push (chờ lệnh). Thiết kế ở ADR 0004.
+- Đã chạy thật trên Postgres 16, DynamoDB Local 2.5.2, NATS JetStream; `go test -race ./...` qua cả ở chế độ bộ nhớ lẫn hạ tầng thật; binary `cmd/gateway` khởi động, migration tạo 14 bảng, `/healthz` 200. Sandbox không có Docker nên `docker-compose.yml` chưa chạy.
+- Kiểm chứng bằng hợp đồng chung `storetest` cho cả bộ nhớ lẫn DynamoDB/Postgres thật (cấp `seq` liền mạch khi tranh chấp, đúng một Commit thắng mỗi epoch, dedup, con trỏ idempotent, GetLog qua nhiều bucket). Phát hiện khi test: cấp `seq` lạc quan cần backoff có jitter (16 lần thử không đủ cho 40 gửi đồng thời).
+- Phát hiện: `coder/websocket` đóng cứng kết nối khi context của `Read` hết hạn, không gửi được mã 4001; dùng timer đóng từ ngoài. `Close` chờ bắt tay đóng tới 5 giây nên đóng kết nối cũ/drain phải chạy bất đồng bộ.
+- Đã sửa spec giao-thuc.md lên 1.1.0: làm rõ phân quyền `SubmitCommit` (path update và gỡ thiết bị của mình không cần admin; External Commit không đổi thành viên/vai trò) và thêm giới hạn Commit/GroupInfo 128 KiB, Welcome 3 MiB (ADR 0004).
+- Giới hạn Commit/GroupInfo/Welcome là số khởi điểm, đo lại kích thước Welcome ở giai đoạn 4.
+- Việc dở / giới hạn: server chưa kiểm credential External Commit (6.5 bước 6: chỉ kiểm tài khoản đã là thành viên và không đổi thành viên/vai trò); tin ephemeral chưa giới hạn 1 lần/3 giây; `leaving` (6.4) chưa có; Valkey chưa dùng; 1 tiến trình gateway (chưa đóng kết nối cũ giữa các node); `TransactWriteItems` DynamoDB Local không phản ánh hết giới hạn thật (100 mục/4 MB) nên ngưỡng 50 Welcome cần kiểm trên DynamoDB thật.
+- Cần làm tiếp: chạy CI `server.yml` trên GitHub (PR), rồi giai đoạn 3 (app Flutter, đăng nhập OTP/passkey, `KeyService`/`DeviceService`).

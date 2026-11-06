@@ -2,11 +2,11 @@
 
 Nov 3, 2026 · @Quang
 
-**Phiên bản:** 1.0.1
+**Phiên bản:** 1.1.0
 
 ## 1. Phạm vi và phiên bản
 
-Tài liệu này đặc tả giao thức giữa client và server, cùng các luồng MLS chi tiết, cho hệ thống trong tài liệu "Thiết kế hệ thống Chat đa nền tảng: E2EE và gọi video" (bản 1.3.0, gọi là *tài liệu chính*). Phiên bản hiện tại là **1.0.0**: các PoC bắt buộc đã đạt (mục 8), đủ để bắt đầu phát triển; các điểm mở còn lại ở mục 9 xử lý trong giai đoạn phát triển, không chặn.
+Tài liệu này đặc tả giao thức giữa client và server, cùng các luồng MLS chi tiết, cho hệ thống trong tài liệu "Thiết kế hệ thống Chat đa nền tảng: E2EE và gọi video" (bản 1.3.0, gọi là *tài liệu chính*). Phiên bản hiện tại là **1.1.0**: các PoC bắt buộc đã đạt (mục 8), đủ để bắt đầu phát triển; các điểm mở còn lại ở mục 9 xử lý trong giai đoạn phát triển, không chặn.
 
 **Trong phạm vi:** giao thức WebSocket, định nghĩa Protobuf cho WebSocket và Connect RPC, mã lỗi, các luồng MLS, máy trạng thái của tin nhắn và kết nối, ánh xạ sang PoC.
 
@@ -44,6 +44,9 @@ Các quy ước này áp dụng cho mọi thông điệp, ở cả WebSocket l�
 | --- | --- |
 | Khung WebSocket | 256 KiB (`max_frame_bytes` do server báo trong `Welcome`) |
 | Ciphertext của một tin | 64 KiB; nội dung lớn hơn đi qua media |
+| Commit | 128 KiB (chỉnh sau khi đo ở giai đoạn 4) |
+| GroupInfo | 128 KiB (chỉnh sau khi đo ở giai đoạn 4) |
+| Tổng Welcome mỗi Commit | 3 MiB (chưa đo kích thước Welcome; chỉnh ở giai đoạn 4) |
 | KeyPackage | 4 KiB mỗi cái, tối đa 200 cái mỗi lần tải lên |
 | Thiết bị trong một nhóm | 1.000 (PoC MLS sẽ xác nhận) |
 | Tốc độ gửi tin | 10 tin/giây mỗi thiết bị, burst 30 |
@@ -458,7 +461,7 @@ message ListBlockedRequest {}
 message ListBlockedResponse { repeated bytes account_ids = 1; }
 ```
 
-**Quy tắc phân quyền ở server.** `SubmitCommit` và `SubmitProposal` chỉ nhận từ thiết bị của tài khoản đang là thành viên; thêm hoặc gỡ thành viên và đổi vai trò (`added`, `removed_*`, `role_changes`) chỉ nhận từ tài khoản có vai trò `ADMIN` hoặc `OWNER` ở bản sao vai trò mà server giữ. Ngoại lệ là Commit có `external = true` do một thiết bị của chính một tài khoản đã là thành viên (mục 6.5) và tin xin rời nhóm (mục 6.4).
+**Quy tắc phân quyền ở server.** `SubmitCommit` và `SubmitProposal` chỉ nhận từ thiết bị của tài khoản đang là thành viên; thêm hoặc gỡ thành viên và đổi vai trò (`added`, `removed_account_ids`, `role_changes`) chỉ nhận từ tài khoản có vai trò `ADMIN` hoặc `OWNER` ở bản sao vai trò mà server giữ; `removed_device_ids` cũng cần vai trò đó, trừ khi mọi thiết bị bị gỡ thuộc chính tài khoản gửi (thu hồi thiết bị, mục 6.6). Commit chỉ có path update (xoay khóa, mục 6.8) nhận từ mọi thành viên. Ngoại lệ là Commit có `external = true` do một thiết bị của chính một tài khoản đã là thành viên (mục 6.5), không được kèm thay đổi thành viên hay vai trò, và tin xin rời nhóm (mục 6.4).
 
 ## 5. Mã lỗi và quy tắc thử lại
 
@@ -738,4 +741,4 @@ Bảng dưới nối các PoC ở mục 16 của tài liệu chính với phần
 | 17 | Thêm hai quyết định: kiểm tra epoch ở server, và External Commit cho thiết bị mới |
 | 7, 12 | Thêm passkey, ProfileService, BlockService, khung IncomingCall, cờ reset\_identity và is\_public; ảnh đại diện không mã hóa là ngoại lệ duy nhất của nguyên tắc server chỉ chuyển ciphertext |
 
-**Phiên bản.** Tài liệu này là 1.0.0 (bản 0.2.0 bổ sung passkey, hồ sơ và tìm người, chặn người dùng, khung cuộc gọi đến và khôi phục tài khoản; bản 1.0.0 chốt sau khi các PoC đạt). Các điều chỉnh trên đã đưa vào tài liệu chính 1.3.0 ngày 06/11/2026 (tài liệu chính 1.1.0 và 1.2.0 đã phát hành với các quyết định bổ sung ở bản 0.2.0 của tài liệu này).
+**Phiên bản.** Tài liệu này là 1.1.0 (bản 1.1.0 làm rõ phân quyền `SubmitCommit` và thêm giới hạn Commit, GroupInfo, Welcome từ giai đoạn 2, xem ADR 0004; bản 0.2.0 bổ sung passkey, hồ sơ và tìm người, chặn người dùng, khung cuộc gọi đến và khôi phục tài khoản; bản 1.0.0 chốt sau khi các PoC đạt). Các điều chỉnh trên đã đưa vào tài liệu chính 1.3.0 ngày 06/11/2026 (tài liệu chính 1.1.0 và 1.2.0 đã phát hành với các quyết định bổ sung ở bản 0.2.0 của tài liệu này).

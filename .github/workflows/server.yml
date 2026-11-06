@@ -1,0 +1,48 @@
+name: server
+on:
+  pull_request:
+    paths: ["server/**", "proto/**", "dev/docker-compose.yml", ".github/workflows/server.yml"]
+  push:
+    branches: [main]
+    paths: ["server/**", "proto/**", "dev/docker-compose.yml", ".github/workflows/server.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: chat, POSTGRES_PASSWORD: chat, POSTGRES_DB: chat_test }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U chat" --health-interval 3s --health-retries 20
+      dynamodb:
+        image: amazon/dynamodb-local:2.5.2
+        ports: ["8000:8000"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-setup-action@v1
+        with: { version: "1.47.2" }
+      - uses: actions/setup-go@v5
+        with: { go-version-file: server/go.mod }
+      - name: Sinh mã Go từ proto (không commit)
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.5
+          go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.18.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          export PATH="$PATH:$(go env GOPATH)/bin"
+          cd proto && buf generate --template buf.gen.server.yaml
+      - name: go vet
+        run: go vet ./...
+        working-directory: server
+      - name: gofmt
+        run: test -z "$(gofmt -l .)"
+        working-directory: server
+      - name: go test (bộ nhớ, -race)
+        run: go test -race -count=1 ./...
+        working-directory: server
+      - name: go test (Postgres + DynamoDB Local + NATS JetStream nhúng)
+        run: go test -race -count=1 ./...
+        working-directory: server
+        env:
+          TEST_POSTGRES_DSN: postgres://chat:chat@localhost:5432/chat_test?sslmode=disable
+          TEST_DYNAMO_ENDPOINT: http://localhost:8000
