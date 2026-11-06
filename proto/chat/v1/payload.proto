@@ -1,0 +1,67 @@
+syntax = "proto3";
+package chat.v1;
+
+// Plaintext bên trong MLSMessage (giao-thuc.md mục 7.3); server không đọc.
+message Payload {
+  uint32 version = 1;
+  bytes client_msg_id = 2; // trùng SendMessage.client_msg_id; dùng để tham chiếu tin
+  uint64 sent_at_ms = 3; // đồng hồ máy người gửi, chỉ để hiển thị
+  bytes reply_to = 4; // client_msg_id của tin được trả lời, nếu có
+  oneof content {
+    TextContent text = 10;
+    MediaContent media = 11;
+    Reaction reaction = 12;
+    Edit edit = 13;
+    Delete delete = 14;
+    ReadUpTo read_up_to = 15;
+    Typing typing = 16;
+    CallEvent call_event = 17;
+  }
+}
+message TextContent {
+  string body = 1;
+}
+message MediaContent {
+  bytes media_id = 1;
+  bytes key = 2;
+  bytes nonce_prefix = 3;
+  bytes ciphertext_sha256 = 4;
+  uint64 size_bytes = 5;
+  string mime = 6;
+  string file_name = 7;
+  string caption = 8;
+  uint32 width = 9;
+  uint32 height = 10;
+  uint32 duration_ms = 11;
+  bytes thumbnail = 12;
+  string blurhash = 13;
+}
+message Reaction {
+  bytes target = 1;
+  string emoji = 2;
+  bool remove = 3;
+}
+message Edit {
+  bytes target = 1;
+  string new_body = 2;
+}
+message Delete {
+  bytes target = 1;
+}
+message ReadUpTo {
+  uint64 seq = 1;
+}
+message Typing {
+  bool active = 1;
+} // gửi với ephemeral = true
+message CallEvent {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    KIND_STARTED = 1;
+    KIND_ENDED = 2;
+    KIND_MISSED = 3;
+  }
+  bytes call_id = 1;
+  Kind kind = 2;
+  uint32 duration_ms = 3;
+}

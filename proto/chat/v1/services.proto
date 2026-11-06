@@ -1,0 +1,409 @@
+syntax = "proto3";
+package chat.v1;
+
+import "chat/v1/common.proto";
+
+// ---------- AuthService ----------
+service AuthService {
+  rpc RequestOtp(RequestOtpRequest) returns (RequestOtpResponse);
+  rpc VerifyOtp(VerifyOtpRequest) returns (VerifyOtpResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (TokenPair);
+  rpc BeginPasskeyRegistration(BeginPasskeyRegistrationRequest) returns (PasskeyChallenge); // cần access token
+  rpc FinishPasskeyRegistration(FinishPasskeyRegistrationRequest) returns (FinishPasskeyRegistrationResponse);
+  rpc BeginPasskeyLogin(BeginPasskeyLoginRequest) returns (PasskeyChallenge); // chưa đăng nhập
+  rpc FinishPasskeyLogin(FinishPasskeyLoginRequest) returns (VerifyOtpResponse); // trả session_ticket như VerifyOtp
+}
+enum OtpChannel {
+  OTP_CHANNEL_UNSPECIFIED = 0;
+  OTP_CHANNEL_SMS = 1;
+  OTP_CHANNEL_EMAIL = 2;
+}
+message RequestOtpRequest {
+  OtpChannel channel = 1;
+  string destination = 2;
+  string captcha_token = 3;
+}
+message RequestOtpResponse {
+  bytes challenge_id = 1;
+  uint32 retry_after_ms = 2;
+}
+message VerifyOtpRequest {
+  bytes challenge_id = 1;
+  string code = 2;
+}
+message VerifyOtpResponse {
+  bytes account_id = 1;
+  bool is_new_account = 2;
+  bytes session_ticket = 3; // dùng một lần, sống 10 phút, đổi lấy thiết bị ở RegisterDevice
+}
+message RefreshTokenRequest {
+  bytes device_id = 1;
+  string refresh_token = 2;
+}
+message TokenPair {
+  string access_token = 1;
+  string refresh_token = 2;
+  uint64 access_expires_ms = 3;
+}
+message PasskeyChallenge {
+  bytes challenge_id = 1;
+  bytes options = 2;
+  uint64 expires_ms = 3;
+} // options: JSON WebAuthn
+message BeginPasskeyRegistrationRequest {}
+message FinishPasskeyRegistrationRequest {
+  bytes challenge_id = 1;
+  bytes attestation = 2;
+  string name = 3;
+}
+message FinishPasskeyRegistrationResponse {}
+message BeginPasskeyLoginRequest {}
+message FinishPasskeyLoginRequest {
+  bytes challenge_id = 1;
+  bytes assertion = 2;
+}
+
+// ---------- DeviceService ----------
+service DeviceService {
+  rpc RegisterDevice(RegisterDeviceRequest) returns (RegisterDeviceResponse);
+  rpc StartLink(StartLinkRequest) returns (StartLinkResponse); // thiết bị mới, chưa đăng nhập
+  rpc ApproveLink(ApproveLinkRequest) returns (ApproveLinkResponse); // thiết bị cũ đã tin cậy
+  rpc CompleteLink(CompleteLinkRequest) returns (CompleteLinkResponse); // thiết bị mới, chờ tối đa 30 giây
+  rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse);
+  rpc RevokeDevice(RevokeDeviceRequest) returns (RevokeDeviceResponse);
+}
+message RegisterDeviceRequest {
+  bytes session_ticket = 1;
+  bytes device_id = 2; // client sinh (UUIDv7)
+  Platform platform = 3;
+  string device_name = 4;
+  bytes device_public_key = 5; // khóa ký Ed25519 của thiết bị
+  bytes credential = 6; // đã được khóa danh tính tài khoản ký
+  bytes account_identity_public_key = 7; // chỉ gửi ở thiết bị đầu tiên của tài khoản
+  repeated bytes key_packages = 8;
+  bytes last_resort_key_package = 9;
+  bool reset_identity = 10; // khôi phục không có bản sao lưu: đặt khóa danh tính tài khoản mới (xem 6.14)
+}
+message RegisterDeviceResponse {
+  TokenPair tokens = 1;
+}
+
+message StartLinkRequest {
+  Platform platform = 1;
+  string device_name = 2;
+  bytes device_public_key = 3;
+  bytes ephemeral_public_key = 4;
+}
+message StartLinkResponse {
+  bytes link_id = 1;
+  string short_code = 2;
+  uint64 expires_ms = 3;
+}
+message ApproveLinkRequest {
+  bytes link_id = 1;
+  bytes credential = 2; // thiết bị cũ ký credential cho thiết bị mới
+  bytes sealed_bundle = 3; // khóa danh tính tài khoản, mã hóa bằng ECDH với ephemeral_public_key
+}
+message ApproveLinkResponse {}
+message CompleteLinkRequest {
+  bytes link_id = 1;
+}
+message CompleteLinkResponse {
+  bytes credential = 1;
+  bytes sealed_bundle = 2;
+  bytes session_ticket = 3;
+}
+
+message DeviceInfo {
+  bytes device_id = 1;
+  Platform platform = 2;
+  string device_name = 3;
+  uint64 created_ms = 4;
+  uint64 last_seen_ms = 5;
+  bool revoked = 6;
+}
+message ListDevicesRequest {}
+message ListDevicesResponse {
+  repeated DeviceInfo devices = 1;
+}
+message RevokeDeviceRequest {
+  bytes device_id = 1;
+  bytes revocation_statement = 2;
+} // ký bằng khóa danh tính tài khoản
+message RevokeDeviceResponse {}
+
+// ---------- KeyService ----------
+service KeyService {
+  rpc UploadKeyPackages(UploadKeyPackagesRequest) returns (KeyPackageCount);
+  rpc CountKeyPackages(CountKeyPackagesRequest) returns (KeyPackageCount);
+  rpc FetchKeyPackages(FetchKeyPackagesRequest) returns (FetchKeyPackagesResponse);
+}
+message UploadKeyPackagesRequest {
+  repeated bytes key_packages = 1;
+}
+message CountKeyPackagesRequest {}
+message KeyPackageCount {
+  uint32 remaining = 1;
+}
+message FetchKeyPackagesRequest {
+  repeated bytes account_ids = 1;
+}
+message DeviceKeyPackage {
+  bytes device_id = 1;
+  bytes key_package = 2;
+  bool last_resort = 3; // true: gói dùng lại, kém an toàn hơn gói một lần
+  bytes credential = 4;
+}
+message AccountKeys {
+  bytes account_id = 1;
+  bytes account_identity_public_key = 2;
+  repeated DeviceKeyPackage devices = 3; // mỗi thiết bị còn hiệu lực một gói
+  repeated bytes revocation_statements = 4;
+}
+message FetchKeyPackagesResponse {
+  repeated AccountKeys accounts = 1;
+}
+
+// ---------- ConversationService ----------
+service ConversationService {
+  rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
+  rpc SubmitCommit(SubmitCommitRequest) returns (SubmitCommitResponse);
+  rpc SubmitProposal(SubmitProposalRequest) returns (SubmitProposalResponse);
+  rpc FetchLog(FetchLogRequest) returns (FetchLogResponse);
+  rpc GetGroupInfo(GetGroupInfoRequest) returns (GetGroupInfoResponse);
+  rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse);
+}
+message WelcomeEnvelope {
+  bytes recipient_device_id = 1;
+  bytes welcome = 2;
+}
+
+message CreateConversationRequest {
+  ConvKind kind = 1;
+  bytes group_id = 2;
+  repeated Member members = 3; // gồm cả người tạo; server cần để định tuyến
+  bytes commit = 4; // Commit đầu tiên (epoch 0 sang 1)
+  repeated WelcomeEnvelope welcomes = 5;
+  bytes group_info = 6;
+}
+message CreateConversationResponse {
+  bytes conv_id = 1;
+  bool existed = 2; // 1-1 đã tồn tại: không ghi gì, client bỏ nhóm vừa tạo
+  uint64 seq = 3;
+  uint64 epoch = 4;
+}
+
+message SubmitCommitRequest {
+  bytes conv_id = 1;
+  uint64 expected_epoch = 2; // epoch mà Commit được dựng trên đó
+  bytes commit = 3;
+  repeated WelcomeEnvelope welcomes = 4;
+  bytes group_info = 5; // GroupInfo của epoch mới
+  repeated Member added = 6;
+  repeated bytes removed_account_ids = 7;
+  repeated bytes removed_device_ids = 8;
+  repeated Member role_changes = 9;
+  bool external = 10; // true: External Commit của một thiết bị vào nhóm
+}
+message SubmitCommitResponse {
+  uint64 seq = 1;
+  uint64 new_epoch = 2;
+}
+message SubmitProposalRequest {
+  bytes conv_id = 1;
+  bytes proposal = 2;
+  uint64 mls_epoch = 3;
+}
+message SubmitProposalResponse {
+  uint64 seq = 1;
+}
+
+message LogEntry {
+  uint64 seq = 1;
+  EntryKind kind = 2;
+  bytes sender_device_id = 3;
+  uint64 mls_epoch = 4;
+  bytes ciphertext = 5;
+  uint64 server_ts_ms = 6;
+}
+message FetchLogRequest {
+  bytes conv_id = 1;
+  uint64 after_seq = 2;
+  uint32 limit = 3;
+} // limit tối đa 200
+message FetchLogResponse {
+  repeated LogEntry entries = 1;
+  bool more = 2;
+  uint64 head_seq = 3;
+  uint64 epoch = 4;
+}
+message GetGroupInfoRequest {
+  bytes conv_id = 1;
+}
+message GetGroupInfoResponse {
+  bytes group_info = 1;
+  uint64 epoch = 2;
+}
+message ConversationSummary {
+  bytes conv_id = 1;
+  ConvKind kind = 2;
+  uint64 head_seq = 3;
+  uint64 epoch = 4;
+  uint64 last_activity_ms = 5;
+  Role role = 6;
+}
+message ListConversationsRequest {
+  bytes page_token = 1;
+  uint32 limit = 2;
+}
+message ListConversationsResponse {
+  repeated ConversationSummary conversations = 1;
+  bytes next_page_token = 2;
+}
+
+// ---------- MediaService ----------
+service MediaService {
+  rpc CreateUpload(CreateUploadRequest) returns (CreateUploadResponse);
+  rpc CompleteUpload(CompleteUploadRequest) returns (CompleteUploadResponse);
+  rpc GetDownloadUrl(GetDownloadUrlRequest) returns (GetDownloadUrlResponse);
+}
+message CreateUploadRequest {
+  uint64 size_bytes = 1;
+  bytes ciphertext_sha256 = 2;
+  bool is_public = 3;
+} // is_public: ảnh đại diện, không mã hóa đầu cuối
+message CreateUploadResponse {
+  bytes media_id = 1;
+  repeated string part_urls = 2;
+  uint32 part_size = 3;
+  uint64 expires_ms = 4;
+}
+message CompleteUploadRequest {
+  bytes media_id = 1;
+  repeated string part_etags = 2;
+}
+message CompleteUploadResponse {}
+message GetDownloadUrlRequest {
+  bytes media_id = 1;
+}
+message GetDownloadUrlResponse {
+  string url = 1;
+  uint64 expires_ms = 2;
+}
+
+// ---------- CallService ----------
+service CallService {
+  rpc StartCall(StartCallRequest) returns (CallTicket);
+  rpc JoinCall(JoinCallRequest) returns (CallTicket);
+  rpc EndCall(EndCallRequest) returns (EndCallResponse);
+}
+message StartCallRequest {
+  bytes conv_id = 1;
+  CallKind kind = 2;
+}
+message JoinCallRequest {
+  bytes call_id = 1;
+}
+message CallTicket {
+  bytes call_id = 1;
+  string livekit_url = 2;
+  string token = 3;
+  uint64 mls_epoch = 4;
+}
+message EndCallRequest {
+  bytes call_id = 1;
+}
+message EndCallResponse {}
+
+// ---------- PushService ----------
+service PushService {
+  rpc RegisterPushToken(RegisterPushTokenRequest) returns (RegisterPushTokenResponse);
+  rpc UnregisterPushToken(UnregisterPushTokenRequest) returns (UnregisterPushTokenResponse);
+}
+enum PushProvider {
+  PUSH_PROVIDER_UNSPECIFIED = 0;
+  PUSH_PROVIDER_FCM = 1;
+  PUSH_PROVIDER_APNS = 2;
+  PUSH_PROVIDER_WEBPUSH = 3;
+}
+message RegisterPushTokenRequest {
+  PushProvider provider = 1;
+  string token = 2;
+  string voip_token = 3;
+}
+message RegisterPushTokenResponse {}
+message UnregisterPushTokenRequest {}
+message UnregisterPushTokenResponse {}
+
+// ---------- BackupService ----------
+service BackupService {
+  rpc CreateBackupUpload(CreateBackupUploadRequest) returns (CreateBackupUploadResponse);
+  rpc GetLatestBackup(GetLatestBackupRequest) returns (GetLatestBackupResponse);
+}
+message CreateBackupUploadRequest {
+  uint64 size_bytes = 1;
+  bytes ciphertext_sha256 = 2;
+}
+message CreateBackupUploadResponse {
+  bytes backup_id = 1;
+  repeated string part_urls = 2;
+  uint32 part_size = 3;
+}
+message GetLatestBackupRequest {
+  bytes session_ticket = 1;
+} // dùng khi chưa có thiết bị (khôi phục tài khoản, 6.14)
+message GetLatestBackupResponse {
+  bytes backup_id = 1;
+  string download_url = 2;
+  uint64 size_bytes = 3;
+  uint64 created_ms = 4;
+}
+
+// ---------- ProfileService ----------
+service ProfileService {
+  rpc GetProfiles(GetProfilesRequest) returns (GetProfilesResponse);
+  rpc UpdateProfile(UpdateProfileRequest) returns (Profile);
+  rpc LookupAccount(LookupAccountRequest) returns (LookupAccountResponse);
+}
+message Profile {
+  bytes account_id = 1;
+  string display_name = 2;
+  bytes avatar_media_id = 3;
+  uint64 updated_ms = 4;
+}
+message GetProfilesRequest {
+  repeated bytes account_ids = 1;
+} // tối đa 100; chỉ trả hồ sơ của người chung hội thoại hoặc đã tra bằng LookupAccount
+message GetProfilesResponse {
+  repeated Profile profiles = 1;
+}
+message UpdateProfileRequest {
+  string display_name = 1;
+  bytes avatar_media_id = 2;
+} // avatar_media_id tạo bằng CreateUpload với is_public = true
+message LookupAccountRequest {
+  OtpChannel channel = 1;
+  string destination = 2;
+} // khớp chính xác số điện thoại hoặc email
+message LookupAccountResponse {
+  Profile profile = 1;
+} // không thấy: lỗi NOT_FOUND
+
+// ---------- BlockService ----------
+service BlockService {
+  rpc BlockAccount(BlockAccountRequest) returns (BlockAccountResponse);
+  rpc UnblockAccount(UnblockAccountRequest) returns (UnblockAccountResponse);
+  rpc ListBlocked(ListBlockedRequest) returns (ListBlockedResponse);
+}
+message BlockAccountRequest {
+  bytes account_id = 1;
+}
+message BlockAccountResponse {}
+message UnblockAccountRequest {
+  bytes account_id = 1;
+}
+message UnblockAccountResponse {}
+message ListBlockedRequest {}
+message ListBlockedResponse {
+  repeated bytes account_ids = 1;
+}

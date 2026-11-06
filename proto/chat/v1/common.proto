@@ -1,0 +1,66 @@
+syntax = "proto3";
+package chat.v1;
+
+enum ConvKind {
+  CONV_KIND_UNSPECIFIED = 0;
+  CONV_KIND_DIRECT = 1;
+  CONV_KIND_GROUP = 2;
+}
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_MEMBER = 1;
+  ROLE_ADMIN = 2;
+  ROLE_OWNER = 3;
+}
+enum Platform {
+  PLATFORM_UNSPECIFIED = 0;
+  PLATFORM_IOS = 1;
+  PLATFORM_ANDROID = 2;
+  PLATFORM_WEB = 3;
+  PLATFORM_MACOS = 4;
+  PLATFORM_WINDOWS = 5;
+  PLATFORM_LINUX = 6;
+}
+
+// Loại mục trong conv_log. Tin điều khiển (đã xem, typing, reaction...) cũng là APPLICATION:
+// server không phân biệt được chúng với tin thường.
+enum EntryKind {
+  ENTRY_KIND_UNSPECIFIED = 0;
+  ENTRY_KIND_APPLICATION = 1;
+  ENTRY_KIND_COMMIT = 2;
+  ENTRY_KIND_WELCOME = 3; // chỉ nằm trong hộp thư của thiết bị nhận
+  ENTRY_KIND_PROPOSAL = 4;
+}
+
+enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0;
+  ERROR_CODE_UNAUTHENTICATED = 1;
+  ERROR_CODE_PERMISSION_DENIED = 2;
+  ERROR_CODE_NOT_FOUND = 3;
+  ERROR_CODE_INVALID_ARGUMENT = 4;
+  ERROR_CODE_RATE_LIMITED = 5;
+  ERROR_CODE_EPOCH_MISMATCH = 6; // kèm current_epoch
+  ERROR_CODE_ALREADY_EXISTS = 7;
+  ERROR_CODE_DEVICE_REVOKED = 8;
+  ERROR_CODE_VERSION_UNSUPPORTED = 9;
+  ERROR_CODE_PAYLOAD_TOO_LARGE = 10;
+  ERROR_CODE_UNAVAILABLE = 11;
+}
+
+message Error {
+  ErrorCode code = 1;
+  string message = 2; // cho log, không hiển thị cho người dùng
+  uint32 retry_after_ms = 3;
+  uint64 current_epoch = 4; // chỉ có khi EPOCH_MISMATCH
+}
+
+message Member {
+  bytes account_id = 1;
+  Role role = 2;
+}
+
+enum CallKind {
+  CALL_KIND_UNSPECIFIED = 0;
+  CALL_KIND_AUDIO = 1;
+  CALL_KIND_VIDEO = 2;
+}

@@ -1,0 +1,26 @@
+name: proto
+on:
+  pull_request:
+    paths: ["proto/**", ".github/workflows/proto.yml"]
+  push:
+    branches: [main]
+    paths: ["proto/**", ".github/workflows/proto.yml"]
+jobs:
+  buf:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: proto } }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # buf breaking cần lịch sử git của main
+      - uses: bufbuild/buf-setup-action@v1
+        with: { version: "1.47.2" }
+      - run: buf lint
+      - run: buf format -d --exit-code
+      # Không có main để so (PR đầu tiên thêm proto): bỏ qua breaking.
+      - name: buf breaking
+        run: |
+          if git cat-file -e origin/main:proto/chat/v1/common.proto 2>/dev/null; then
+            buf breaking --against "../.git#branch=origin/main,subdir=proto"
+          else
+            echo "main chưa có proto: bỏ qua buf breaking"
+          fi
