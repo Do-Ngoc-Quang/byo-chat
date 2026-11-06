@@ -126,4 +126,35 @@ impl Device {
     pub fn sframe_key(&self, g: &MlsGroup, call_id: &[u8]) -> Result<Vec<u8>> {
         Ok(g.export_secret(self.provider.crypto(), "call", call_id, 32)?)
     }
+
+    /// Gỡ các lá theo chỉ số; Commit áp dụng ngay cho chính mình.
+    pub fn remove(&self, g: &mut MlsGroup, leaves: &[LeafNodeIndex]) -> Result<CommitOut> {
+        let (commit, welcome, gi) = g.remove_members(&self.provider, &self.signer, leaves)?;
+        g.merge_pending_commit(&self.provider)?;
+        Ok(CommitOut {
+            commit: commit.tls_serialize_detached()?,
+            welcome: welcome.map(|w| w.tls_serialize_detached()).transpose()?,
+            group_info: gi.ok_or("no group info")?.tls_serialize_detached()?,
+        })
+    }
+
+    /// Commit chỉ có path update (xoay khóa định kỳ, spec 6.8).
+    pub fn update(&self, g: &mut MlsGroup) -> Result<CommitOut> {
+        let b = g.self_update(&self.provider, &self.signer, LeafNodeParameters::default())?;
+        g.merge_pending_commit(&self.provider)?;
+        let (commit, welcome, gi) = b.into_contents();
+        Ok(CommitOut {
+            commit: commit.tls_serialize_detached()?,
+            welcome: welcome.map(|w| w.tls_serialize_detached()).transpose()?,
+            group_info: gi.ok_or("no group info")?.tls_serialize_detached()?,
+        })
+    }
+
+    /// Chỉ số lá của mọi thành viên có `identity` này (có thể nhiều hơn một sau khôi phục).
+    pub fn leaves_of(g: &MlsGroup, identity: &[u8]) -> Vec<LeafNodeIndex> {
+        g.members()
+            .filter(|m| BasicCredential::try_from(m.credential.clone()).map(|c| c.identity() == identity).unwrap_or(false))
+            .map(|m| m.index)
+            .collect()
+    }
 }
