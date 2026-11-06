@@ -25,7 +25,7 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 - [x] SQLite trên OPFS và cầu nối Dart-JavaScript trong Flutter Web
 - [ ] (hoãn) MLS trên máy ARM thật
 - [ ] (hoãn) Video trên Flutter Android và Safari
-- [ ] (hoãn) Chép PoC vào `poc/` (bỏ `target/`, `node_modules/`); giai đoạn 1 cần mã nguồn `poc/mls`, `poc/exporter` thì chép riêng hai thư mục đó khi nâng lên `chatcore/`
+- [x] `poc/` đã xóa (ADR 0003); không chép mã PoC
 
 ## Giai đoạn 1 — Proto, CI, `chatcore`
 - [x] `proto/chat/v1/`: `common.proto`, `ws.proto`, `services.proto`, `payload.proto` từ spec; `buf lint` sạch (ADR 0002)
@@ -38,7 +38,7 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 - [x] Kiểm thử thuộc tính cho mã hóa/giải mã Protobuf
 - [ ] CI `chatcore.yml`: có `cargo test --release` (Linux, Windows) và `cargo check` WASM; còn thiếu crate `wasm/` + `wasm-pack`, chưa chạy trên GitHub
 - [x] Mốc hiệu năng: kiểm không tệ hơn số đo mốc (`tests/scale.rs`, Linux: 90 KB, tạo 44 ms, nhận 14 ms)
-- [ ] Xóa `poc/` (sau khi nâng xong)
+- [x] Xóa `poc/` (ADR 0003)
 
 ## Giai đoạn 2 — Server tối thiểu
 - [ ] `dev/docker-compose.yml`: Postgres, DynamoDB local, NATS JetStream, Valkey

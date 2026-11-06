@@ -8,3 +8,4 @@ Mẫu: Trạng thái · Bối cảnh · Quyết định · Hệ quả.
 |---|---|---|
 | [0001](0001-to-chuc-repo.md) | Tổ chức repo | Chấp nhận |
 | [0002](0002-tach-proto-chat-v1.md) | Cách tách file proto `chat.v1` | Chấp nhận |
+| [0003](0003-xoa-poc.md) | Xóa `poc/` | Chấp nhận |

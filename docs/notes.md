@@ -10,7 +10,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 
 ## Phiên giai đoạn 1 (proto, CI, chatcore)
 - Proto: 4 file (thêm `payload.proto`), `CallKind` sang `common.proto`, `reserved` cho số trống; spec 1.0.1, ADR 0002. `buf lint` sạch, `buf` 1.47.2.
-- `chatcore` viết lại theo spec vì `poc/` chưa có mã (đầu việc hoãn). Kết quả khớp PoC: External Commit khóa ký mới giữ leaf cũ (cần Remove), resync cùng khóa tự gỡ; 1.000 thiết bị: 90 KB, tạo 44 ms, nhận 14 ms trên Linux.
+- `chatcore` viết lại theo spec vì `poc/` chưa có mã; `poc/` đã xóa theo yêu cầu (ADR 0003). Kết quả khớp PoC: External Commit khóa ký mới giữ leaf cũ (cần Remove), resync cùng khóa tự gỡ; 1.000 thiết bị: 90 KB, tạo 44 ms, nhận 14 ms trên Linux.
 - Phát hiện: `max_past_epochs = 0` nên thiết bị phải đọc hết tin của epoch hiện tại trước khi tự dựng Commit (client sẽ cần quy tắc này; test `inv3`). Server phải lưu GroupInfo dạng `MlsMessage` (serialize `MlsMessageOut`), không phải `GroupInfo` thô.
 - OpenMLS ghim 0.8.1 (có 0.9.2); API `into_verifiable_group_info` chỉ có ở test-utils, dùng `MlsMessageIn::extract()`.
-- Chưa làm/chưa kiểm: chạy KAT RFC 9420 (lệnh chạy mã clone từ OpenMLS bị chặn trong phiên, job CI chỉ viết); CI chưa chạy trên GitHub; crate `wasm/` + `wasm-pack`, test trên Android; kiểm WASM chỉ mới `cargo check`; Windows chưa chạy; sinh mã Go/Dart vào `gen/`; xóa `poc/`.
+- Chưa làm/chưa kiểm: chạy KAT RFC 9420 (lệnh chạy mã clone từ OpenMLS bị chặn trong phiên, job CI chỉ viết); CI chưa chạy trên GitHub; crate `wasm/` + `wasm-pack`, test trên Android; kiểm WASM chỉ mới `cargo check`; Windows chưa chạy; sinh mã Go/Dart vào `gen/`.
