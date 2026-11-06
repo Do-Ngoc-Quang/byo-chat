@@ -42,7 +42,7 @@ poc/                 đóng băng, chỉ đọc
 - Tên nhánh: `loai/ten-ngan`, kebab-case; loại là `feat`, `fix`, `docs`, `chore`, `refactor`, `test`. Ví dụ `feat/proto-common`, `docs/ke-hoach`. Phiên cloud của Claude có thể dùng nhánh do hệ thống cấp (`claude/...`).
 - Thông điệp commit: dòng đầu ngắn, mệnh lệnh, tiếng Anh hoặc tiếng Việt thống nhất trong một PR; phần thân nêu lý do.
 - PR phải: CI xanh (khi đã có), cập nhật `docs/ke-hoach.md` nếu hoàn thành đầu việc, thêm ADR nếu đổi kiến trúc hoặc quy ước.
-- Sau khi merge: xóa nhánh; nhánh tiếp theo tách từ `main` mới nhất.
+- `main` là nhánh mặc định. GitHub tự xóa nhánh sau khi merge; nhánh tiếp theo tách từ `main` mới nhất.
 
 ## Ngoại lệ: `docs/ui/`
 Giữ phẳng, không chia thư mục con: `canvas.json` tham chiếu từng màn bằng tên file (`Main.dc.html` là màn danh sách chat mobile, `Mobile-*`, `Desktop-*`). Đổi tên hoặc di chuyển sẽ làm hỏng canvas. Chỉ đổi khi công cụ thiết kế cập nhật cùng lúc.
