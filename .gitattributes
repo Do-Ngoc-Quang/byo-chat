@@ -1,0 +1,2 @@
+# Luôn dùng LF để gofmt/CI khớp giữa Windows và Linux
+* text=auto eol=lf

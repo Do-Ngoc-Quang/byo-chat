@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"connectrpc.com/connect"
 	chatv1 "byo-chat/server/gen/chat/v1"
 	"byo-chat/server/gen/chat/v1/chatv1connect"
 	"byo-chat/server/internal/api"
@@ -20,6 +19,7 @@ import (
 	"byo-chat/server/internal/store"
 	"byo-chat/server/internal/store/memory"
 	"byo-chat/server/internal/store/storetest"
+	"connectrpc.com/connect"
 	"github.com/coder/websocket"
 	"google.golang.org/protobuf/proto"
 )
