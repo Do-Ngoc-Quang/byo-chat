@@ -47,6 +47,9 @@ type Config struct {
 	Window       int           // 256
 	SendRate     rate.Limit    // 10 tin/giây
 	SendBurst    int           // 30
+	// OriginPatterns: host (không kèm scheme) của các origin trình duyệt được phép mở WebSocket khác origin
+	// với server (ví dụ "localhost:8142"). Rỗng = chỉ cùng origin (mặc định an toàn, chống CSWSH).
+	OriginPatterns []string
 }
 
 func DefaultConfig() Config {
@@ -137,7 +140,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "draining", http.StatusServiceUnavailable)
 		return
 	}
-	ws, err := websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{Subprotocol}})
+	ws, err := websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{Subprotocol}, OriginPatterns: s.Cfg.OriginPatterns})
 	if err != nil {
 		return
 	}

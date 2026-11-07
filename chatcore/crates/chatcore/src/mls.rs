@@ -29,6 +29,7 @@ fn config() -> MlsGroupCreateConfig {
         .use_ratchet_tree_extension(true)
         .wire_format_policy(MIXED_CIPHERTEXT_WIRE_FORMAT_POLICY)
         .max_past_epochs(0) // client không giữ khóa epoch cũ
+        .padding_size(256) // đệm plaintext lên bội số của 256 byte (giao-thuc.md 7.3)
         .build()
 }
 
@@ -36,6 +37,7 @@ fn join_config() -> MlsGroupJoinConfig {
     MlsGroupJoinConfig::builder()
         .wire_format_policy(MIXED_CIPHERTEXT_WIRE_FORMAT_POLICY)
         .max_past_epochs(0)
+        .padding_size(256)
         .use_ratchet_tree_extension(true)
         .build()
 }
@@ -51,6 +53,32 @@ impl Device {
             signature_key: signer.public().into(),
         };
         Ok(Self { provider, signer, credential, identity: identity.to_vec() })
+    }
+
+    /// Dựng thiết bị từ khóa ký có sẵn và byte identity (credential 136 byte theo spec 6.1).
+    pub fn from_parts(signer: SignatureKeyPair, identity: Vec<u8>) -> Result<Self> {
+        let provider = OpenMlsRustCrypto::default();
+        signer.store(provider.storage())?;
+        let credential = CredentialWithKey {
+            credential: BasicCredential::new(identity.clone()).into(),
+            signature_key: signer.public().into(),
+        };
+        Ok(Self { provider, signer, credential, identity })
+    }
+
+    /// KeyPackage một lần (hạn 30 ngày) hoặc last resort (hạn 90 ngày), spec 6.1 bước 4.
+    pub fn key_package_for_server(&self, last_resort: bool) -> Result<KeyPackage> {
+        const DAY: u64 = 24 * 3600;
+        let b = KeyPackage::builder();
+        let b = if last_resort {
+            // Gói last resort mang LastResortExtension: lá phải khai báo hỗ trợ extension này, nếu không
+            // `add_members` báo UnsupportedExtension.
+            let caps = Capabilities::builder().extensions(vec![ExtensionType::LastResort]).build();
+            b.key_package_lifetime(Lifetime::new(90 * DAY)).leaf_node_capabilities(caps).mark_as_last_resort()
+        } else {
+            b.key_package_lifetime(Lifetime::new(30 * DAY))
+        };
+        Ok(b.build(CIPHERSUITE, &self.provider, &self.signer, self.credential.clone())?.key_package().clone())
     }
 
     pub fn key_package(&self) -> Result<KeyPackage> {

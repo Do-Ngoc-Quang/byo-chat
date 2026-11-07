@@ -1,0 +1,6 @@
+version: v2
+# Chỉ Dart cho app/ (plugin remote của BSR, cần mạng). Dùng: cd proto && buf generate --template buf.gen.app.yaml
+# Mã sinh vào app/lib/gen/ (gitignore) để import được bằng package:byo_chat/gen/...
+plugins:
+  - remote: buf.build/protocolbuffers/dart:v22.0.1
+    out: ../app/lib/gen

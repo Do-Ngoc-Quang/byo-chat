@@ -79,3 +79,10 @@ func TestMigrateIdempotent(t *testing.T) {
 		}
 	}
 }
+
+func TestAccountContract(t *testing.T) {
+	storetest.RunAccount(t, func(tb testing.TB) (store.AccountStore, store.MetaStore) {
+		s, _ := newStore(tb)
+		return s, s
+	})
+}

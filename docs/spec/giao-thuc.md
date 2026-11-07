@@ -2,7 +2,7 @@
 
 Nov 3, 2026 · @Quang
 
-**Phiên bản:** 1.1.0
+**Phiên bản:** 1.1.2
 
 ## 1. Phạm vi và phiên bản
 
@@ -503,6 +503,10 @@ Tiền điều kiện: đã `VerifyOtp` và có `session_ticket`.
 5. Gọi `RegisterDevice`. Server kiểm tra ticket còn hạn, chữ ký credential đúng với khóa danh tính tài khoản (ở thiết bị đầu tiên, khóa trong request), mỗi KeyPackage hợp lệ về định dạng, chữ ký và credential khớp, kích thước và số lượng nằm trong giới hạn.
 6. Server trả cặp token; thiết bị kết nối WebSocket.
 
+**Định dạng credential (làm rõ ở 1.1.1).** `credential` trong `RegisterDevice` và `DeviceKeyPackage` chính là byte `identity` của `BasicCredential` (nên MLS và server dùng cùng một chuỗi byte), dài đúng 136 byte, bố cục cố định: `account_id` (16) ‖ `device_id` (16) ‖ `device_public_key` (32, Ed25519) ‖ `created_ms` (8, big-endian) ‖ `signature` (64). `signature` là chữ ký Ed25519 của khóa danh tính tài khoản lên chuỗi `"chat.v1.credential"` ‖ 72 byte đầu (từ `account_id` tới `created_ms`). Bố cục cố định để không phụ thuộc cách mã hóa chuẩn tắc của Protobuf.
+
+**Tham số xác thực (làm rõ ở 1.1.1).** OTP 6 chữ số, hạn 5 phút, tối đa 5 lần nhập sai mỗi `challenge_id`, hai lần `RequestOtp` tới cùng một đích cách nhau ít nhất 30 giây (`RATE_LIMITED` kèm `retry_after_ms`). Đích được chuẩn hóa trước khi băm (email: bỏ khoảng trắng, chữ thường; số điện thoại: dạng E.164). `session_ticket` ngẫu nhiên 32 byte, dùng một lần, hạn 10 phút. Access token sống 15 phút; refresh token ngẫu nhiên 32 byte, sống 30 ngày, xoay vòng mỗi lần `RefreshToken` (token cũ hết hiệu lực). Server chỉ lưu băm của OTP, ticket và refresh token. `RegisterDevice` kiểm: ticket hợp lệ, `device_id` chưa dùng, credential đúng bố cục và chữ ký, `account_id` trong credential khớp ticket, `device_id` và `device_public_key` khớp request, số KeyPackage trong giới hạn mục 2. Server chưa phân tích nội dung MLS của KeyPackage (chữ ký lá, khớp khóa thiết bị); client kiểm các điều này khi nhận (mục 6.2 bước 2), việc server kiểm làm cùng với External Commit (ADR 0007).
+
 **Bổ sung KeyPackage.** Thiết bị gọi `CountKeyPackages` khi kết nối và mỗi 24 giờ; còn dưới 20 gói thì tải lên thêm 100.
 
 ### 6.2 Tạo hội thoại 1-1 hoặc nhóm
@@ -612,7 +616,7 @@ Passkey là cách thay cho bước OTP, không thay cho việc chứng minh thi�
 
 Hồ sơ (tên hiển thị, ảnh đại diện) do server lưu dạng thường trong PostgreSQL, nên server thấy được. Ảnh đại diện tải lên bằng `CreateUpload` với `is_public = true`: không mã hóa đầu cuối, mọi người dùng đã đăng nhập đều tải được qua `GetDownloadUrl`. `GetProfiles` chỉ trả hồ sơ của người chung hội thoại với người gọi hoặc người vừa được tra bằng `LookupAccount`.
 
-Tìm người để nhắn chỉ bằng `LookupAccount` với số điện thoại hoặc email nhập chính xác. Bản 1 không đồng bộ danh bạ và không tìm theo tên. Server giới hạn số lần tra mỗi tài khoản để chống dò số (trả `RATE_LIMITED`), và trả `NOT_FOUND` khi không có tài khoản.
+Tìm người để nhắn chỉ bằng `LookupAccount` với số điện thoại hoặc email nhập chính xác. Bản 1 không đồng bộ danh bạ và không tìm theo tên. Server giới hạn số lần tra mỗi tài khoản để chống dò số (trả `RATE_LIMITED` kèm `retry_after_ms`; khởi điểm 30 lần mỗi giờ, làm rõ ở 1.1.2), và trả `NOT_FOUND` khi không có tài khoản. Đích được chuẩn hóa như `RequestOtp` (mục 6.1) trước khi so khớp. Bản này `LookupAccount` chỉ trả `account_id` (chưa có hồ sơ).
 
 ### 6.13 Chặn người dùng
 

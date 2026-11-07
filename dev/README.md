@@ -6,8 +6,10 @@ Môi trường phát triển cục bộ: `docker-compose.yml` (Postgres, DynamoD
 ```bash
 docker compose -f dev/docker-compose.yml up -d
 export CHAT_TOKEN_KEY=$(head -c 32 /dev/urandom | base64)   # khóa HMAC dev, >= 32 ký tự
+export CHAT_DEV_OTP=1   # chưa có nhà cung cấp SMS/email: mã OTP được ghi vào log (CHỈ khi phát triển); thiếu biến này server không chạy
 cd server && go run ./cmd/gateway     # :8080 — WebSocket /v1/connect, Connect RPC, /healthz
 ```
+Dev/e2e thêm: `CHAT_DEV_OTP_CODE=123456` (mã OTP cố định, chỉ có tác dụng khi `CHAT_DEV_OTP=1`), `CHAT_CORS_ORIGINS=http://localhost:8140,...` (origin được gọi Connect từ trình duyệt; rỗng = tắt CORS).
 Biến môi trường (có mặc định cho compose): `CHAT_POSTGRES_DSN`, `CHAT_DYNAMO_ENDPOINT`, `CHAT_DYNAMO_PREFIX`, `CHAT_NATS_URL`, `CHAT_LISTEN`, `CHAT_ENSURE_TABLES` (=1 tạo bảng DynamoDB nếu thiếu).
 
 ## Chạy test trên hạ tầng thật
