@@ -12,7 +12,7 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 |---|---|---|---|
 | 0 | PoC | Bốn PoC đạt tiêu chí (trừ mục chưa kiểm) | Xong; 3 mục còn lại tạm hoãn (pending) |
 | 1 | Proto, CI, `chatcore` | 5 bất biến đúng trên Windows, WASM, Android (emulator là đủ); `buf breaking` chạy trong CI; test hiệu năng không tệ hơn mốc | Xong (PR #3 đã merge; mục cần thiết bị thật hoãn, xem bên dưới) |
-| 2 | Server tối thiểu | Gateway và Message Service chạy cục bộ; `SendMessage` từ chối `EPOCH_MISMATCH`; con trỏ hộp thư idempotent; qua kiểm thử chèn lỗi | Chưa bắt đầu |
+| 2 | Server tối thiểu | Gateway và Message Service chạy cục bộ; `SendMessage` từ chối `EPOCH_MISMATCH`; con trỏ hộp thư idempotent; qua kiểm thử chèn lỗi | Xong (PR #5; CI `server.yml` xanh; còn chờ merge) |
 | 3 | Lát cắt dọc | Đăng nhập và chat 1-1 E2EE giữa Android và Web, đầu cuối | Chưa bắt đầu |
 | 4 | Nhóm, đa thiết bị, backup | Nhóm, thêm thiết bị bằng External Commit, khôi phục có và không có backup; 5 bất biến đúng | Chưa bắt đầu |
 | 5 | Media | Gửi nhận ảnh/tệp mã hóa qua R2 | Chưa bắt đầu |
@@ -44,13 +44,14 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 - [x] Xóa `poc/` (ADR 0003)
 
 ## Giai đoạn 2 — Server tối thiểu
-- [ ] `dev/docker-compose.yml`: Postgres, DynamoDB local, NATS JetStream, Valkey
-- [ ] Gateway: WebSocket, `Hello`, `proto_version`
-- [ ] Message Service: `SendMessage`, kiểm tra epoch, `SubmitCommit`
-- [ ] Hộp thư: con trỏ ghi qua hàng đợi bền, idempotent theo `(conv_id, seq)`
-- [ ] Schema Postgres/DynamoDB (gồm `device_links`, `revocations`)
-- [ ] Kiểm thử chèn lỗi: mất kết nối khi `SubmitCommit`; sập giữa ghi Commit và con trỏ
-- [ ] CI `server.yml`: `go vet`, `go test`
+- [x] `dev/docker-compose.yml`: Postgres, DynamoDB local, NATS JetStream, Valkey. Sandbox không có Docker daemon nên file compose chưa chạy; đã chạy cùng thành phần theo cách khác (Postgres 16 cài sẵn, DynamoDB Local 2.5.2 qua Maven, NATS nhúng/`nats-server`). Valkey chưa dùng (chưa có presence/rate limit phân tán)
+- [x] Gateway: WebSocket, `Hello`, `proto_version`, `Welcome`, tồn đọng, `SyncDone`, `Ack` + cửa sổ, heartbeat, mã đóng 4001/4002/4003/4004/4009/4010, giới hạn tốc độ
+- [x] Message Service: `SendMessage` (EPOCH_MISMATCH, khử trùng), `SubmitCommit` (điều kiện epoch, Idempotency-Key, phân quyền, External Commit), `CreateConversation`, `SubmitProposal`, `FetchLog`, `GetGroupInfo`, `ListConversations`; Connect RPC
+- [x] Hộp thư: con trỏ ghi qua JetStream, idempotent theo `(conv_id, seq)`, kèm `Repair` quét việc dở (ADR 0004)
+- [x] Schema Postgres (`internal/store/postgres/migrations/0001_init.sql`, gồm `device_links`, `revocations`) và bảng DynamoDB (`EnsureTables`)
+- [x] Kiểm thử chèn lỗi: gửi lại `SubmitCommit` sau khi mất phản hồi; sập giữa ghi Commit và con trỏ (mất job, khởi động lại tiến trình, `Repair` hoàn tất). Giới hạn: mô phỏng ở tầng dịch vụ/hàng đợi, chưa kill tiến trình thật hay cắt TCP giữa chừng
+- [x] CI `server.yml` xanh trên GitHub (PR #5, commit fde164c): `go vet`, `gofmt`, `go test -race` ở chế độ bộ nhớ, rồi trên Postgres + DynamoDB Local + NATS JetStream nhúng
+- [ ] (hoãn sang giai đoạn sau, không chặn cổng) Server kiểm tra credential của External Commit (cần phân tích `PublicMessage` MLS ở Go); `KeyService`/`DeviceService`/`AuthService`; presence, `DeliveredReceipt`, HTTP streaming `/v1/stream`, rời nhóm (`leaving`), cache Valkey cho thành viên; GSI thưa thay Scan cho `PendingFanouts`; nhiều node gateway (đóng kết nối cũ ở node khác bằng 4010)
 
 ## Giai đoạn 3 — Lát cắt dọc
 - [ ] `app/`: khung Flutter, tích hợp `chatcore` (FFI Android, WASM Web)
