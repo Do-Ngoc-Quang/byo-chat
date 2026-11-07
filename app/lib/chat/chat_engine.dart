@@ -251,9 +251,13 @@ class ChatEngine extends ChangeNotifier {
   /// Tạo nhóm với [contacts] (số điện thoại/email), mình là OWNER. Một Commit thêm tối đa 50 thiết bị.
   Future<ConvState> createGroup(String title, List<(OtpChannel, String)> contacts) async {
     final peers = <String, Uint8List>{};
+    final labels = <String, String>{};
     for (final (ch, dest) in contacts) {
       final p = await _lookup(ch, dest);
-      if (hex(p) != hex(session.accountId)) peers[hex(p)] = p;
+      if (hex(p) != hex(session.accountId)) {
+        peers[hex(p)] = p;
+        labels[hex(p)] = dest.trim();
+      }
     }
     if (peers.isEmpty) throw ChatException('Nhóm cần ít nhất một thành viên khác');
     final keys = await _fetchKeys([session.accountId, ...peers.values]);
@@ -294,10 +298,12 @@ class ChatEngine extends ChangeNotifier {
         lastActivityMs: _nowMs,
         isGroup: true,
         admin: true,
+        owner: true,
       );
       doc.convs[cs.hexId] = cs;
       for (final p in peers.keys) {
         doc.peerIdentities[p] = keys.identities[p]!;
+        doc.names[p] = labels[p]!;
       }
       await _persist();
       notifyListeners();
@@ -332,6 +338,7 @@ class ChatEngine extends ChangeNotifier {
       ),
     );
     doc.peerIdentities[hex(peer)] = keys.identities[hex(peer)]!;
+    doc.names[hex(peer)] = destination.trim();
     await _mu.run(_persist);
   }
 
@@ -452,6 +459,7 @@ class ChatEngine extends ChangeNotifier {
             lastActivityMs: _nowMs,
             isGroup: group,
             admin: sum.role == Role.ROLE_ADMIN || sum.role == Role.ROLE_OWNER,
+            owner: sum.role == Role.ROLE_OWNER,
           );
           await _persist();
           notifyListeners();
@@ -537,12 +545,13 @@ class ChatEngine extends ChangeNotifier {
       final acct = cred.sublist(0, 16);
       if (hex(acct) != hex(session.accountId)) peer = Uint8List.fromList(acct);
     }
-    var group = false, admin = false;
+    var group = false, admin = false, owner = false;
     try {
       final l = await api.listConversations();
       final sum = l.conversations.where((c) => hex(c.convId) == hex(convId)).firstOrNull;
       group = sum?.kind == ConvKind.CONV_KIND_GROUP;
       admin = sum?.role == Role.ROLE_ADMIN || sum?.role == Role.ROLE_OWNER;
+      owner = sum?.role == Role.ROLE_OWNER;
     } catch (_) {
       // Offline: đoán theo số tài khoản, không sửa lại sau (chấp nhận, hiếm).
       group = (await _core.groupMembers(convId)).map((c) => hex(c.sublist(0, 16))).toSet().length > 2;
@@ -553,6 +562,7 @@ class ChatEngine extends ChangeNotifier {
       peerAccount: group ? null : peer,
       isGroup: group,
       admin: admin,
+      owner: owner,
       lastSeq: d.seq.toInt(),
       lastActivityMs: d.serverTsMs.toInt(),
     );
@@ -584,16 +594,86 @@ class ChatEngine extends ChangeNotifier {
       switch (e.kind) {
         case EntryKind.ENTRY_KIND_COMMIT:
           await _core.applyCommit(cs.convId, Uint8List.fromList(e.ct));
-          if (!await _core.isActive(cs.convId)) cs.removed = true; // Commit gỡ mình là tin cuối (6.4)
+          if (!await _core.isActive(cs.convId)) {
+            cs.removed = true;
+            cs.leaving = false;
+          } // Commit gỡ mình là tin cuối (6.4)
         case EntryKind.ENTRY_KIND_APPLICATION:
           await _receiveApplication(cs, e);
+        case EntryKind.ENTRY_KIND_PROPOSAL:
+          await _receiveProposal(cs, e);
         default:
-          break; // PROPOSAL: chưa xử lý
+          break;
       }
     }
     cs.lastSeq = e.seq;
     cs.lastActivityMs = max(cs.lastActivityMs, e.tsMs);
     _advanceSkips(cs);
+  }
+
+  /// Proposal của người khác (xin rời nhóm, 6.4): xếp hàng chờ; admin online tự commit gỡ người đó sau một khoảng
+  /// ngẫu nhiên (tránh nhiều admin cùng commit; kẻ thua nhận EPOCH_MISMATCH và bỏ qua).
+  Future<void> _receiveProposal(ConvState cs, _Entry e) async {
+    if (!cs.isGroup || cs.removed) return;
+    try {
+      await _core.applyProposal(cs.convId, Uint8List.fromList(e.ct));
+    } on ChatCoreException {
+      return;
+    }
+    final leaver = await _senderAccount(cs, e.sender);
+    if (cs.admin && leaver != null && leaver != hex(session.accountId)) {
+      unawaited(
+        Future<void>.delayed(Duration(milliseconds: autoCommitDelayMs + _rng.nextInt(1500)))
+            .then((_) => _commitLeave(cs.hexId, unhex(leaver))),
+      );
+    }
+  }
+
+  /// Độ trễ tối thiểu (ms) trước khi admin tự commit gỡ người xin rời; test đặt nhỏ.
+  int autoCommitDelayMs = 300;
+
+  Future<void> _commitLeave(String convHex, Uint8List leaver) async {
+    final cs = doc.convs[convHex];
+    if (!_started || cs == null || cs.removed) return;
+    try {
+      await _groupCommit(
+        cs,
+        () => _core.stageCommitPending(cs.convId),
+        (out, epoch) => SubmitCommitRequest(
+          convId: cs.convId,
+          expectedEpoch: Int64(epoch),
+          commit: out.commit,
+          groupInfo: out.groupInfo,
+          removedAccountIds: [leaver],
+        ),
+      );
+    } on ChatCoreException {
+      // không còn proposal chờ (admin khác đã commit) hoặc proposal đã cũ: bỏ qua
+    } on ConnectException {
+      // bị từ chối (mất quyền, mạng): người xin rời có thể gửi lại
+    }
+  }
+
+  /// Rời nhóm (6.4): gửi Remove proposal cho chính mình; admin online sẽ commit gỡ. Chủ nhóm không rời được (cần
+  /// chuyển quyền trước, chưa có). Chưa có đường rời khi không có admin online (cần cờ `chat_policy`, việc dở).
+  Future<void> leaveGroup(String convHex) async {
+    final cs = doc.convs[convHex] ?? (throw ChatException('Hội thoại không tồn tại'));
+    if (!cs.isGroup) throw ChatException('Không phải nhóm');
+    if (cs.removed) throw ChatException('Bạn đã không còn trong nhóm');
+    if (cs.owner) throw ChatException('Chủ nhóm cần chuyển quyền trước khi rời');
+    await _mu.run(() async {
+      final epoch = await _core.epoch(cs.convId);
+      final proposal = await _core.leaveProposal(cs.convId);
+      final r = await api.submitProposal(
+        SubmitProposalRequest(convId: cs.convId, proposal: proposal, mlsEpoch: Int64(epoch)),
+        idempotencyKey: hex(newUuidV7()),
+      );
+      cs.skip.add(r.seq.toInt());
+      _advanceSkips(cs);
+      cs.leaving = true;
+      await _persist();
+      notifyListeners();
+    });
   }
 
   /// Bỏ qua các seq do chính thiết bị này ghi, nối liền với seq đã áp dụng.
@@ -603,6 +683,19 @@ class ChatEngine extends ChangeNotifier {
     }
   }
 
+  /// Tài khoản (hex) của thiết bị gửi, tra từ credential của các lá trong nhóm (16 byte đầu = account, 16..32 = device).
+  Future<String?> _senderAccount(ConvState cs, List<int> senderDevice) async {
+    final d = hex(senderDevice);
+    for (final c in await _core.groupMembers(cs.convId)) {
+      if (hex(c.sublist(16, 32)) == d) return hex(c.sublist(0, 16));
+    }
+    return null;
+  }
+
+  /// Tên hiển thị của một tài khoản: số điện thoại/email đã nhập khi thêm họ, hoặc mã rút gọn.
+  String displayName(String accountHex) =>
+      accountHex == hex(session.accountId) ? 'Bạn' : (doc.names[accountHex] ?? 'Tài khoản ${accountHex.substring(0, 8)}');
+
   Future<void> _receiveApplication(ConvState cs, _Entry e) async {
     final list = doc.msgs.putIfAbsent(cs.hexId, () => []);
     try {
@@ -611,7 +704,17 @@ class ChatEngine extends ChangeNotifier {
       if (p.whichContent() != Payload_Content.text) return; // phản ứng, sửa, xóa... làm sau
       final id = hex(p.clientMsgId);
       if (list.any((m) => m.id == id)) return; // khử trùng theo client_msg_id
-      list.add(ChatMessage(id: id, mine: false, text: p.text.body, tsMs: e.tsMs, seq: e.seq, state: MsgState.received));
+      list.add(
+        ChatMessage(
+          id: id,
+          mine: false,
+          text: p.text.body,
+          tsMs: e.tsMs,
+          seq: e.seq,
+          state: MsgState.received,
+          sender: cs.isGroup ? await _senderAccount(cs, e.sender) : null,
+        ),
+      );
     } on ChatCoreException {
       // Spec 7.2: chỗ giữ chỗ "không giải mã được"; vào lại nhóm (6.7) làm ở giai đoạn sau.
       list.add(ChatMessage(id: 'x${cs.hexId}-${e.seq}', mine: false, text: '', tsMs: e.tsMs, seq: e.seq, state: MsgState.undecryptable));

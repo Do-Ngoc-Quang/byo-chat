@@ -50,6 +50,10 @@ void main() {
       timeout: const Timeout(Duration(minutes: 3)),
       skip: api == null || skip != false ? 'đặt CHAT_API và CHATCORE_LIB để chạy' : false);
 
+  test('rời nhóm với server thật (FFI)', () => runLeaveE2E(Uri.parse(api!)),
+      timeout: const Timeout(Duration(minutes: 3)),
+      skip: api == null || skip != false ? 'đặt CHAT_API và CHATCORE_LIB để chạy' : false);
+
   test('liên kết thiết bị + External Commit vào nhóm với server thật (FFI)', () => runLinkE2E(Uri.parse(api!)),
       timeout: const Timeout(Duration(minutes: 3)),
       skip: api == null || skip != false ? 'đặt CHAT_API và CHATCORE_LIB để chạy' : false);

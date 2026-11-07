@@ -45,6 +45,9 @@ pub struct Core {
     app_state: Vec<u8>,
     /// Thiết bị mới đang chờ liên kết (giao-thuc.md 6.5): chưa có tài khoản/credential.
     pending: Option<Pending>,
+    /// Proposal nhận được nhưng chưa commit (theo conv). Không xếp vào nhóm ngay vì OpenMLS cấm gửi tin khi còn
+    /// proposal chờ; `stage_commit_pending` mới xếp rồi commit. Không lưu bền: mất khi tắt app (người xin rời gửi lại).
+    proposals: HashMap<Vec<u8>, Vec<Vec<u8>>>,
 }
 
 struct Pending {
@@ -57,7 +60,7 @@ const NO_GROUP: &str = "không có nhóm cho conv này";
 
 impl Core {
     fn from_device(device: Device, identity: Option<SignatureKeyPair>) -> Self {
-        Self { device, groups: HashMap::new(), identity, app_state: Vec::new(), pending: None }
+        Self { device, groups: HashMap::new(), identity, app_state: Vec::new(), pending: None, proposals: HashMap::new() }
     }
 
     pub fn new(identity: &[u8]) -> Result<Self> {
@@ -187,6 +190,39 @@ impl Core {
                 let ms = u64::from_le_bytes(a[1].as_slice().try_into().map_err(|_| "revoked_ms phải 8 byte")?);
                 pack(&[&credential::revocation_sign(id, &dev, ms)?])
             }
+            "leave_proposal" => {
+                need(1)?;
+                let g = self.groups.get_mut(&a[0]).ok_or(NO_GROUP)?;
+                pack(&[&d.leave_proposal(g)?])
+            }
+            "apply_proposal" => {
+                need(2)?;
+                if !self.groups.contains_key(&a[0]) {
+                    return Err(NO_GROUP.into());
+                }
+                MlsMessageIn::tls_deserialize_exact(a[1].as_slice())?; // hợp lệ về cú pháp; kiểm chữ ký khi xếp vào nhóm
+                self.proposals.entry(a[0].clone()).or_default().push(a[1].clone());
+                pack(&[])
+            }
+            "stage_commit_pending" => {
+                need(1)?;
+                let g = self.groups.get_mut(&a[0]).ok_or(NO_GROUP)?;
+                let queued = self.proposals.remove(&a[0]).unwrap_or_default();
+                let staged = (|| {
+                    for p in &queued {
+                        d.apply_proposal(g, p)?;
+                    }
+                    d.stage_commit_pending(g)
+                })();
+                let out = match staged {
+                    Ok(o) => o,
+                    Err(e) => {
+                        g.clear_pending_proposals(d.provider.storage())?; // không để proposal chặn gửi tin
+                        return Err(e);
+                    }
+                };
+                pack(&[&out.commit, &out.welcome.unwrap_or_default(), &out.group_info])
+            }
             "stage_add" => {
                 if a.len() < 2 {
                     return Err("stage_add: cần conv và ít nhất một KeyPackage".into());
@@ -203,7 +239,9 @@ impl Core {
             }
             "clear_commit" => {
                 need(1)?;
-                self.groups.get_mut(&a[0]).ok_or(NO_GROUP)?.clear_pending_commit(d.provider.storage())?;
+                let g = self.groups.get_mut(&a[0]).ok_or(NO_GROUP)?;
+                g.clear_pending_commit(d.provider.storage())?;
+                g.clear_pending_proposals(d.provider.storage())?; // Commit bị từ chối: bỏ cả proposal đã xếp để không chặn gửi tin
                 pack(&[])
             }
             "is_active" => {
@@ -244,7 +282,19 @@ impl Core {
             }
             "apply_commit" => {
                 need(2)?;
-                d.apply_commit(self.groups.get_mut(&a[0]).ok_or(NO_GROUP)?, &a[1])?;
+                let g = self.groups.get_mut(&a[0]).ok_or(NO_GROUP)?;
+                // Commit tham chiếu proposal theo hash: xếp những proposal đã nhận vào nhóm ngay trước khi xử lý.
+                let queued = self.proposals.remove(&a[0]).unwrap_or_default();
+                let r = (|| {
+                    for p in &queued {
+                        d.apply_proposal(g, p)?;
+                    }
+                    d.apply_commit(g, &a[1])
+                })();
+                if r.is_err() {
+                    g.clear_pending_proposals(d.provider.storage())?;
+                }
+                r?;
                 pack(&[])
             }
             "external_join" => {

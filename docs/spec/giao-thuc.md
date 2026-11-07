@@ -2,7 +2,7 @@
 
 Nov 3, 2026 · @Quang
 
-**Phiên bản:** 1.2.1
+**Phiên bản:** 1.2.2
 
 ## 1. Phạm vi và phiên bản
 
@@ -550,6 +550,8 @@ Hai quy tắc đi kèm. Thứ nhất, `SendMessage` mang epoch cũ cũng bị t�
 2. Client của một admin đang online tự động dựng Commit gỡ lá đó. Nếu 60 giây (cộng jitter) không có admin nào làm, thành viên bất kỳ được phép làm, nhờ cờ `chat_policy` cho phép commit việc tự rời.
 
 Chủ nhóm (`OWNER`) phải chuyển quyền trước khi rời; client không cho phép bỏ qua bước này.
+
+Làm rõ ở 1.2.2 (bản hiện thực): client nhận Proposal chỉ GIỮ lại (không xếp vào nhóm ngay vì OpenMLS cấm gửi tin ứng dụng khi còn proposal chờ); admin online xếp proposal rồi commit gỡ sau một khoảng ngẫu nhiên, mọi client xếp proposal đã giữ ngay trước khi xử lý Commit tham chiếu nó. Người xin rời vẫn đọc được cho tới khi Commit tới và không gửi được tin trong lúc chờ. Chưa có đường dự phòng khi không admin nào online (cờ `chat_policy` cho thành viên thường commit, đòi server kiểm proposal đang chờ) và proposal chỉ nằm trong bộ nhớ (mất khi tắt app, người xin rời gửi lại).
 
 ### 6.5 Thêm thiết bị mới vào tài khoản đã có
 

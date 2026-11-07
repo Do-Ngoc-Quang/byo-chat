@@ -177,6 +177,13 @@ Future<void> runGroupE2E(Uri serverUrl) async {
   await bob.engine.sendText(gb.hexId, 'Carol có đọc được không');
   await _waitFor('Carol và Alice nhận tin của Bob', () => carol.msgs(gc).any((m) => m.text == 'Carol có đọc được không') && alice.msgs(g).any((m) => m.text == 'Carol có đọc được không'));
 
+  // Tên người gửi trong nhóm: Carol thấy tài khoản của Bob (chỉ biết mã rút gọn), Alice thấy số điện thoại đã nhập.
+  final fromBob = carol.msgs(gc).firstWhere((m) => m.text == 'Carol có đọc được không');
+  _check(fromBob.sender == hex(bob.session.accountId), 'người gửi tin nhóm phải là tài khoản của Bob');
+  _check(carol.engine.displayName(fromBob.sender!).startsWith('Tài khoản '), 'Carol chưa biết tên Bob');
+  _check(alice.engine.displayName(hex(bob.session.accountId)) == bob.phone, 'Alice thấy số điện thoại đã nhập');
+  _check(alice.msgs(g).where((m) => m.mine).every((m) => m.sender == null), 'tin của mình không có người gửi');
+
   // 3. Alice gỡ Carol; Carol nhận Commit cuối rồi bị đánh dấu đã gỡ và không gửi được nữa.
   await alice.engine.removeMember(g.hexId, carol.session.accountId);
   await _waitFor('Carol biết mình bị gỡ', () => gc.removed);
@@ -253,6 +260,62 @@ Future<void> runLinkE2E(Uri serverUrl) async {
   _check(await a3.engine.joinAllConversations() == 0, 'chạy lại không vào thêm');
 
   for (final u in [alice, bob, a3]) {
+    await u.engine.stop();
+    await u.session.core.dispose();
+  }
+}
+
+/// Rời nhóm (giao-thuc.md 6.4) với server thật: Alice (OWNER, online) tạo nhóm với Bob và Carol; chủ nhóm không rời
+/// được; Bob xin rời -> Alice tự commit gỡ Bob; Bob bị đánh dấu đã rời, không gửi được; Alice và Carol nói chuyện tiếp.
+Future<void> runLeaveE2E(Uri serverUrl) async {
+  final alice = await signUpForTest(serverUrl, 'lvalice.');
+  final bob = await signUpForTest(serverUrl, 'lvbob.');
+  final carol = await signUpForTest(serverUrl, 'lvcarol.');
+  for (final u in [alice, bob, carol]) {
+    await u.startEngine();
+  }
+  alice.engine.autoCommitDelayMs = 50;
+  const sms = OtpChannel.OTP_CHANNEL_SMS;
+  final g = await alice.engine.createGroup('Nhóm rời', [(sms, bob.phone), (sms, carol.phone)]);
+  await _waitFor('Bob và Carol vào nhóm', () => bob.engine.conversations.length == 1 && carol.engine.conversations.length == 1);
+  final gb = bob.engine.conversations.single;
+  final gc = carol.engine.conversations.single;
+  _check(g.owner && !gb.owner, 'Alice là chủ nhóm, Bob thì không');
+
+  var ownerBlocked = false;
+  try {
+    await alice.engine.leaveGroup(g.hexId);
+  } on ChatException {
+    ownerBlocked = true;
+  }
+  _check(ownerBlocked, 'chủ nhóm không được rời');
+
+  // Bob xin rời; trong lúc chờ vẫn nhận tin; rồi Alice tự commit gỡ Bob.
+  await bob.engine.leaveGroup(gb.hexId);
+  _check(gb.leaving, 'Bob phải ở trạng thái đang rời');
+  await _waitFor('Bob bị gỡ khỏi nhóm', () => gb.removed);
+  _check(!gb.leaving, 'hết trạng thái đang rời');
+  await _waitFor('Alice áp dụng Commit gỡ Bob', () => alice.engine.doc.convs[g.hexId]!.lastSeq >= gb.lastSeq);
+  _check((await alice.engine.memberAccounts(g.hexId)).length == 2, 'nhóm còn 2 người');
+  await _waitFor('Carol thấy nhóm còn 2 người', () => gc.lastSeq == g.lastSeq);
+  _check((await carol.engine.memberAccounts(gc.hexId)).length == 2, 'Carol thấy 2 người');
+
+  // Alice và Carol nói chuyện tiếp; Bob không đọc được và không gửi được.
+  await alice.engine.sendText(g.hexId, 'Bob đã rời, hai người còn lại');
+  await _waitFor('Carol nhận tin', () => carol.msgs(gc).any((m) => m.text == 'Bob đã rời, hai người còn lại'));
+  await carol.engine.sendText(gc.hexId, 'Carol trả lời');
+  await _waitFor('Alice nhận trả lời', () => alice.msgs(g).any((m) => m.text == 'Carol trả lời'));
+  await Future<void>.delayed(const Duration(milliseconds: 400));
+  _check(!bob.msgs(gb).any((m) => m.text == 'Bob đã rời, hai người còn lại'), 'Bob không được đọc tin sau khi rời');
+  var sendBlocked = false;
+  try {
+    await bob.engine.sendText(gb.hexId, 'còn gửi được không');
+  } on ChatException {
+    sendBlocked = true;
+  }
+  _check(sendBlocked, 'Bob đã rời không được gửi');
+
+  for (final u in [alice, bob, carol]) {
     await u.engine.stop();
     await u.session.core.dispose();
   }

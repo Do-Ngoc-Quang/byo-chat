@@ -50,6 +50,8 @@ type Device struct {
 	chatv1connect.UnimplementedDeviceServiceHandler
 	Svc      *account.Service
 	Verifier auth.Verifier // cho ApproveLink (cần access token)
+
+	startLimit ipLimiter
 }
 
 func (d *Device) Handler() (string, http.Handler) { return chatv1connect.NewDeviceServiceHandler(d) }

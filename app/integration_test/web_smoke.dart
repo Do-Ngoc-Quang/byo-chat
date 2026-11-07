@@ -26,6 +26,7 @@ Future<void> _run() async {
     await runPersistE2E(Uri.parse(_apiUrl), SecureSecretStore(), await openBlobStore());
     await runChatE2E(Uri.parse(_apiUrl));
     await runGroupE2E(Uri.parse(_apiUrl));
+    await runLeaveE2E(Uri.parse(_apiUrl));
     await runLinkE2E(Uri.parse(_apiUrl));
     await runRevokeE2E(Uri.parse(_apiUrl));
     await runBackupE2E(Uri.parse(_apiUrl));

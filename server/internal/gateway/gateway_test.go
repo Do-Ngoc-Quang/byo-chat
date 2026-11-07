@@ -269,6 +269,14 @@ func TestCloseCodes(t *testing.T) {
 		c.send(hello(r, s.token(r, time.Hour), nil))
 		c.wantClose(4003)
 	})
+	t.Run("4003 thu hồi khi kết nối đang mở", func(t *testing.T) {
+		r := s.device(ids.New())
+		c, _ := s.connect(r, nil)
+		s.meta.RevokeDevice(r.DeviceID)
+		s.gw.CloseDevice(r.DeviceID)
+		c.wantClose(4003)
+		s.gw.CloseDevice(ids.New()) // thiết bị không có kết nối: không làm gì
+	})
 	t.Run("4010 bị thay bởi kết nối mới", func(t *testing.T) {
 		old, _ := s.connect(d, nil)
 		s.connect(d, nil)

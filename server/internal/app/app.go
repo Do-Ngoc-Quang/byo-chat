@@ -120,6 +120,7 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 	svc.Log = cfg.Log
 	gw := gateway.New(svc, tok, cfg.Gateway)
 	gw.Log = cfg.Log
+	acc.OnRevoke = gw.CloseDevice
 	mux := http.NewServeMux()
 	mux.Handle("/v1/connect", gw)
 	p, h := (&api.Conversation{Svc: svc, Verifier: tok}).Handler()

@@ -57,10 +57,13 @@ Future<void> runRevokeE2E(Uri serverUrl) async {
     self = true;
   }
   _check(self, 'không được tự thu hồi');
+  var closedByServer = false;
+  a3.engine.onRevoked = () => closedByServer = true; // mã đóng 4003 từ server
   final removedFrom = await alice.engine.revokeDevice(s3.deviceId);
   _check(removedFrom == 2, 'A3 phải bị gỡ khỏi 2 nhóm, gỡ $removedFrom');
   _check((await alice.engine.listDevices()).where((d) => d.revoked).length == 1, 'một thiết bị bị thu hồi');
 
+  await _waitFor('server đóng kết nối của A3 bằng 4003', () => closedByServer);
   var blocked = false;
   try {
     await api3.listDevices();

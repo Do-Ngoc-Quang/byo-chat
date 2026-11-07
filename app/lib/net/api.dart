@@ -55,6 +55,9 @@ class ChatApi {
   Future<RevokeDeviceResponse> revokeDevice(RevokeDeviceRequest r) =>
       client.unary('DeviceService', 'RevokeDevice', r, RevokeDeviceResponse.new);
 
+  Future<SubmitProposalResponse> submitProposal(SubmitProposalRequest r, {required String idempotencyKey}) =>
+      client.unary('ConversationService', 'SubmitProposal', r, SubmitProposalResponse.new, idempotencyKey: idempotencyKey);
+
   Future<SubmitCommitResponse> submitCommit(SubmitCommitRequest r, {required String idempotencyKey}) =>
       client.unary('ConversationService', 'SubmitCommit', r, SubmitCommitResponse.new, idempotencyKey: idempotencyKey);
 

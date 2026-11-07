@@ -119,6 +119,7 @@ impl Core {
             identity: identity_key,
             app_state: app_state.clone(),
             pending: None,
+            proposals: Default::default(),
         })
     }
 }

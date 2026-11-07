@@ -94,6 +94,18 @@ extension ChatCoreMls on ChatCore {
     return CommitOut(r[0], r[1], r[2]);
   }
 
+  /// Xin rời nhóm (6.4): Remove proposal cho chính mình, gửi qua `SubmitProposal`.
+  Future<Uint8List> leaveProposal(Uint8List conv) async => (await _call('leave_proposal', [conv]))[0];
+
+  /// Nhận Proposal của người khác từ log; sẽ được gom khi [stageCommitPending] hoặc khi áp dụng Commit.
+  Future<void> applyProposal(Uint8List conv, Uint8List proposal) => _call('apply_proposal', [conv, proposal]);
+
+  /// Commit gom các proposal đang chờ (gỡ người xin rời), chưa áp dụng; lỗi nếu không có proposal nào.
+  Future<CommitOut> stageCommitPending(Uint8List conv) async {
+    final r = await _call('stage_commit_pending', [conv]);
+    return CommitOut(r[0], r[1], r[2]);
+  }
+
   Future<void> mergeCommit(Uint8List conv) => _call('merge_commit', [conv]);
   Future<void> clearCommit(Uint8List conv) => _call('clear_commit', [conv]);
 

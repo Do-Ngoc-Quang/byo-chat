@@ -57,9 +57,11 @@ func (l LogSender) Send(_ context.Context, ch chatv1.OtpChannel, dest, code stri
 }
 
 type Service struct {
-	Store      store.AccountStore
-	Meta       store.MetaStore
-	Tokens     *auth.HMAC
+	Store  store.AccountStore
+	Meta   store.MetaStore
+	Tokens *auth.HMAC
+	// OnRevoke chạy sau khi một thiết bị bị thu hồi (đóng kết nối đang mở). Có thể nil.
+	OnRevoke   func(device ids.ID)
 	Blobs      blob.Signer // kho sao lưu (nil: BackupService báo UNAVAILABLE)
 	Sender     OTPSender
 	ContactKey []byte // khóa HMAC để băm đích liên hệ và mã OTP

@@ -187,6 +187,36 @@ impl Device {
         })
     }
 
+    /// Rời nhóm (spec 6.4): Remove proposal cho chính mình, gửi qua `SubmitProposal`. MLS không cho tự gỡ nên cần
+    /// một thành viên khác commit; nhóm giữ nguyên (còn nhận Commit) cho tới khi bị gỡ.
+    pub fn leave_proposal(&self, g: &mut MlsGroup) -> Result<Vec<u8>> {
+        Ok(g.leave_group(&self.provider, &self.signer)?.tls_serialize_detached()?)
+    }
+
+    /// Nhận một Proposal từ log (theo `seq`): xếp vào hàng chờ để `stage_commit_pending` gom vào Commit.
+    pub fn apply_proposal(&self, g: &mut MlsGroup, bytes: &[u8]) -> Result<()> {
+        let msg = MlsMessageIn::tls_deserialize_exact(bytes)?;
+        let processed = g.process_message(&self.provider, msg.try_into_protocol_message()?)?;
+        match processed.into_content() {
+            ProcessedMessageContent::ProposalMessage(p) => Ok(g.store_pending_proposal(self.provider.storage(), *p)?),
+            _ => Err("không phải proposal".into()),
+        }
+    }
+
+    /// Commit gom mọi proposal đang chờ (vd. gỡ người xin rời), CHƯA áp dụng (như `stage_add`).
+    pub fn stage_commit_pending(&self, g: &mut MlsGroup) -> Result<CommitOut> {
+        g.clear_pending_commit(self.provider.storage())?;
+        if g.pending_proposals().next().is_none() {
+            return Err("không có proposal nào đang chờ".into());
+        }
+        let (commit, welcome, gi) = g.commit_to_pending_proposals(&self.provider, &self.signer)?;
+        Ok(CommitOut {
+            commit: commit.tls_serialize_detached()?,
+            welcome: welcome.map(|w| w.tls_serialize_detached()).transpose()?,
+            group_info: MlsMessageOut::from(gi.ok_or("no group info")?).tls_serialize_detached()?,
+        })
+    }
+
     /// Commit chỉ có path update (xoay khóa định kỳ, spec 6.8).
     pub fn update(&self, g: &mut MlsGroup) -> Result<CommitOut> {
         let b = g.self_update(&self.provider, &self.signer, LeafNodeParameters::default())?;

@@ -127,6 +127,23 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     if (await guarded(context, () => widget.engine.removeMember(widget.conv.hexId, unhex(account)))) _reload();
   }
 
+  Future<void> _leave() async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rời nhóm?'),
+        content: const Text('Quản trị viên đang trực tuyến sẽ xác nhận việc bạn rời nhóm. Sau đó bạn không đọc được tin mới.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+          FilledButton(key: const Key('confirm-leave'), onPressed: () => Navigator.pop(ctx, true), child: const Text('Rời nhóm')),
+        ],
+      ),
+    );
+    if (yes != true || !mounted) return;
+    await guarded(context, () => widget.engine.leaveGroup(widget.conv.hexId));
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final me = hex(widget.engine.session.accountId);
@@ -157,6 +174,20 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                           onPressed: () => _remove(a),
                         )
                       : null,
+                ),
+              if (widget.conv.leaving)
+                const ListTile(
+                  key: Key('leaving-note'),
+                  leading: Icon(Icons.hourglass_top),
+                  title: Text('Đang chờ quản trị viên xác nhận bạn rời nhóm'),
+                ),
+              if (!widget.conv.removed && !widget.conv.leaving)
+                ListTile(
+                  key: const Key('leave-group'),
+                  leading: const Icon(Icons.logout),
+                  title: Text(widget.conv.owner ? 'Rời nhóm (chủ nhóm cần chuyển quyền trước)' : 'Rời nhóm'),
+                  enabled: !widget.conv.owner,
+                  onTap: _leave,
                 ),
               if (canEdit)
                 ListTile(

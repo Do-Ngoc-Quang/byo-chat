@@ -116,7 +116,11 @@ class ConversationsPage extends StatelessWidget {
     ConvState? c;
     final ok = await guarded(context, () async => c = await engine.openDirect(dest.$1, dest.$2));
     if (ok && c != null) {
-      nav.push(MaterialPageRoute<void>(builder: (_) => ChatPage(engine: engine, conv: c!)));
+      nav.push(
+        MaterialPageRoute<void>(
+          builder: (_) => ChatPage(engine: engine, conv: c!),
+        ),
+      );
     }
   }
 }

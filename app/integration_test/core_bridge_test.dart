@@ -56,4 +56,7 @@ void main() {
   test('sao lưu + khôi phục tài khoản với server thật', () => runBackupE2E(Uri.parse(apiUrl)),
       timeout: const Timeout(Duration(minutes: 3)),
       skip: apiUrl.isEmpty ? 'đặt --dart-define=CHAT_API để chạy' : false);
+  test('rời nhóm với server thật', () => runLeaveE2E(Uri.parse(apiUrl)),
+      timeout: const Timeout(Duration(minutes: 3)),
+      skip: apiUrl.isEmpty ? 'đặt --dart-define=CHAT_API để chạy' : false);
 }

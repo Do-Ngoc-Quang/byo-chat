@@ -21,8 +21,11 @@ class ChatMessage {
     this.state = MsgState.pending,
     this.ct,
     this.epoch = 0,
+    this.sender,
   });
 
+  /// Tài khoản (hex) người gửi tin nhận được trong nhóm; null với tin của mình và hội thoại 1-1.
+  final String? sender;
   final String id; // hex của client_msg_id
   final bool mine;
   String text;
@@ -41,6 +44,7 @@ class ChatMessage {
     'state': state.name,
     if (ct != null) 'ct': base64.encode(ct!),
     'epoch': epoch,
+    if (sender != null) 'from': sender,
   };
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
@@ -52,6 +56,7 @@ class ChatMessage {
     state: MsgState.values.byName(j['state'] as String),
     ct: j['ct'] == null ? null : _b64(j['ct'] as String),
     epoch: j['epoch'] as int,
+    sender: j['from'] as String?,
   );
 }
 
@@ -67,6 +72,8 @@ class ConvState {
     this.isGroup = false,
     this.removed = false,
     this.admin = false,
+    this.owner = false,
+    this.leaving = false,
   }) : skip = skip ?? {};
 
   final Uint8List convId;
@@ -85,6 +92,9 @@ class ConvState {
   /// `admin`: tài khoản này là ADMIN/OWNER (được thêm/gỡ thành viên).
   bool isGroup, removed, admin;
 
+  /// `owner`: chủ nhóm (không rời được, 6.4); `leaving`: đã gửi xin rời, chờ admin commit.
+  bool owner, leaving;
+
   String get hexId => hex(convId);
 
   Map<String, Object?> toJson() => {
@@ -97,6 +107,8 @@ class ConvState {
     if (isGroup) 'group': true,
     if (removed) 'removed': true,
     if (admin) 'admin': true,
+    if (owner) 'owner': true,
+    if (leaving) 'leaving': true,
   };
 
   factory ConvState.fromJson(Map<String, dynamic> j) => ConvState(
@@ -109,6 +121,8 @@ class ConvState {
     isGroup: j['group'] == true,
     removed: j['removed'] == true,
     admin: j['admin'] == true,
+    owner: j['owner'] == true,
+    leaving: j['leaving'] == true,
   );
 }
 
@@ -125,6 +139,9 @@ class LocalDoc {
   /// account_id (hex) -> khóa danh tính công khai đã thấy lần đầu (giao-thuc.md 6.2 bước 2).
   final peerIdentities = <String, Uint8List>{};
 
+  /// account_id (hex) -> tên hiển thị người dùng đã nhập (số điện thoại/email) khi thêm người đó.
+  final names = <String, String>{};
+
   Uint8List toBytes() => Uint8List.fromList(
     utf8.encode(
       jsonEncode({
@@ -133,6 +150,7 @@ class LocalDoc {
         'convs': convs.values.map((c) => c.toJson()).toList(),
         'msgs': msgs.map((k, v) => MapEntry(k, v.map((m) => m.toJson()).toList())),
         'peers': peerIdentities.map((k, v) => MapEntry(k, base64.encode(v))),
+        if (names.isNotEmpty) 'names': names,
       }),
     ),
   );
@@ -151,6 +169,7 @@ class LocalDoc {
       d.msgs[k] = (v as List).map((m) => ChatMessage.fromJson(m as Map<String, dynamic>)).toList();
     });
     (j['peers'] as Map<String, dynamic>).forEach((k, v) => d.peerIdentities[k] = _b64(v as String));
+    (j['names'] as Map<String, dynamic>?)?.forEach((k, v) => d.names[k] = v as String);
     return d;
   }
 }

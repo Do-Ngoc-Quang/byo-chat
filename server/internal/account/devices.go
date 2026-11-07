@@ -58,5 +58,8 @@ func (s *Service) RevokeDevice(ctx context.Context, dev store.DeviceInfo, r *cha
 	case err != nil:
 		return nil, internal(s, "RevokeAccountDevice", err)
 	}
+	if s.OnRevoke != nil {
+		s.OnRevoke(target)
+	}
 	return &chatv1.RevokeDeviceResponse{}, nil
 }

@@ -109,3 +109,40 @@ fn nhom_3_nguoi_them_va_go_tai_khoan() {
     assert!(a.call("stage_remove", &pack(&[b"g", &[9u8; 16]])).is_err());
     assert!(a.call("stage_remove", &pack(&[b"g", b"ngan"])).is_err());
 }
+
+#[test]
+fn roi_nhom_proposal_roi_admin_commit() {
+    let (mut a, mut b) = pair();
+    let mut c = Core::new_device(&[3; 16], &[30; 16], None, 1).unwrap();
+    let kc = call(&mut c, "key_packages", &[&1u32.to_le_bytes()]).remove(0);
+    let add = call(&mut a, "stage_add", &[b"g", &kc]);
+    call(&mut a, "merge_commit", &[b"g"]);
+    call(&mut b, "apply_commit", &[b"g", &add[0]]);
+    call(&mut c, "join_welcome", &[b"g", &add[1]]);
+
+    // Chưa có proposal: không commit được.
+    assert!(a.call("stage_commit_pending", &pack(&[b"g"])).is_err());
+
+    // C xin rời: A và B xếp proposal vào hàng chờ; C vẫn ở trong nhóm và còn đọc được.
+    let prop = call(&mut c, "leave_proposal", &[b"g"]).remove(0);
+    call(&mut a, "apply_proposal", &[b"g", &prop]);
+    call(&mut b, "apply_proposal", &[b"g", &prop]);
+    assert_eq!(call(&mut c, "is_active", &[b"g"])[0], [1]);
+    // Trong lúc chờ commit, A và B vẫn gửi tin được (proposal chưa xếp vào nhóm) và C vẫn đọc được.
+    let ct = call(&mut a, "encrypt", &[b"g", b"truoc khi roi"]).remove(0);
+    assert_eq!(call(&mut c, "decrypt", &[b"g", &ct])[0], b"truoc khi roi");
+    assert_eq!(call(&mut b, "decrypt", &[b"g", &ct])[0], b"truoc khi roi");
+
+    // A commit gom proposal: B và C áp dụng; C bị gỡ, còn lại 2 người nói chuyện tiếp.
+    let rm = call(&mut a, "stage_commit_pending", &[b"g"]);
+    call(&mut a, "merge_commit", &[b"g"]);
+    call(&mut b, "apply_commit", &[b"g", &rm[0]]);
+    call(&mut c, "apply_commit", &[b"g", &rm[0]]);
+    assert_eq!(call(&mut c, "is_active", &[b"g"])[0], [0]);
+    assert_eq!(call(&mut a, "group_members", &[b"g"]).len(), 2);
+    let ct = call(&mut a, "encrypt", &[b"g", b"sau khi roi"]).remove(0);
+    assert_eq!(call(&mut b, "decrypt", &[b"g", &ct])[0], b"sau khi roi");
+    assert!(c.call("decrypt", &pack(&[b"g", &ct])).is_err());
+    // Proposal đã được dùng: không còn gì để commit.
+    assert!(a.call("stage_commit_pending", &pack(&[b"g"])).is_err());
+}

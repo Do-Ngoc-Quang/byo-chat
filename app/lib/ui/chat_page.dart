@@ -62,7 +62,10 @@ class _ChatPageState extends State<ChatPage> {
                   reverse: true,
                   padding: const EdgeInsets.all(12),
                   itemCount: msgs.length,
-                  itemBuilder: (context, i) => _Bubble(msgs[msgs.length - 1 - i]),
+                  itemBuilder: (context, i) {
+                    final m = msgs[msgs.length - 1 - i];
+                    return _Bubble(m, who: m.sender == null ? null : widget.engine.displayName(m.sender!));
+                  },
                 );
               },
             ),
@@ -70,7 +73,12 @@ class _ChatPageState extends State<ChatPage> {
           if (widget.conv.removed)
             const Padding(
               padding: EdgeInsets.all(12),
-              child: Text('Bạn đã bị gỡ khỏi nhóm này.', key: Key('removed-banner')),
+              child: Text('Bạn không còn trong nhóm này.', key: Key('removed-banner')),
+            )
+          else if (widget.conv.leaving)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text('Đang chờ quản trị viên xác nhận bạn rời nhóm…', key: Key('leaving-banner')),
             )
           else
             SafeArea(
@@ -101,9 +109,12 @@ class _ChatPageState extends State<ChatPage> {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble(this.m);
+  const _Bubble(this.m, {this.who});
 
   final ChatMessage m;
+
+  /// Tên người gửi (chỉ trong nhóm, tin của người khác).
+  final String? who;
 
   @override
   Widget build(BuildContext context) {
@@ -129,6 +140,7 @@ class _Bubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (who != null) Text(who!, key: Key('from-${m.id}'), style: Theme.of(context).textTheme.labelSmall),
             Text(text, style: broken ? const TextStyle(fontStyle: FontStyle.italic) : null),
             if (status.isNotEmpty) Text(status.substring(3), style: Theme.of(context).textTheme.labelSmall),
           ],
