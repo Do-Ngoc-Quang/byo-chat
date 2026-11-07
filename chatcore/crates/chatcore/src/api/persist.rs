@@ -118,6 +118,7 @@ impl Core {
             groups,
             identity: identity_key,
             app_state: app_state.clone(),
+            pending: None,
         })
     }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../auth/login_controller.dart';
 import '../gen/chat/v1/services.pbenum.dart';
+import 'backup_pages.dart';
+import 'device_pages.dart';
 
 /// Màn đăng nhập OTP (man-hinh.md): nhập số điện thoại hoặc email, rồi nhập mã.
 class LoginPage extends StatefulWidget {
@@ -46,7 +48,11 @@ class _LoginPageState extends State<LoginPage> {
                 if (c.error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 16),
-                    child: Text(c.error!, key: const Key('login-error'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    child: Text(
+                      c.error!,
+                      key: const Key('login-error'),
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    ),
                   ),
               ],
             ),
@@ -57,54 +63,69 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   List<Widget> _contactForm() => [
-        SegmentedButton<OtpChannel>(
-          segments: const [
-            ButtonSegment(value: OtpChannel.OTP_CHANNEL_SMS, label: Text('Số điện thoại')),
-            ButtonSegment(value: OtpChannel.OTP_CHANNEL_EMAIL, label: Text('Email')),
-          ],
-          selected: {_channel},
-          onSelectionChanged: c.busy ? null : (s) => setState(() => _channel = s.first),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          key: const Key('contact-field'),
-          controller: _contact,
-          enabled: !c.busy,
-          keyboardType: _channel == OtpChannel.OTP_CHANNEL_SMS ? TextInputType.phone : TextInputType.emailAddress,
-          decoration: InputDecoration(
-            labelText: _channel == OtpChannel.OTP_CHANNEL_SMS ? 'Số điện thoại (+84...)' : 'Email',
-            border: const OutlineInputBorder(),
-          ),
-          onSubmitted: (_) => _request(),
-        ),
-        const SizedBox(height: 16),
-        FilledButton(key: const Key('request-otp'), onPressed: c.busy ? null : _request, child: const Text('Gửi mã')),
-      ];
+    SegmentedButton<OtpChannel>(
+      segments: const [
+        ButtonSegment(value: OtpChannel.OTP_CHANNEL_SMS, label: Text('Số điện thoại')),
+        ButtonSegment(value: OtpChannel.OTP_CHANNEL_EMAIL, label: Text('Email')),
+      ],
+      selected: {_channel},
+      onSelectionChanged: c.busy ? null : (s) => setState(() => _channel = s.first),
+    ),
+    const SizedBox(height: 16),
+    TextField(
+      key: const Key('contact-field'),
+      controller: _contact,
+      enabled: !c.busy,
+      keyboardType: _channel == OtpChannel.OTP_CHANNEL_SMS ? TextInputType.phone : TextInputType.emailAddress,
+      decoration: InputDecoration(
+        labelText: _channel == OtpChannel.OTP_CHANNEL_SMS ? 'Số điện thoại (+84...)' : 'Email',
+        border: const OutlineInputBorder(),
+      ),
+      onSubmitted: (_) => _request(),
+    ),
+    const SizedBox(height: 16),
+    FilledButton(key: const Key('request-otp'), onPressed: c.busy ? null : _request, child: const Text('Gửi mã')),
+    if (c.existing) ...[
+      const SizedBox(height: 16),
+      OutlinedButton.icon(
+        key: const Key('open-restore'),
+        icon: const Icon(Icons.restore),
+        label: const Text('Khôi phục từ bản sao lưu'),
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => RestorePage(login: c))),
+      ),
+    ],
+    const SizedBox(height: 8),
+    TextButton.icon(
+      key: const Key('open-link'),
+      icon: const Icon(Icons.devices),
+      label: const Text('Đăng nhập bằng thiết bị khác của tôi'),
+      onPressed: c.busy ? null : () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => LinkNewDevicePage(login: c))),
+    ),
+  ];
 
   List<Widget> _codeForm() => [
-        Text('Nhập mã gồm 6 chữ số đã gửi tới ${_contact.text.trim()}'),
-        const SizedBox(height: 16),
-        TextField(
-          key: const Key('code-field'),
-          controller: _code,
-          enabled: !c.busy,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          maxLength: 6,
-          decoration: const InputDecoration(labelText: 'Mã OTP', border: OutlineInputBorder()),
-          onSubmitted: (_) => _verify(),
-        ),
-        FilledButton(key: const Key('verify-otp'), onPressed: c.busy ? null : _verify, child: const Text('Xác nhận')),
-        TextButton(onPressed: c.busy ? null : c.backToContact, child: const Text('Đổi số hoặc email')),
-      ];
+    Text('Nhập mã gồm 6 chữ số đã gửi tới ${_contact.text.trim()}'),
+    const SizedBox(height: 16),
+    TextField(
+      key: const Key('code-field'),
+      controller: _code,
+      enabled: !c.busy,
+      autofocus: true,
+      keyboardType: TextInputType.number,
+      maxLength: 6,
+      decoration: const InputDecoration(labelText: 'Mã OTP', border: OutlineInputBorder()),
+      onSubmitted: (_) => _verify(),
+    ),
+    FilledButton(key: const Key('verify-otp'), onPressed: c.busy ? null : _verify, child: const Text('Xác nhận')),
+    TextButton(onPressed: c.busy ? null : c.backToContact, child: const Text('Đổi số hoặc email')),
+  ];
 
   List<Widget> _registering() => [
-        const Center(child: CircularProgressIndicator()),
-        const SizedBox(height: 16),
-        const Center(child: Text('Đang tạo khóa mã hóa và đăng ký thiết bị...')),
-        if (c.error != null && !c.busy)
-          TextButton(key: const Key('retry-register'), onPressed: c.retryRegister, child: const Text('Thử lại')),
-      ];
+    const Center(child: CircularProgressIndicator()),
+    const SizedBox(height: 16),
+    const Center(child: Text('Đang tạo khóa mã hóa và đăng ký thiết bị...')),
+    if (c.error != null && !c.busy) TextButton(key: const Key('retry-register'), onPressed: c.retryRegister, child: const Text('Thử lại')),
+  ];
 
   void _request() => c.requestOtp(_channel, _contact.text);
   void _verify() => c.verifyCode(_code.text);

@@ -48,7 +48,8 @@ func (a *Auth) RefreshToken(ctx context.Context, r *connect.Request[chatv1.Refre
 // thu hồi làm ở giai đoạn 4.
 type Device struct {
 	chatv1connect.UnimplementedDeviceServiceHandler
-	Svc *account.Service
+	Svc      *account.Service
+	Verifier auth.Verifier // cho ApproveLink (cần access token)
 }
 
 func (d *Device) Handler() (string, http.Handler) { return chatv1connect.NewDeviceServiceHandler(d) }

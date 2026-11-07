@@ -100,8 +100,16 @@ impl Device {
         if g.members().count() + kps.len() > MAX_DEVICES_PER_GROUP {
             return Err(format!("quá {MAX_DEVICES_PER_GROUP} thiết bị mỗi nhóm").into());
         }
-        let (commit, welcome, gi) = g.add_members(&self.provider, &self.signer, kps)?;
+        let out = self.stage_add(g, kps)?;
         g.merge_pending_commit(&self.provider)?;
+        Ok(out)
+    }
+
+    /// Như `add` nhưng CHƯA áp dụng: chờ `merge_pending_commit` sau khi server nhận, hoặc `clear_pending_commit`
+    /// nếu bị từ chối (EPOCH_MISMATCH) để không lệch trạng thái với server.
+    pub fn stage_add(&self, g: &mut MlsGroup, kps: &[KeyPackage]) -> Result<CommitOut> {
+        g.clear_pending_commit(self.provider.storage())?;
+        let (commit, welcome, gi) = g.add_members(&self.provider, &self.signer, kps)?;
         Ok(CommitOut {
             commit: commit.tls_serialize_detached()?,
             welcome: Some(welcome.tls_serialize_detached()?),
@@ -163,8 +171,15 @@ impl Device {
 
     /// Gỡ các lá theo chỉ số; Commit áp dụng ngay cho chính mình.
     pub fn remove(&self, g: &mut MlsGroup, leaves: &[LeafNodeIndex]) -> Result<CommitOut> {
-        let (commit, welcome, gi) = g.remove_members(&self.provider, &self.signer, leaves)?;
+        let out = self.stage_remove(g, leaves)?;
         g.merge_pending_commit(&self.provider)?;
+        Ok(out)
+    }
+
+    /// Như `remove` nhưng chưa áp dụng (xem `stage_add`).
+    pub fn stage_remove(&self, g: &mut MlsGroup, leaves: &[LeafNodeIndex]) -> Result<CommitOut> {
+        g.clear_pending_commit(self.provider.storage())?;
+        let (commit, welcome, gi) = g.remove_members(&self.provider, &self.signer, leaves)?;
         Ok(CommitOut {
             commit: commit.tls_serialize_detached()?,
             welcome: welcome.map(|w| w.tls_serialize_detached()).transpose()?,
@@ -193,6 +208,6 @@ impl Device {
     }
 }
 
-/// Giới hạn bất biến (CLAUDE.md): tối đa 50 thiết bị mỗi Commit, 1.000 thiết bị mỗi nhóm.
+/// Giới hạn bất biến (CLAUDE.md): tối đa 50 thiết bị mỗi Commit, 256 thiết bị mỗi nhóm (ADR 0011).
 pub const MAX_DEVICES_PER_COMMIT: usize = 50;
-pub const MAX_DEVICES_PER_GROUP: usize = 1000;
+pub const MAX_DEVICES_PER_GROUP: usize = 256;

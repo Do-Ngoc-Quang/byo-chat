@@ -8,6 +8,8 @@ use openmls::prelude::{tls_codec::*, *};
 use openmls_basic_credential::SignatureKeyPair;
 use std::collections::HashMap;
 
+mod backup;
+mod link;
 mod persist;
 
 /// Đóng gói danh sách byte: mỗi phần tử là độ dài u32 little-endian rồi dữ liệu.
@@ -41,13 +43,25 @@ pub struct Core {
     /// Dữ liệu ứng dụng đi cùng snapshot (kho tin nhắn cục bộ, con trỏ hộp thư...): ghi MỘT lần với trạng thái
     /// MLS nên không bao giờ lệch nhau sau khi sập (ADR 0009).
     app_state: Vec<u8>,
+    /// Thiết bị mới đang chờ liên kết (giao-thuc.md 6.5): chưa có tài khoản/credential.
+    pending: Option<Pending>,
+}
+
+struct Pending {
+    device_id: [u8; 16],
+    hpke_private: Vec<u8>,
+    hpke_public: Vec<u8>,
 }
 
 const NO_GROUP: &str = "không có nhóm cho conv này";
 
 impl Core {
+    fn from_device(device: Device, identity: Option<SignatureKeyPair>) -> Self {
+        Self { device, groups: HashMap::new(), identity, app_state: Vec::new(), pending: None }
+    }
+
     pub fn new(identity: &[u8]) -> Result<Self> {
-        Ok(Self { device: Device::new(identity)?, groups: HashMap::new(), identity: None, app_state: Vec::new() })
+        Ok(Self::from_device(Device::new(identity)?, None))
     }
 
     /// Như `new_device` nhưng nhận đối số đóng gói qua cầu nối:
@@ -56,6 +70,9 @@ impl Core {
         let a = unpack(args)?;
         if a.len() != 4 {
             return Err(format!("open_device: cần 4 đối số, nhận {}", a.len()).into());
+        }
+        if a[0].is_empty() {
+            return Self::new_pending(&a[1]); // thiết bị mới chờ liên kết (6.5)
         }
         let created = u64::from_le_bytes(a[3].as_slice().try_into().map_err(|_| "created_ms phải 8 byte")?);
         Self::new_device(&a[0], &a[1], if a[2].is_empty() { None } else { Some(&a[2]) }, created)
@@ -72,12 +89,13 @@ impl Core {
         };
         let signer = SignatureKeyPair::new(CIPHERSUITE.signature_algorithm())?;
         let cred = credential::build(&identity, &acct, &dev, signer.public(), created_ms)?;
-        Ok(Self { device: Device::from_parts(signer, cred)?, groups: HashMap::new(), identity: Some(identity), app_state: Vec::new() })
+        Ok(Self::from_device(Device::from_parts(signer, cred)?, Some(identity)))
     }
 
     /// Gọi một thao tác theo tên. Bảng thao tác (đối số -> kết quả):
     /// `key_package` [] -> [kp]; `create_group` [conv] -> []; `add_members` [conv, kp...] ->
-    /// [commit, welcome, group_info]; `group_info` [conv] -> [gi]; `join_welcome` [conv, welcome] -> [];
+    /// [commit, welcome, group_info]; `remove_accounts` [conv, account_id...] -> [commit, "", group_info] (gỡ mọi
+    /// thiết bị của các tài khoản đó, spec 6.4); `group_info` [conv] -> [gi]; `join_welcome` [conv, welcome] -> [];
     /// `apply_commit` [conv, commit] -> []; `external_join` [conv, gi] -> [commit];
     /// `encrypt` [conv, pt] -> [ct]; `decrypt` [conv, ct] -> [pt]; `epoch` [conv] -> [u64 LE];
     /// `sframe_key` [conv, call_id] -> [key]; `credential` [] -> [credential, device_pub, identity_pub];
@@ -119,6 +137,100 @@ impl Core {
                 let g = self.groups.get_mut(&a[0]).ok_or(NO_GROUP)?;
                 let out = d.add(g, &kps)?;
                 pack(&[&out.commit, &out.welcome.unwrap_or_default(), &out.group_info])
+            }
+            "stage_remove" => {
+                if a.len() < 2 {
+                    return Err("stage_remove: cần conv và ít nhất một account_id".into());
+                }
+                let g = self.groups.get_mut(&a[0]).ok_or(NO_GROUP)?;
+                // Mọi lá (thiết bị) của các tài khoản bị gỡ; account_id là 16 byte đầu của credential (spec 6.1).
+                let leaves: Vec<LeafNodeIndex> = g
+                    .members()
+                    .filter(|m| {
+                        BasicCredential::try_from(m.credential.clone())
+                            .map(|c| a[1..].iter().any(|acct| c.identity().starts_with(acct)))
+                            .unwrap_or(false)
+                    })
+                    .map(|m| m.index)
+                    .collect();
+                if leaves.is_empty() || a[1..].iter().any(|x| x.len() != 16) {
+                    return Err("stage_remove: không có thiết bị nào khớp (account_id phải 16 byte)".into());
+                }
+                let out = d.stage_remove(g, &leaves)?;
+                pack(&[&out.commit, &out.welcome.unwrap_or_default(), &out.group_info])
+            }
+            "stage_remove_devices" => {
+                if a.len() < 2 || a[1..].iter().any(|x| x.len() != 16) {
+                    return Err("stage_remove_devices: cần conv và device_id 16 byte".into());
+                }
+                let g = self.groups.get_mut(&a[0]).ok_or(NO_GROUP)?;
+                // device_id là byte 16..32 của credential (spec 6.1).
+                let leaves: Vec<LeafNodeIndex> = g
+                    .members()
+                    .filter(|m| {
+                        BasicCredential::try_from(m.credential.clone())
+                            .map(|c| c.identity().len() >= 32 && a[1..].iter().any(|d| &c.identity()[16..32] == d.as_slice()))
+                            .unwrap_or(false)
+                    })
+                    .map(|m| m.index)
+                    .collect();
+                if leaves.is_empty() {
+                    return Err("stage_remove_devices: không có thiết bị nào khớp trong nhóm".into());
+                }
+                let out = d.stage_remove(g, &leaves)?;
+                pack(&[&out.commit, &out.welcome.unwrap_or_default(), &out.group_info])
+            }
+            "revocation_sign" => {
+                need(2)?;
+                let id = self.identity.as_ref().ok_or("thiết bị này không giữ khóa danh tính")?;
+                let dev: [u8; 16] = a[0].as_slice().try_into().map_err(|_| "device_id phải 16 byte")?;
+                let ms = u64::from_le_bytes(a[1].as_slice().try_into().map_err(|_| "revoked_ms phải 8 byte")?);
+                pack(&[&credential::revocation_sign(id, &dev, ms)?])
+            }
+            "stage_add" => {
+                if a.len() < 2 {
+                    return Err("stage_add: cần conv và ít nhất một KeyPackage".into());
+                }
+                let kps = a[1..].iter().map(|b| parse_key_package(d, b)).collect::<Result<Vec<_>>>()?;
+                let g = self.groups.get_mut(&a[0]).ok_or(NO_GROUP)?;
+                let out = d.stage_add(g, &kps)?;
+                pack(&[&out.commit, &out.welcome.unwrap_or_default(), &out.group_info])
+            }
+            "merge_commit" => {
+                need(1)?;
+                self.groups.get_mut(&a[0]).ok_or(NO_GROUP)?.merge_pending_commit(&d.provider)?;
+                pack(&[])
+            }
+            "clear_commit" => {
+                need(1)?;
+                self.groups.get_mut(&a[0]).ok_or(NO_GROUP)?.clear_pending_commit(d.provider.storage())?;
+                pack(&[])
+            }
+            "is_active" => {
+                need(1)?;
+                pack(&[&[self.groups.get(&a[0]).ok_or(NO_GROUP)?.is_active() as u8]])
+            }
+            "backup_key_new" => {
+                need(0)?;
+                pack(&[&Self::backup_key_new()?])
+            }
+            "backup_seal" => {
+                need(1)?;
+                pack(&[&self.backup_seal(&a[0])?])
+            }
+            "backup_open" => {
+                need(2)?;
+                Self::backup_open(&a[0], &a[1])?
+            }
+            "link_start" => {
+                need(0)?;
+                self.link_start()?
+            }
+            "link_approve" => self.link_approve(&a)?,
+            "link_finish" => {
+                need(3)?;
+                self.link_finish(&a)?;
+                pack(&[])
             }
             "group_info" => {
                 need(1)?;

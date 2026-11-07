@@ -491,3 +491,65 @@ func TestFetchLogAndGroupInfo(t *testing.T) {
 		t.Fatalf("%+v", g)
 	}
 }
+
+// Giới hạn kích thước (giao-thuc.md mục 2): tối đa 50 Welcome mỗi Commit, mỗi Welcome <= 128 KiB, tổng <= 3 MiB.
+func TestCommitWelcomeLimits(t *testing.T) {
+	e := newEnv(t)
+	conv := e.group()
+	ctx := context.Background()
+	var devs []store.DeviceInfo
+	for i := 0; i < 51; i++ {
+		d := store.DeviceInfo{DeviceID: ids.New(), AccountID: e.carol, Platform: chatv1.Platform_PLATFORM_ANDROID}
+		e.meta.AddDevice(d)
+		devs = append(devs, d)
+	}
+	try := func(n, size int) *message.Error {
+		req := commitReq(conv, 1)
+		req.Added = []*chatv1.Member{member(e.carol, chatv1.Role_ROLE_MEMBER)}
+		for _, d := range devs[:n] {
+			req.Welcomes = append(req.Welcomes, &chatv1.WelcomeEnvelope{RecipientDeviceId: d.DeviceID.Bytes(), Welcome: make([]byte, size)})
+		}
+		_, err := e.svc.SubmitCommit(ctx, e.A1, ids.New().String(), req)
+		return err
+	}
+	wantCode(t, try(51, 10), chatv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT)                 // 51 > 50 thiết bị
+	wantCode(t, try(1, message.MaxCommit+1), chatv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT) // một Welcome quá lớn
+	wantCode(t, try(25, message.MaxCommit), chatv1.ErrorCode_ERROR_CODE_PAYLOAD_TOO_LARGE) // 25 x 128 KiB > 3 MiB
+	if err := try(50, 10); err != nil {                                                    // đúng 50: được
+		t.Fatalf("50 Welcome nhỏ phải được: %v", err)
+	}
+}
+
+// Nhóm tối đa MaxGroupDevs (256) thiết bị (ADR 0011): thêm bằng các Commit 50 Welcome cho tới khi đầy, thiết bị thứ 257 bị từ chối.
+func TestGroupDeviceLimit(t *testing.T) {
+	e := newEnv(t)
+	conv := e.group() // A1, A2, B1 = 3 thiết bị
+	ctx := context.Background()
+	epoch := uint64(1)
+	devices := 3
+	add := func(n int) *message.Error {
+		req := commitReq(conv, epoch)
+		acct := ids.New() // mỗi lần thêm một tài khoản mới (Welcome chỉ tới thiết bị của tài khoản trong added)
+		req.Added = []*chatv1.Member{member(acct, chatv1.Role_ROLE_MEMBER)}
+		for i := 0; i < n; i++ {
+			d := store.DeviceInfo{DeviceID: ids.New(), AccountID: acct, Platform: chatv1.Platform_PLATFORM_ANDROID}
+			e.meta.AddDevice(d)
+			req.Welcomes = append(req.Welcomes, welcome(d))
+		}
+		r, err := e.svc.SubmitCommit(ctx, e.A1, ids.New().String(), req)
+		if err == nil {
+			epoch = r.NewEpoch
+			devices += n
+			e.drain()
+		}
+		return err
+	}
+	for devices+50 <= message.MaxGroupDevs {
+		e.mustOK(add(50))
+	}
+	e.mustOK(add(message.MaxGroupDevs - devices)) // đúng đầy
+	if devices != message.MaxGroupDevs {
+		t.Fatalf("đã có %d thiết bị, muốn %d", devices, message.MaxGroupDevs)
+	}
+	wantCode(t, add(1), chatv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT)
+}

@@ -17,14 +17,9 @@ enum LoginStep { contact, code, registering, done }
 /// RequestOtp -> VerifyOtp -> sinh khóa + credential + KeyPackage trong chatcore -> RegisterDevice.
 /// Tài khoản đã có (không phải thiết bị đầu tiên) cần liên kết thiết bị hoặc khôi phục (giai đoạn 4).
 class LoginController extends ChangeNotifier {
-  LoginController({
-    required this.api,
-    required this.openCore,
-    this.store,
-    Platform? platform,
-    DateTime Function()? now,
-  })  : platform = platform ?? _hostPlatform(),
-        _now = now ?? DateTime.now;
+  LoginController({required this.api, required this.openCore, this.store, Platform? platform, DateTime Function()? now})
+    : platform = platform ?? _hostPlatform(),
+      _now = now ?? DateTime.now;
 
   final ChatApi api;
   final Future<ChatCore> Function() openCore;
@@ -45,6 +40,12 @@ class LoginController extends ChangeNotifier {
   List<int>? _challengeId;
   Uint8List? _ticket;
   Uint8List? _accountId;
+
+  /// true sau khi OTP đúng nhưng tài khoản đã có thiết bị: dùng [existingTicket]/[existingAccountId] để khôi phục
+  /// từ bản sao lưu (`RestoreController`). Liên kết thiết bị dùng `LinkController`, không cần ticket này.
+  bool existing = false;
+  Uint8List? get existingTicket => existing ? _ticket : null;
+  Uint8List? get existingAccountId => existing ? _accountId : null;
 
   static Platform _hostPlatform() {
     if (kIsWeb) return Platform.PLATFORM_WEB;
@@ -76,32 +77,45 @@ class LoginController extends ChangeNotifier {
   }
 
   Future<void> requestOtp(OtpChannel channel, String destination) => _run(() async {
-        final r = await api.requestOtp(RequestOtpRequest(channel: channel, destination: destination.trim()));
-        _challengeId = r.challengeId;
-        retryAfterMs = r.retryAfterMs;
-        step = LoginStep.code;
-      });
+    final r = await api.requestOtp(RequestOtpRequest(channel: channel, destination: destination.trim()));
+    _challengeId = r.challengeId;
+    retryAfterMs = r.retryAfterMs;
+    step = LoginStep.code;
+  });
 
   /// Nhập mã. Đúng thì đi tiếp tới đăng ký thiết bị ngay.
   Future<void> verifyCode(String code) => _run(() async {
-        final id = _challengeId ?? (throw StateError('chưa xin mã'));
-        final v = await api.verifyOtp(VerifyOtpRequest(challengeId: id, code: code.trim()));
-        _ticket = Uint8List.fromList(v.sessionTicket);
-        _accountId = Uint8List.fromList(v.accountId);
-        if (!v.isNewAccount) {
-          // Thiết bị này chưa giữ khóa danh tính của tài khoản đã có: cần liên kết hoặc khôi phục.
-          _ticket = null;
-          step = LoginStep.contact;
-          error = 'Tài khoản này đã có thiết bị khác. Liên kết thiết bị hoặc khôi phục sẽ có ở bản sau.';
-          return;
-        }
-        step = LoginStep.registering;
-        notifyListeners();
-        await _register();
-      });
+    final id = _challengeId ?? (throw StateError('chưa xin mã'));
+    final v = await api.verifyOtp(VerifyOtpRequest(challengeId: id, code: code.trim()));
+    _ticket = Uint8List.fromList(v.sessionTicket);
+    _accountId = Uint8List.fromList(v.accountId);
+    if (!v.isNewAccount) {
+      // Thiết bị này chưa giữ khóa danh tính của tài khoản đã có: cần liên kết hoặc khôi phục.
+      existing = true; // giữ ticket cho luồng khôi phục (RestoreController)
+      step = LoginStep.contact;
+      error = 'Tài khoản này đã có thiết bị khác. Hãy đăng nhập bằng thiết bị khác của bạn, hoặc khôi phục từ bản sao lưu.';
+      return;
+    }
+    step = LoginStep.registering;
+    notifyListeners();
+    await _register();
+  });
 
   /// Thử lại đăng ký sau khi lỗi (ticket còn dùng được vì server chỉ tiêu thụ khi thành công).
   Future<void> retryRegister() => _run(_register);
+
+  /// true khi phiên vừa tới từ liên kết/khôi phục: app phải gọi `ChatEngine.joinAllConversations` (External Commit).
+  bool needsJoin = false;
+
+  /// Nhận phiên do `LinkController`/`BackupService.restore` tạo ra (thiết bị mới của tài khoản đã có).
+  void adopt(Session s) {
+    session = s;
+    existing = false;
+    error = null;
+    needsJoin = true;
+    step = LoginStep.done;
+    notifyListeners();
+  }
 
   /// Khôi phục phiên đã lưu khi mở app. true nếu đã vào được phiên.
   Future<bool> restore() async {
@@ -146,17 +160,19 @@ class LoginController extends ChangeNotifier {
       final cred = await core.deviceCredential();
       final kps = await core.keyPackages(100); // spec 6.1 bước 4
       final last = await core.lastResortKeyPackage();
-      final resp = await api.registerDevice(RegisterDeviceRequest(
-        sessionTicket: ticket,
-        deviceId: deviceId,
-        platform: platform,
-        deviceName: _deviceName(),
-        devicePublicKey: cred.devicePublicKey,
-        credential: cred.credential,
-        accountIdentityPublicKey: cred.identityPublicKey, // thiết bị đầu tiên
-        keyPackages: kps,
-        lastResortKeyPackage: last,
-      ));
+      final resp = await api.registerDevice(
+        RegisterDeviceRequest(
+          sessionTicket: ticket,
+          deviceId: deviceId,
+          platform: platform,
+          deviceName: _deviceName(),
+          devicePublicKey: cred.devicePublicKey,
+          credential: cred.credential,
+          accountIdentityPublicKey: cred.identityPublicKey, // thiết bị đầu tiên
+          keyPackages: kps,
+          lastResortKeyPackage: last,
+        ),
+      );
       api.client.accessToken = resp.tokens.accessToken;
       final count = await api.countKeyPackages();
       final s = Session(accountId, deviceId, core, resp.tokens, count.remaining);
@@ -172,10 +188,10 @@ class LoginController extends ChangeNotifier {
   }
 
   String _deviceName() => switch (platform) {
-        Platform.PLATFORM_ANDROID => 'Android',
-        Platform.PLATFORM_WEB => 'Web',
-        _ => 'Thiết bị',
-      };
+    Platform.PLATFORM_ANDROID => 'Android',
+    Platform.PLATFORM_WEB => 'Web',
+    _ => 'Thiết bị',
+  };
 }
 
 /// Thông báo tiếng Việt cho người dùng theo bảng mã lỗi ở giao-thuc.md mục 5.

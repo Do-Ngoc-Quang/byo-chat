@@ -14,6 +14,7 @@ import (
 	"byo-chat/server/internal/account"
 	"byo-chat/server/internal/api"
 	"byo-chat/server/internal/auth"
+	"byo-chat/server/internal/blob"
 	"byo-chat/server/internal/gateway"
 	"byo-chat/server/internal/message"
 	"byo-chat/server/internal/natsx"
@@ -35,6 +36,7 @@ type Config struct {
 	TokenKey       []byte            // khóa HMAC ký access token; khóa băm liên hệ/OTP suy ra từ đây
 	OTPSender      account.OTPSender // bắt buộc; dev dùng account.LogSender
 	DevFixedOTP    string            // chỉ dev/e2e: mã OTP cố định
+	DevBlobURL     string            // chỉ dev/e2e: URL công khai của chính server; bật kho sao lưu trong bộ nhớ (R2 là việc dở)
 	EnsureTables   bool              // tạo bảng DynamoDB nếu thiếu (dev/test)
 	RepairEvery    time.Duration
 	Gateway        gateway.Config
@@ -109,6 +111,11 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 	acc := account.New(meta, meta, tok, cfg.OTPSender, contactKey(cfg.TokenKey))
 	acc.Log = cfg.Log
 	acc.DevFixedCode = cfg.DevFixedOTP
+	var devBlob *blob.Dev
+	if cfg.DevBlobURL != "" {
+		devBlob = blob.NewDev(cfg.DevBlobURL, contactKey(append([]byte("blob:"), cfg.TokenKey...)))
+		acc.Blobs = devBlob
+	}
 	svc := message.New(meta, mb, q, natsx.NewBus(nc))
 	svc.Log = cfg.Log
 	gw := gateway.New(svc, tok, cfg.Gateway)
@@ -119,11 +126,16 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 	mux.Handle(p, h)
 	for _, hf := range []func() (string, http.Handler){
 		(&api.Auth{Svc: acc}).Handler,
-		(&api.Device{Svc: acc}).Handler,
+		(&api.Device{Svc: acc, Verifier: tok}).Handler,
 		(&api.Key{Svc: acc, Verifier: tok}).Handler,
 		(&api.Profile{Svc: acc, Verifier: tok}).Handler,
+		(&api.Backup{Svc: acc, Verifier: tok}).Handler,
 	} {
 		p, h := hf()
+		mux.Handle(p, h)
+	}
+	if devBlob != nil {
+		p, h := devBlob.Handler()
 		mux.Handle(p, h)
 	}
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })

@@ -85,6 +85,18 @@ pub fn identity_from_bytes(b: &[u8]) -> Result<SignatureKeyPair> {
     Ok(k)
 }
 
+/// Bản xác nhận thu hồi thiết bị (spec 6.6): device_id(16) | revoked_ms(8, BE) | chữ ký(64) của khóa danh tính lên
+/// "chat.v1.revocation" ‖ 24 byte đầu. Cùng bố cục với `server/internal/account/revocation.go`.
+pub fn revocation_sign(identity: &SignatureKeyPair, device_id: &[u8; 16], revoked_ms: u64) -> Result<Vec<u8>> {
+    let mut out = Vec::with_capacity(88);
+    out.extend_from_slice(device_id);
+    out.extend_from_slice(&revoked_ms.to_be_bytes());
+    let mut msg = b"chat.v1.revocation".to_vec();
+    msg.extend_from_slice(&out);
+    out.extend_from_slice(identity.sign(&msg).map_err(|e| format!("ký revocation: {e:?}"))?.as_slice());
+    Ok(out)
+}
+
 /// Nội dung identity của BasicCredential trong KeyPackage (để kiểm khớp credential).
 pub fn leaf_identity(kp: &KeyPackage) -> Result<Vec<u8>> {
     Ok(BasicCredential::try_from(kp.leaf_node().credential().clone())?.identity().to_vec())

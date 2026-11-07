@@ -73,6 +73,7 @@ func main() {
 		TokenKey:       []byte(key),
 		OTPSender:      account.LogSender{Log: log},
 		DevFixedOTP:    os.Getenv("CHAT_DEV_OTP_CODE"),
+		DevBlobURL:     os.Getenv("CHAT_DEV_BLOB_URL"),
 		EnsureTables:   env("CHAT_ENSURE_TABLES", "1") == "1",
 		Gateway:        gwConfig(),
 		Log:            log,

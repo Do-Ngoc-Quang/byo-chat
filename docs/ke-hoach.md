@@ -68,12 +68,21 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 - [ ] CI `app.yml`: đã viết (`flutter analyze`, `flutter test`, build web), chưa chạy trên GitHub; chưa có job Android emulator
 
 ## Giai đoạn 4 — Nhóm, đa thiết bị, backup
-- [ ] Nhóm, thêm/gỡ thành viên
-- [ ] Thiết bị mới vào nhóm bằng External Commit; liên kết thiết bị
-- [ ] Backup và khôi phục tài khoản
-- [ ] Giới hạn 50 thiết bị mỗi Commit, 1.000 mỗi nhóm
-- [ ] Đo kích thước Welcome, Commit thêm 1 thiết bị
-- [ ] Desktop
+- [x] Nhóm, thêm/gỡ thành viên ở tầng lõi + engine (spec 6.2, 6.3, 6.4): `stage_add`/`stage_remove`/`merge_commit`/`clear_commit`/`is_active`; `ChatEngine.createGroup/addMember/removeMember`; e2e 3 người với server thật qua FFI Windows
+- [x] Nhóm: giao diện (tạo nhóm, thông tin nhóm, thêm/gỡ thành viên, banner khi bị gỡ): `GroupCreatePage`, `GroupInfoPage`; kiểm trên Chrome thật (màn Nhóm mới) và test đơn vị
+- [ ] Nhóm: rời nhóm (`SubmitProposal` + admin commit), đổi vai trò, tên nhóm trong `chat_policy` (người nhận hiện "Nhóm"), hiện tên người gửi trong nhóm, e2e giao diện trên emulator Android, tranh chấp epoch hai admin ở tầng engine
+- [x] Server liên kết thiết bị (6.5): `StartLink`/`ApproveLink`/`CompleteLink` (kho bộ nhớ + Postgres chung hợp đồng `storetest`, test dịch vụ)
+- [x] Client liên kết thiết bị (ADR 0010): chatcore `link_start/link_approve/link_finish` (HPKE), `LinkController`, `ChatEngine.approveLink/joinAllConversations` (External Commit vào từng hội thoại, tối đa 4 song song, thử lại EPOCH_MISMATCH); e2e Alice 2 thiết bị + Bob qua FFI Windows
+- [x] Thu hồi thiết bị (6.6, ADR 0012): server `ListDevices`/`RevokeDevice` (giao dịch một lần: đánh dấu, xóa KeyPackage và refresh token, lưu statement 88 byte; hợp đồng `storetest` chạy trên Postgres), chatcore `revocation_sign`/`stage_remove_devices`, `ChatEngine.revokeDevice`; e2e qua FFI Windows (token A3 bị vô hiệu ngay, A3 bị gỡ khỏi 2 nhóm, không đọc được tin mới)
+- [x] Backup và khôi phục tài khoản (6.14, ADR 0012): chatcore `backup_key_new/backup_seal/backup_open` (HKDF + AES-256-GCM), server `BackupService` với `blob.Signer` (bản dev trong bộ nhớ), `BackupService`/`LoginController.existing` ở app; e2e: mất máy, OTP lại, khôi phục bằng recovery key, giữ lịch sử, vào lại 2 hội thoại bằng External Commit, thu hồi máy mất, nói chuyện tiếp
+- [x] Backup: giao diện `BackupPage` (sao lưu ngay, recovery key hiện một lần kèm cảnh báo, chép) và `RestorePage` (nhập recovery key sau OTP); kiểm trên Chrome thật: sao lưu tải lên URL ký qua CORS thành công
+- [ ] Backup: cài đặt R2 thật (URL ký sẵn, tải nhiều phần, vòng đời), sao lưu định kỳ/gia tăng, tùy chọn passphrase Argon2id, khôi phục không có bản sao lưu (`reset_identity`)
+- [x] Liên kết thiết bị, thu hồi: giao diện (`LinkNewDevicePage` hiện QR + chuỗi mã + mã 6 số và chờ duyệt, `LinkApprovePage` dán mã/so khớp/duyệt, `DevicesPage` danh sách + thu hồi, nút "Đăng nhập bằng thiết bị khác" ở màn đăng nhập; `LoginController.adopt` + `joinAllConversations` tự chạy); kiểm trên Chrome thật: màn QR, danh sách thiết bị
+- [ ] Liên kết: quét QR bằng camera (cần plugin camera, thiết bị thật), hoàn tất liên kết hai thiết bị qua GIAO DIỆN trên Chrome (engine đã có e2e), e2e giao diện trên emulator Android, server kiểm credential External Commit, giới hạn tốc độ `StartLink`, client kiểm statement trước khi tin Commit gỡ thiết bị (6.6 bước 4), đóng kết nối đang mở của thiết bị bị thu hồi bằng mã 4003
+- [x] Giới hạn 50 thiết bị mỗi Commit, 256 mỗi nhóm (ADR 0011, hạ từ 1.000): lõi (`limits_are_enforced`, `group_at_device_limit`) và server (`TestCommitWelcomeLimits`; `TestGroupDeviceLimit`: nhóm đầy đúng 256, thiết bị thứ 257 bị từ chối)
+- [x] Đo kích thước Welcome, Commit thêm 1 thiết bị (`chatcore/tests/sizes.rs`): Welcome 51 thiết bị: 10 KB; 201: 38 KB; 256: 48 KB (Commit 22 KB, GroupInfo 48 KB); ngoại suy 501: 94 KB, 1.000: 187 KB
+- [x] Quyết định (ADR 0011): hạ giới hạn xuống 256 thiết bị mỗi nhóm để vừa 128 KiB mỗi Welcome/GroupInfo và 3 MiB mỗi Commit; nhóm lớn hơn nằm ngoài bản 1
+- [ ] Desktop (Windows): đã `flutter create --platforms=windows`, CMake đặt `chatcore_ffi.dll` cạnh file .exe; CHƯA build được vì Flutter cần bật Developer Mode của Windows (liên kết tượng trưng cho plugin), việc của người dùng. macOS/Linux chưa làm
 
 ## Giai đoạn 5 — Media
 - [ ] Media mã hóa lên Cloudflare R2 (spec mục 11 tài liệu chính)

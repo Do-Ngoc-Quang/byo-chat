@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../chat/chat_engine.dart';
 import '../chat/local_doc.dart';
+import 'group_pages.dart';
 
 /// Màn hình chat 1-1: danh sách tin (mới nhất ở dưới) và ô nhập.
 class ChatPage extends StatefulWidget {
@@ -34,7 +35,22 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: const Key('chat-page'),
-      appBar: AppBar(title: Text(widget.conv.title)),
+      appBar: AppBar(
+        title: Text(widget.conv.title),
+        actions: [
+          if (widget.conv.isGroup)
+            IconButton(
+              key: const Key('group-info'),
+              tooltip: 'Thông tin nhóm',
+              icon: const Icon(Icons.info_outline),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => GroupInfoPage(engine: widget.engine, conv: widget.conv),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
@@ -51,27 +67,33 @@ class _ChatPageState extends State<ChatPage> {
               },
             ),
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      key: const Key('message-field'),
-                      controller: _text,
-                      minLines: 1,
-                      maxLines: 4,
-                      textInputAction: TextInputAction.send,
-                      decoration: const InputDecoration(hintText: 'Nhập tin nhắn', border: OutlineInputBorder()),
-                      onSubmitted: (_) => _send(),
+          if (widget.conv.removed)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text('Bạn đã bị gỡ khỏi nhóm này.', key: Key('removed-banner')),
+            )
+          else
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        key: const Key('message-field'),
+                        controller: _text,
+                        minLines: 1,
+                        maxLines: 4,
+                        textInputAction: TextInputAction.send,
+                        decoration: const InputDecoration(hintText: 'Nhập tin nhắn', border: OutlineInputBorder()),
+                        onSubmitted: (_) => _send(),
+                      ),
                     ),
-                  ),
-                  IconButton(key: const Key('send'), tooltip: 'Gửi', icon: const Icon(Icons.send), onPressed: _send),
-                ],
+                    IconButton(key: const Key('send'), tooltip: 'Gửi', icon: const Icon(Icons.send), onPressed: _send),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

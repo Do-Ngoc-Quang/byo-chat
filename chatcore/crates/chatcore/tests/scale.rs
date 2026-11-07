@@ -2,8 +2,8 @@
 use chatcore::scenarios::scale as s;
 
 #[test]
-fn group_of_1000_devices() {
-    s::group_of_1000_devices();
+fn group_at_device_limit() {
+    s::group_at_device_limit();
 }
 
 #[test]

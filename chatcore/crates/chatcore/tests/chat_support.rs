@@ -72,3 +72,40 @@ fn app_state_di_cung_snapshot() {
     // trạng thái MLS và app_state cùng một lần ghi: nhóm vẫn đó
     assert_eq!(call(&mut r, "epoch", &[b"g"])[0], call(&mut a, "epoch", &[b"g"])[0]);
 }
+
+#[test]
+fn nhom_3_nguoi_them_va_go_tai_khoan() {
+    let (mut a, mut b) = pair();
+    // Carol có hai thiết bị cùng tài khoản; Alice thêm cả hai bằng một Commit.
+    let mut c1 = Core::new_device(&[3; 16], &[30; 16], None, 1).unwrap();
+    let mut c2 = Core::new_device(&[3; 16], &[31; 16], Some(&call(&mut c1, "identity_export", &[])[0]), 1).unwrap();
+    let kp1 = call(&mut c1, "key_packages", &[&1u32.to_le_bytes()]).remove(0);
+    let kp2 = call(&mut c2, "key_packages", &[&1u32.to_le_bytes()]).remove(0);
+    call(&mut a, "stage_add", &[b"g", &kp1, &kp2]);
+    // Bị từ chối thì hủy: nhóm giữ nguyên epoch, rồi dựng lại và được nhận.
+    call(&mut a, "clear_commit", &[b"g"]);
+    assert_eq!(call(&mut a, "group_members", &[b"g"]).len(), 2);
+    let add = call(&mut a, "stage_add", &[b"g", &kp1, &kp2]);
+    call(&mut a, "merge_commit", &[b"g"]);
+    call(&mut b, "apply_commit", &[b"g", &add[0]]);
+    call(&mut c1, "join_welcome", &[b"g", &add[1]]);
+    call(&mut c2, "join_welcome", &[b"g", &add[1]]);
+    assert_eq!(call(&mut a, "group_members", &[b"g"]).len(), 4);
+
+    // Alice gỡ Carol: cả hai thiết bị của Carol biến mất; Bob áp dụng được; Carol không đọc được tin mới.
+    let rm = call(&mut a, "stage_remove", &[b"g", &[3u8; 16]]);
+    call(&mut a, "merge_commit", &[b"g"]);
+    call(&mut b, "apply_commit", &[b"g", &rm[0]]);
+    assert_eq!(call(&mut a, "group_members", &[b"g"]).len(), 2);
+    let ct = call(&mut a, "encrypt", &[b"g", b"sau khi go"]).remove(0);
+    assert_eq!(call(&mut b, "decrypt", &[b"g", &ct])[0], b"sau khi go");
+    call(&mut c1, "apply_commit", &[b"g", &rm[0]]);
+    assert_eq!(call(&mut c1, "is_active", &[b"g"])[0], [0]);
+    assert_eq!(call(&mut b, "is_active", &[b"g"])[0], [1]);
+    assert!(c1.call("decrypt", &pack(&[b"g", &ct])).is_err());
+    assert!(c2.call("decrypt", &pack(&[b"g", &ct])).is_err());
+
+    // Gỡ tài khoản không có trong nhóm, hoặc account_id sai độ dài: lỗi.
+    assert!(a.call("stage_remove", &pack(&[b"g", &[9u8; 16]])).is_err());
+    assert!(a.call("stage_remove", &pack(&[b"g", b"ngan"])).is_err());
+}

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../chat/chat_engine.dart';
 import '../chat/local_doc.dart';
-import '../gen/chat/v1/common.pbenum.dart';
-import '../gen/chat/v1/services.pbenum.dart';
-import '../net/connect_client.dart';
 import '../net/gateway_client.dart';
+import 'backup_pages.dart';
 import 'chat_page.dart';
+import 'contact_dialog.dart';
+import 'device_pages.dart';
+import 'errors.dart';
+import 'group_pages.dart';
 
 /// Danh sách hội thoại (man-hinh.md) và nút bắt đầu chat bằng số điện thoại/email.
 class ConversationsPage extends StatelessWidget {
@@ -33,7 +35,16 @@ class ConversationsPage extends StatelessWidget {
               ),
             ),
             actions: [
-              if (onLogout != null) IconButton(key: const Key('logout'), tooltip: 'Đăng xuất', icon: const Icon(Icons.logout), onPressed: onLogout),
+              PopupMenuButton<String>(
+                key: const Key('menu'),
+                onSelected: (v) => _menu(context, v),
+                itemBuilder: (_) => [
+                  const PopupMenuItem(key: Key('menu-group'), value: 'group', child: Text('Nhóm mới')),
+                  const PopupMenuItem(key: Key('menu-devices'), value: 'devices', child: Text('Thiết bị của tôi')),
+                  const PopupMenuItem(key: Key('menu-backup'), value: 'backup', child: Text('Sao lưu')),
+                  if (onLogout != null) const PopupMenuItem(key: Key('logout'), value: 'logout', child: Text('Đăng xuất')),
+                ],
+              ),
             ],
           ),
           body: convs.isEmpty
@@ -43,10 +54,16 @@ class ConversationsPage extends StatelessWidget {
                     for (final c in convs)
                       ListTile(
                         key: Key('conv-${c.hexId}'),
-                        leading: CircleAvatar(child: Text(c.title.isEmpty ? '?' : c.title.characters.first)),
+                        leading: CircleAvatar(
+                          child: c.isGroup ? const Icon(Icons.group) : Text(c.title.isEmpty ? '?' : c.title.characters.first),
+                        ),
                         title: Text(c.title),
                         subtitle: Text(_lastLine(engine.messages(c.hexId)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ChatPage(engine: engine, conv: c))),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ChatPage(engine: engine, conv: c),
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -62,12 +79,12 @@ class ConversationsPage extends StatelessWidget {
   }
 
   static String _status(GatewayState s) => switch (s) {
-        GatewayState.online => 'Đã kết nối',
-        GatewayState.syncing => 'Đang đồng bộ…',
-        GatewayState.connecting || GatewayState.authenticating => 'Đang kết nối…',
-        GatewayState.backoff || GatewayState.disconnected => 'Mất kết nối, đang thử lại…',
-        GatewayState.stopped => 'Đã dừng',
-      };
+    GatewayState.online => 'Đã kết nối',
+    GatewayState.syncing => 'Đang đồng bộ…',
+    GatewayState.connecting || GatewayState.authenticating => 'Đang kết nối…',
+    GatewayState.backoff || GatewayState.disconnected => 'Mất kết nối, đang thử lại…',
+    GatewayState.stopped => 'Đã dừng',
+  };
 
   static String _lastLine(List<ChatMessage> m) {
     if (m.isEmpty) return '';
@@ -78,53 +95,28 @@ class ConversationsPage extends StatelessWidget {
     };
   }
 
-  Future<void> _newChat(BuildContext context) async {
-    final ctl = TextEditingController();
-    var channel = OtpChannel.OTP_CHANNEL_SMS;
+  void _menu(BuildContext context, String v) {
     final nav = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final dest = await showDialog<(OtpChannel, String)>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: const Text('Cuộc trò chuyện mới'),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            SegmentedButton<OtpChannel>(
-              segments: const [
-                ButtonSegment(value: OtpChannel.OTP_CHANNEL_SMS, label: Text('Số điện thoại')),
-                ButtonSegment(value: OtpChannel.OTP_CHANNEL_EMAIL, label: Text('Email')),
-              ],
-              selected: {channel},
-              onSelectionChanged: (s) => setState(() => channel = s.first),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const Key('peer-field'),
-              controller: ctl,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: channel == OtpChannel.OTP_CHANNEL_SMS ? 'Số điện thoại (+84...)' : 'Email',
-                border: const OutlineInputBorder(),
-              ),
-            ),
-          ]),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
-            FilledButton(key: const Key('peer-ok'), onPressed: () => Navigator.pop(ctx, (channel, ctl.text)), child: const Text('Bắt đầu')),
-          ],
-        ),
-      ),
-    );
-    if (dest == null || dest.$2.trim().isEmpty) return;
-    try {
-      final c = await engine.openDirect(dest.$1, dest.$2);
-      nav.push(MaterialPageRoute<void>(builder: (_) => ChatPage(engine: engine, conv: c)));
-    } on ConnectException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.errorCode == ErrorCode.ERROR_CODE_NOT_FOUND ? 'Không tìm thấy người dùng này.' : 'Lỗi: ${e.message}')));
-    } on IdentityChangedException {
-      messenger.showSnackBar(const SnackBar(content: Text('Khóa bảo mật của người này đã thay đổi. Hãy xác minh lại trước khi nhắn.')));
-    } on ChatException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    switch (v) {
+      case 'group':
+        nav.push(MaterialPageRoute<void>(builder: (_) => GroupCreatePage(engine: engine)));
+      case 'devices':
+        nav.push(MaterialPageRoute<void>(builder: (_) => DevicesPage(engine: engine)));
+      case 'backup':
+        nav.push(MaterialPageRoute<void>(builder: (_) => BackupPage(engine: engine)));
+      case 'logout':
+        onLogout?.call();
+    }
+  }
+
+  Future<void> _newChat(BuildContext context) async {
+    final nav = Navigator.of(context);
+    final dest = await askContact(context, title: 'Cuộc trò chuyện mới', ok: 'Bắt đầu');
+    if (dest == null || !context.mounted) return;
+    ConvState? c;
+    final ok = await guarded(context, () async => c = await engine.openDirect(dest.$1, dest.$2));
+    if (ok && c != null) {
+      nav.push(MaterialPageRoute<void>(builder: (_) => ChatPage(engine: engine, conv: c!)));
     }
   }
 }

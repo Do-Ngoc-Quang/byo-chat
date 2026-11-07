@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -307,6 +308,117 @@ func RunAccount(t *testing.T, mk func(testing.TB) (store.AccountStore, store.Met
 		}
 		if len(seen) != 30 {
 			t.Fatalf("giao %d/30 gói", len(seen))
+		}
+	})
+
+	t.Run("LinkLifecycle", func(t *testing.T) {
+		a, _ := mk(t)
+		id, acct := ids.New(), ids.New()
+		l := store.DeviceLink{ID: id, ShortCode: "123456", Platform: chatv1.Platform_PLATFORM_ANDROID, Name: "máy mới",
+			DevicePub: []byte("dp"), Ephemeral: []byte("ep"), ExpiresAt: now.Add(5 * time.Minute)}
+		if err := a.PutLink(ctx, l); err != nil {
+			t.Fatal(err)
+		}
+		if err := a.PutLink(ctx, l); !errors.Is(err, store.ErrExists) {
+			t.Fatalf("PutLink trùng: %v", err)
+		}
+		got, err := a.GetLink(ctx, id, now)
+		if err != nil || !got.Account.IsZero() || string(got.DevicePub) != "dp" || got.ShortCode != "123456" {
+			t.Fatalf("GetLink: %+v %v", got, err)
+		}
+		if _, err := a.TakeApprovedLink(ctx, id, now); !errors.Is(err, store.ErrNotFound) {
+			t.Fatalf("chưa duyệt không được lấy: %v", err)
+		}
+		if err := a.ApproveLink(ctx, id, acct, []byte("cred"), []byte("sealed"), now); err != nil {
+			t.Fatal(err)
+		}
+		if err := a.ApproveLink(ctx, id, acct, []byte("x"), []byte("y"), now); !errors.Is(err, store.ErrExists) {
+			t.Fatalf("duyệt lần hai: %v", err)
+		}
+		taken, err := a.TakeApprovedLink(ctx, id, now)
+		if err != nil || taken.Account != acct || string(taken.Credential) != "cred" || string(taken.Sealed) != "sealed" {
+			t.Fatalf("TakeApprovedLink: %+v %v", taken, err)
+		}
+		if _, err := a.TakeApprovedLink(ctx, id, now); !errors.Is(err, store.ErrNotFound) {
+			t.Fatalf("lấy lần hai: %v", err)
+		}
+	})
+
+	t.Run("LinkExpiryAndRace", func(t *testing.T) {
+		a, _ := mk(t)
+		id := ids.New()
+		_ = a.PutLink(ctx, store.DeviceLink{ID: id, ShortCode: "1", DevicePub: []byte("d"), Ephemeral: []byte("e"), ExpiresAt: now.Add(time.Minute)})
+		late := now.Add(2 * time.Minute)
+		if _, err := a.GetLink(ctx, id, late); !errors.Is(err, store.ErrNotFound) {
+			t.Fatalf("hết hạn: %v", err)
+		}
+		if err := a.ApproveLink(ctx, id, ids.New(), []byte("c"), []byte("s"), late); !errors.Is(err, store.ErrNotFound) {
+			t.Fatalf("duyệt khi hết hạn: %v", err)
+		}
+		// 10 thiết bị cũ cùng duyệt một liên kết: đúng một thắng.
+		id2 := ids.New()
+		_ = a.PutLink(ctx, store.DeviceLink{ID: id2, ShortCode: "2", DevicePub: []byte("d"), Ephemeral: []byte("e"), ExpiresAt: now.Add(time.Minute)})
+		var wins atomic.Int32
+		var wg sync.WaitGroup
+		for i := 0; i < 10; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if a.ApproveLink(ctx, id2, ids.New(), []byte("c"), []byte("s"), now) == nil {
+					wins.Add(1)
+				}
+			}()
+		}
+		wg.Wait()
+		if wins.Load() != 1 {
+			t.Fatalf("%d lần duyệt thắng, muốn đúng 1", wins.Load())
+		}
+	})
+
+	t.Run("ListAndRevokeAccountDevice", func(t *testing.T) {
+		a, m := mk(t)
+		acct, th := newAcct(t, a, "rev")
+		d1, d2 := ids.New(), ids.New()
+		if _, err := a.RegisterDevice(ctx, req(th, d1)); err != nil {
+			t.Fatal(err)
+		}
+		th2 := []byte("ticket-rev-2")
+		_ = a.PutTicket(ctx, th2, acct, false, now.Add(time.Minute))
+		r2 := req(th2, d2)
+		r2.NewIdentity = nil
+		r2.ExpectIdentity = []byte("identity-1")
+		if _, err := a.RegisterDevice(ctx, r2); err != nil {
+			t.Fatal(err)
+		}
+		rows, err := a.ListDevices(ctx, acct)
+		if err != nil || len(rows) != 2 || rows[0].DeviceID != d1 || rows[1].DeviceID != d2 || rows[0].Revoked || rows[0].Name != "máy 1" {
+			t.Fatalf("ListDevices: %+v %v", rows, err)
+		}
+		if err := a.RevokeAccountDevice(ctx, ids.New(), d2, []byte("x"), now); !errors.Is(err, store.ErrNotFound) {
+			t.Fatalf("thu hồi thiết bị của tài khoản khác: %v", err)
+		}
+		if err := a.RevokeAccountDevice(ctx, acct, d2, []byte("stmt"), now); err != nil {
+			t.Fatal(err)
+		}
+		if err := a.RevokeAccountDevice(ctx, acct, d2, []byte("stmt"), now); !errors.Is(err, store.ErrExists) {
+			t.Fatalf("thu hồi lần hai: %v", err)
+		}
+		if g, _ := m.GetDevice(ctx, d2); !g.Revoked {
+			t.Fatal("GetDevice phải báo Revoked")
+		}
+		if n, _ := a.CountKeyPackages(ctx, d2, now); n != 0 {
+			t.Fatalf("KeyPackage của thiết bị bị thu hồi phải bị xóa, còn %d", n)
+		}
+		if err := a.RotateRefresh(ctx, d2, []byte("r1-"+d2.Hex()), []byte("n"), now.Add(time.Hour), now); !errors.Is(err, store.ErrNotFound) {
+			t.Fatalf("refresh token của thiết bị bị thu hồi phải mất: %v", err)
+		}
+		_, devs, revs, err := a.AccountKeys(ctx, acct)
+		if err != nil || len(devs) != 1 || devs[0].DeviceID != d1 || len(revs) != 1 || string(revs[0]) != "stmt" {
+			t.Fatalf("AccountKeys: %v %v %v", devs, revs, err)
+		}
+		rows, _ = a.ListDevices(ctx, acct)
+		if !rows[1].Revoked {
+			t.Fatal("ListDevices vẫn phải liệt kê thiết bị đã thu hồi, đánh dấu revoked")
 		}
 	})
 }

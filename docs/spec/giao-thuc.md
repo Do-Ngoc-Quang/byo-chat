@@ -2,7 +2,7 @@
 
 Nov 3, 2026 · @Quang
 
-**Phiên bản:** 1.1.2
+**Phiên bản:** 1.2.1
 
 ## 1. Phạm vi và phiên bản
 
@@ -46,9 +46,9 @@ Các quy ước này áp dụng cho mọi thông điệp, ở cả WebSocket l�
 | Ciphertext của một tin | 64 KiB; nội dung lớn hơn đi qua media |
 | Commit | 128 KiB (chỉnh sau khi đo ở giai đoạn 4) |
 | GroupInfo | 128 KiB (chỉnh sau khi đo ở giai đoạn 4) |
-| Tổng Welcome mỗi Commit | 3 MiB (chưa đo kích thước Welcome; chỉnh ở giai đoạn 4) |
+| Tổng Welcome mỗi Commit | 3 MiB (đã đo: một Welcome 48 KB ở nhóm 256 thiết bị, 50 phong bì 2,4 MB; ADR 0011) |
 | KeyPackage | 4 KiB mỗi cái, tối đa 200 cái mỗi lần tải lên |
-| Thiết bị trong một nhóm | 1.000 (PoC MLS sẽ xác nhận) |
+| Thiết bị trong một nhóm | 256 (hạ từ 1.000 ở bản 1.2.0 sau khi đo Welcome/GroupInfo, ADR 0011) |
 | Tốc độ gửi tin | 10 tin/giây mỗi thiết bị, burst 30 |
 | Đăng ký presence | 500 tài khoản mỗi kết nối |
 
@@ -556,7 +556,7 @@ Chủ nhóm (`OWNER`) phải chuyển quyền trước khi rời; client không 
 Ví dụ: A3 là thiết bị mới của Alice, A1 là thiết bị đã được tin cậy.
 
 1. A3 sinh `device_id`, cặp khóa ký và cặp khóa X25519 tạm, gọi `StartLink` và nhận `link_id`, `short_code` (6 chữ số, hạn 5 phút). A3 hiển thị mã QR chứa `link_id`, khóa công khai của thiết bị, khóa X25519 tạm và `short_code`.
-2. A1 quét QR. Khi người dùng xác nhận `short_code` khớp ở cả hai máy, A1 gọi `ApproveLink` với credential ký cho A3 (bằng khóa danh tính tài khoản) và `sealed_bundle`: khóa danh tính tài khoản, mã hóa bằng ECDH giữa khóa tạm của A1 và khóa tạm của A3 cùng một thuật toán mã hóa có xác thực.
+2. A1 quét QR. Khi người dùng xác nhận `short_code` khớp ở cả hai máy, A1 gọi `ApproveLink` với credential ký cho A3 (bằng khóa danh tính tài khoản) và `sealed_bundle`: khóa danh tính tài khoản, mã hóa bằng ECDH giữa khóa tạm của A1 và khóa tạm của A3 cùng một thuật toán mã hóa có xác thực. Làm rõ ở 1.1.3 (ADR 0010): `sealed_bundle` là HPKE single-shot (X25519, HKDF-SHA256, AES-128-GCM) tới khóa tạm của A3, `info` = `chat.v1.link`, `aad` = `link_id`; `device_id` do A3 sinh trước `StartLink` và có trong mã QR; server kiểm credential đúng tài khoản người duyệt, đúng khóa thiết bị của A3 và chữ ký đúng khóa danh tính đã lưu, và chỉ cho duyệt một lần.
 3. A3 gọi `CompleteLink` (chờ tối đa 30 giây), nhận credential, `sealed_bundle` và `session_ticket`, rồi giải `sealed_bundle`.
 4. A3 gọi `RegisterDevice` như luồng 6.1, không gửi `account_identity_public_key`.
 5. Với mỗi hội thoại trong `ListConversations`, ưu tiên hoạt động gần nhất, tối đa 4 hội thoại song song: A3 gọi `GetGroupInfo`, dựng External Commit (kèm path update) để tự vào nhóm, rồi `SubmitCommit(expected_epoch = epoch của GroupInfo, external = true)`. Nếu gặp `EPOCH_MISMATCH` thì lấy lại `GroupInfo` và thử lại, tối đa 5 lần với backoff.
@@ -568,7 +568,7 @@ Sau bước 2, A1 không cần online nữa. Đây là điểm khác với mô t
 
 ### 6.6 Thu hồi thiết bị
 
-1. Từ một thiết bị còn tin cậy (A1), người dùng chọn thu hồi A3. A1 tạo `revocation_statement` gồm `device_id` và thời điểm thu hồi, ký bằng khóa danh tính tài khoản.
+1. Từ một thiết bị còn tin cậy (A1), người dùng chọn thu hồi A3. A1 tạo `revocation_statement` gồm `device_id` và thời điểm thu hồi, ký bằng khóa danh tính tài khoản. Bố cục cố định 88 byte (làm rõ ở 1.2.1, ADR 0012): `device_id(16) ‖ revoked_ms(8, BE) ‖ chữ ký Ed25519(64)` lên `"chat.v1.revocation" ‖ 24 byte đầu`; một thiết bị không tự thu hồi chính mình.
 2. A1 gọi `RevokeDevice`. Server đánh dấu thu hồi, đóng kết nối của A3 bằng mã 4003, vô hiệu token, xóa KeyPackage còn lại của A3, ngừng ghi hộp thư cho A3, và lưu statement vào key directory (trả về trong `FetchKeyPackages.revocation_statements`).
 3. A1 (hoặc thiết bị khác của Alice) gỡ A3 khỏi từng nhóm bằng Remove proposal và Commit với `removed_device_ids`, ưu tiên hội thoại gần đây.
 4. Client của các thành viên khác kiểm tra statement trước khi tin rằng Commit gỡ thiết bị là hợp lệ.
@@ -624,7 +624,7 @@ Danh sách chặn nằm ở server. Với người bị chặn, server từ ch�
 
 ### 6.14 Khôi phục tài khoản khi mất hết thiết bị
 
-Người dùng đăng nhập lại bằng OTP hoặc passkey để có `session_ticket`. Thiết bị gọi `GetLatestBackup` kèm `session_ticket` (chưa có token vì chưa có thiết bị). Có bản sao lưu: client tải về, giải mã bằng khóa sao lưu của người dùng, lấy lại khóa danh tính tài khoản và lịch sử, rồi `RegisterDevice` như bình thường. Không có bản sao lưu: client tạo khóa danh tính mới và gọi `RegisterDevice` với `reset_identity = true`; tài khoản giữ nguyên nhưng mọi tin cũ mất. Server tin khóa mới vì tài khoản vừa qua OTP hoặc passkey, ghi nhận khóa này là khóa danh tính hiện tại của account\_id và chấp nhận External Commit (6.5) của thiết bị mới vào mọi cuộc trò chuyện mà account\_id đang là thành viên (PoC 05/11/2026: External Commit với khóa ký mới không tự gỡ leaf cũ, chỉ resync với cùng khóa ký mới tự gỡ). Quy tắc client: khi xử lý một External Commit có credential trùng account\_id với một leaf hiện có nhưng khác khóa ký, thành viên có leaf index nhỏ nhất đang online gửi Commit Remove leaf cũ; không thêm RPC hay khung mới. Client của người khác chấp nhận ngay và không hiện cảnh báo. Đây là rủi ro đã chấp nhận: ai chiếm được số điện thoại (ví dụ qua SIM swap) có thể mạo danh người dùng mà không ai biết; Key Transparency ở giai đoạn 4 sẽ giảm rủi ro này.
+Người dùng đăng nhập lại bằng OTP hoặc passkey để có `session_ticket`. Thiết bị gọi `GetLatestBackup` kèm `session_ticket` (chưa có token vì chưa có thiết bị). Có bản sao lưu: client tải về, giải mã bằng khóa sao lưu của người dùng, lấy lại khóa danh tính tài khoản và lịch sử, rồi `RegisterDevice` như bình thường (không gửi khóa danh tính) và vào lại từng nhóm bằng External Commit. Bản sao lưu gồm khóa danh tính và lịch sử, không gồm trạng thái MLS; mã hóa và định dạng theo ADR 0012 (làm rõ ở 1.2.1). Không có bản sao lưu: client tạo khóa danh tính mới và gọi `RegisterDevice` với `reset_identity = true`; tài khoản giữ nguyên nhưng mọi tin cũ mất. Server tin khóa mới vì tài khoản vừa qua OTP hoặc passkey, ghi nhận khóa này là khóa danh tính hiện tại của account\_id và chấp nhận External Commit (6.5) của thiết bị mới vào mọi cuộc trò chuyện mà account\_id đang là thành viên (PoC 05/11/2026: External Commit với khóa ký mới không tự gỡ leaf cũ, chỉ resync với cùng khóa ký mới tự gỡ). Quy tắc client: khi xử lý một External Commit có credential trùng account\_id với một leaf hiện có nhưng khác khóa ký, thành viên có leaf index nhỏ nhất đang online gửi Commit Remove leaf cũ; không thêm RPC hay khung mới. Client của người khác chấp nhận ngay và không hiện cảnh báo. Đây là rủi ro đã chấp nhận: ai chiếm được số điện thoại (ví dụ qua SIM swap) có thể mạo danh người dùng mà không ai biết; Key Transparency ở giai đoạn 4 sẽ giảm rủi ro này.
 
 ## 7. Máy trạng thái và nội dung bên trong MLS
 

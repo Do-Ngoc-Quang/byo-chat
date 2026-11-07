@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 String hex(List<int> b) => b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
 
+Uint8List unhex(String h) => Uint8List.fromList([for (var i = 0; i < h.length; i += 2) int.parse(h.substring(i, i + 2), radix: 16)]);
+
 Uint8List _b64(String s) => base64.decode(s);
 
 enum MsgState { pending, sent, failed, received, undecryptable }
@@ -31,26 +33,26 @@ class ChatMessage {
   int epoch;
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'mine': mine,
-        'text': text,
-        'ts': tsMs,
-        'seq': seq,
-        'state': state.name,
-        if (ct != null) 'ct': base64.encode(ct!),
-        'epoch': epoch,
-      };
+    'id': id,
+    'mine': mine,
+    'text': text,
+    'ts': tsMs,
+    'seq': seq,
+    'state': state.name,
+    if (ct != null) 'ct': base64.encode(ct!),
+    'epoch': epoch,
+  };
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
-        id: j['id'] as String,
-        mine: j['mine'] as bool,
-        text: j['text'] as String,
-        tsMs: j['ts'] as int,
-        seq: j['seq'] as int,
-        state: MsgState.values.byName(j['state'] as String),
-        ct: j['ct'] == null ? null : _b64(j['ct'] as String),
-        epoch: j['epoch'] as int,
-      );
+    id: j['id'] as String,
+    mine: j['mine'] as bool,
+    text: j['text'] as String,
+    tsMs: j['ts'] as int,
+    seq: j['seq'] as int,
+    state: MsgState.values.byName(j['state'] as String),
+    ct: j['ct'] == null ? null : _b64(j['ct'] as String),
+    epoch: j['epoch'] as int,
+  );
 }
 
 /// Trạng thái một hội thoại 1-1 ở máy này.
@@ -62,6 +64,9 @@ class ConvState {
     this.lastSeq = 0,
     Set<int>? skip,
     this.lastActivityMs = 0,
+    this.isGroup = false,
+    this.removed = false,
+    this.admin = false,
   }) : skip = skip ?? {};
 
   final Uint8List convId;
@@ -76,25 +81,35 @@ class ConvState {
   final Set<int> skip;
   int lastActivityMs;
 
+  /// Nhóm (nhiều người) hay 1-1; `removed`: thiết bị này đã bị gỡ khỏi nhóm (chỉ đọc lịch sử);
+  /// `admin`: tài khoản này là ADMIN/OWNER (được thêm/gỡ thành viên).
+  bool isGroup, removed, admin;
+
   String get hexId => hex(convId);
 
   Map<String, Object?> toJson() => {
-        'conv': base64.encode(convId),
-        'title': title,
-        if (peerAccount != null) 'peer': base64.encode(peerAccount!),
-        'lastSeq': lastSeq,
-        'skip': skip.toList()..sort(),
-        'activity': lastActivityMs,
-      };
+    'conv': base64.encode(convId),
+    'title': title,
+    if (peerAccount != null) 'peer': base64.encode(peerAccount!),
+    'lastSeq': lastSeq,
+    'skip': skip.toList()..sort(),
+    'activity': lastActivityMs,
+    if (isGroup) 'group': true,
+    if (removed) 'removed': true,
+    if (admin) 'admin': true,
+  };
 
   factory ConvState.fromJson(Map<String, dynamic> j) => ConvState(
-        convId: _b64(j['conv'] as String),
-        title: j['title'] as String,
-        peerAccount: j['peer'] == null ? null : _b64(j['peer'] as String),
-        lastSeq: j['lastSeq'] as int,
-        skip: (j['skip'] as List).cast<int>().toSet(),
-        lastActivityMs: j['activity'] as int,
-      );
+    convId: _b64(j['conv'] as String),
+    title: j['title'] as String,
+    peerAccount: j['peer'] == null ? null : _b64(j['peer'] as String),
+    lastSeq: j['lastSeq'] as int,
+    skip: (j['skip'] as List).cast<int>().toSet(),
+    lastActivityMs: j['activity'] as int,
+    isGroup: j['group'] == true,
+    removed: j['removed'] == true,
+    admin: j['admin'] == true,
+  );
 }
 
 /// Kho cục bộ của app: hội thoại, tin nhắn, con trỏ hộp thư, khóa danh tính đã thấy (TOFU).
@@ -110,13 +125,17 @@ class LocalDoc {
   /// account_id (hex) -> khóa danh tính công khai đã thấy lần đầu (giao-thuc.md 6.2 bước 2).
   final peerIdentities = <String, Uint8List>{};
 
-  Uint8List toBytes() => Uint8List.fromList(utf8.encode(jsonEncode({
+  Uint8List toBytes() => Uint8List.fromList(
+    utf8.encode(
+      jsonEncode({
         'v': 1,
         'cursor': base64.encode(cursor),
         'convs': convs.values.map((c) => c.toJson()).toList(),
         'msgs': msgs.map((k, v) => MapEntry(k, v.map((m) => m.toJson()).toList())),
         'peers': peerIdentities.map((k, v) => MapEntry(k, base64.encode(v))),
-      })));
+      }),
+    ),
+  );
 
   factory LocalDoc.fromBytes(Uint8List b) {
     final d = LocalDoc();

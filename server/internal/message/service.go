@@ -18,10 +18,10 @@ const (
 	MaxGroupInfo    = 128 << 10
 	MaxWelcomes     = 50 // thiết bị mỗi Commit
 	MaxWelcomeBytes = 3 << 20
-	MaxGroupDevs    = 1000
+	MaxGroupDevs    = 256 // ADR 0011
 	MaxFetchLimit   = 200
 	DefaultFetch    = 100
-	maxMembersCall  = 1000
+	maxMembersCall  = 256
 )
 
 // Service là Message Service.

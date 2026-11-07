@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -74,6 +76,10 @@ class _ByoChatAppState extends State<ByoChatApp> {
     n.onRevoked = _logout; // mã đóng 4003: thiết bị bị thu hồi, xóa dữ liệu
     _engine = n;
     n.start();
+    if (_login.needsJoin) {
+      _login.needsJoin = false;
+      unawaited(n.joinAllConversations()); // thiết bị mới: tự vào từng hội thoại bằng External Commit (6.5)
+    }
     return n;
   }
 
@@ -93,7 +99,9 @@ class _ByoChatAppState extends State<ByoChatApp> {
         future: _restored,
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator(key: Key('restoring'))));
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator(key: Key('restoring'))),
+            );
           }
           return ListenableBuilder(
             listenable: _login,

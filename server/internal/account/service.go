@@ -16,6 +16,7 @@ import (
 
 	chatv1 "byo-chat/server/gen/chat/v1"
 	"byo-chat/server/internal/auth"
+	"byo-chat/server/internal/blob"
 	"byo-chat/server/internal/ids"
 	"byo-chat/server/internal/message"
 	"byo-chat/server/internal/store"
@@ -59,6 +60,7 @@ type Service struct {
 	Store      store.AccountStore
 	Meta       store.MetaStore
 	Tokens     *auth.HMAC
+	Blobs      blob.Signer // kho sao lưu (nil: BackupService báo UNAVAILABLE)
 	Sender     OTPSender
 	ContactKey []byte // khóa HMAC để băm đích liên hệ và mã OTP
 	// DevFixedCode khác rỗng thì mọi OTP dùng mã này (CHỈ cho dev/e2e, bật qua CHAT_DEV_OTP_CODE).

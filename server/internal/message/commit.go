@@ -255,7 +255,7 @@ func (s *Service) SubmitCommit(ctx context.Context, dev store.DeviceInfo, idem s
 	if e != nil {
 		return nil, e
 	}
-	if len(recips)+len(ws) > MaxGroupDevs {
+	if len(recips)+1+len(ws) > MaxGroupDevs { // +1: thiết bị gửi (recips không gồm nó)
 		return nil, errf(chatv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT, "vượt %d thiết bị mỗi nhóm", MaxGroupDevs)
 	}
 	fo.Recipients = recips

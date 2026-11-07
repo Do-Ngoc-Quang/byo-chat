@@ -7,6 +7,8 @@ import 'package:byo_chat/storage/secret_store.dart';
 import 'package:flutter/material.dart';
 
 import 'chat_e2e.dart';
+import 'backup_e2e.dart';
+import 'revoke_e2e.dart';
 import 'login_e2e.dart';
 import 'persist_e2e.dart';
 import 'mls_scenario.dart';
@@ -23,6 +25,10 @@ Future<void> _run() async {
     await runLoginE2E(Uri.parse(_apiUrl));
     await runPersistE2E(Uri.parse(_apiUrl), SecureSecretStore(), await openBlobStore());
     await runChatE2E(Uri.parse(_apiUrl));
+    await runGroupE2E(Uri.parse(_apiUrl));
+    await runLinkE2E(Uri.parse(_apiUrl));
+    await runRevokeE2E(Uri.parse(_apiUrl));
+    await runBackupE2E(Uri.parse(_apiUrl));
   }
 }
 
