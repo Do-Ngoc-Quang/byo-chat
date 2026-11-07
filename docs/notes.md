@@ -39,4 +39,5 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Đã sửa spec giao-thuc.md lên 1.1.0: làm rõ phân quyền `SubmitCommit` (path update và gỡ thiết bị của mình không cần admin; External Commit không đổi thành viên/vai trò) và thêm giới hạn Commit/GroupInfo 128 KiB, Welcome 3 MiB (ADR 0004).
 - Giới hạn Commit/GroupInfo/Welcome là số khởi điểm, đo lại kích thước Welcome ở giai đoạn 4.
 - Việc dở / giới hạn: server chưa kiểm credential External Commit (6.5 bước 6: chỉ kiểm tài khoản đã là thành viên và không đổi thành viên/vai trò); tin ephemeral chưa giới hạn 1 lần/3 giây; `leaving` (6.4) chưa có; Valkey chưa dùng; 1 tiến trình gateway (chưa đóng kết nối cũ giữa các node); `TransactWriteItems` DynamoDB Local không phản ánh hết giới hạn thật (100 mục/4 MB) nên ngưỡng 50 Welcome cần kiểm trên DynamoDB thật.
-- Cần làm tiếp: chạy CI `server.yml` trên GitHub (PR), rồi giai đoạn 3 (app Flutter, đăng nhập OTP/passkey, `KeyService`/`DeviceService`).
+- CI `server.yml` đã xanh trên GitHub (PR #5). `dev/docker-compose.yml` vẫn chưa chạy (sandbox không có Docker).
+- Cần làm tiếp: merge PR #5, rồi giai đoạn 3 (app Flutter, đăng nhập OTP/passkey, `KeyService`/`DeviceService`).
