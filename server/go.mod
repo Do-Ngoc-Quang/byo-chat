@@ -1,4 +1,4 @@
-module github.com/Do-Ngoc-Quang/byo-chat/server
+module byo-chat/server
 
 go 1.26.0
 

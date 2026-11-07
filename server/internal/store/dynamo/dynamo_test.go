@@ -3,7 +3,7 @@ package dynamo_test
 import (
 	"testing"
 
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/store/storetest"
+	"byo-chat/server/internal/store/storetest"
 )
 
 // Cần DynamoDB Local: TEST_DYNAMO_ENDPOINT=http://localhost:8000 go test ./internal/store/dynamo/

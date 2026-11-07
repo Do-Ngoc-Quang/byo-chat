@@ -7,10 +7,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/ids"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/store"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/store/postgres"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/store/storetest"
+	"byo-chat/server/internal/ids"
+	"byo-chat/server/internal/store"
+	"byo-chat/server/internal/store/postgres"
+	"byo-chat/server/internal/store/storetest"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

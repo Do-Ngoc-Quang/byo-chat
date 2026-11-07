@@ -19,9 +19,9 @@ import (
 	"strconv"
 	"time"
 
-	chatv1 "github.com/Do-Ngoc-Quang/byo-chat/server/gen/chat/v1"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/ids"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/store"
+	chatv1 "byo-chat/server/gen/chat/v1"
+	"byo-chat/server/internal/ids"
+	"byo-chat/server/internal/store"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"

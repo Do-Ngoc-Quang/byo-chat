@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/ids"
+	"byo-chat/server/internal/ids"
 )
 
 var errEmptySubject = errors.New("subject rỗng")

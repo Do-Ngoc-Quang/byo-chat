@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	chatv1 "github.com/Do-Ngoc-Quang/byo-chat/server/gen/chat/v1"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/store"
+	chatv1 "byo-chat/server/gen/chat/v1"
+	"byo-chat/server/internal/store"
 )
 
 // Error là lỗi giao thức (giao-thuc.md mục 5), dùng chung cho WebSocket và Connect.
