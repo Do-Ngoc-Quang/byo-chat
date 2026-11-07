@@ -41,4 +41,4 @@ jobs:
         working-directory: proto
       - run: go mod tidy && go vet ./...
         working-directory: server
-      - run: test -n "$(find app/gen -name '*.pb.dart')"
+      - run: test -n "$(find app/lib/gen -name '*.pb.dart')"

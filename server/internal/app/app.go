@@ -4,11 +4,14 @@ package app
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"errors"
 	"log/slog"
 	"net/http"
 	"time"
 
+	"byo-chat/server/internal/account"
 	"byo-chat/server/internal/api"
 	"byo-chat/server/internal/auth"
 	"byo-chat/server/internal/gateway"
@@ -29,8 +32,10 @@ type Config struct {
 	DynamoPrefix   string
 	DynamoRegion   string
 	NATSURL        string
-	TokenKey       []byte // khóa HMAC dev; giai đoạn 3 thay bằng AuthService
-	EnsureTables   bool   // tạo bảng DynamoDB nếu thiếu (dev/test)
+	TokenKey       []byte            // khóa HMAC ký access token; khóa băm liên hệ/OTP suy ra từ đây
+	OTPSender      account.OTPSender // bắt buộc; dev dùng account.LogSender
+	DevFixedOTP    string            // chỉ dev/e2e: mã OTP cố định
+	EnsureTables   bool              // tạo bảng DynamoDB nếu thiếu (dev/test)
 	RepairEvery    time.Duration
 	Gateway        gateway.Config
 	Log            *slog.Logger
@@ -95,7 +100,16 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 		pool.Close()
 		return nil, err
 	}
-	svc := message.New(postgres.New(pool), mb, q, natsx.NewBus(nc))
+	meta := postgres.New(pool)
+	if cfg.OTPSender == nil {
+		pool.Close()
+		nc.Close()
+		return nil, errors.New("app: thiếu OTPSender (dev: account.LogSender)")
+	}
+	acc := account.New(meta, meta, tok, cfg.OTPSender, contactKey(cfg.TokenKey))
+	acc.Log = cfg.Log
+	acc.DevFixedCode = cfg.DevFixedOTP
+	svc := message.New(meta, mb, q, natsx.NewBus(nc))
 	svc.Log = cfg.Log
 	gw := gateway.New(svc, tok, cfg.Gateway)
 	gw.Log = cfg.Log
@@ -103,8 +117,24 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 	mux.Handle("/v1/connect", gw)
 	p, h := (&api.Conversation{Svc: svc, Verifier: tok}).Handler()
 	mux.Handle(p, h)
+	for _, hf := range []func() (string, http.Handler){
+		(&api.Auth{Svc: acc}).Handler,
+		(&api.Device{Svc: acc}).Handler,
+		(&api.Key{Svc: acc, Verifier: tok}).Handler,
+		(&api.Profile{Svc: acc, Verifier: tok}).Handler,
+	} {
+		p, h := hf()
+		mux.Handle(p, h)
+	}
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	return &App{Svc: svc, Gateway: gw, Tokens: tok, Mux: mux, cfg: cfg, pool: pool, nc: nc}, nil
+}
+
+// contactKey suy ra khóa băm liên hệ/OTP từ khóa token (tách miền, không dùng chung khóa).
+func contactKey(tokenKey []byte) []byte {
+	m := hmac.New(sha256.New, tokenKey)
+	m.Write([]byte("chat.v1.contact-key"))
+	return m.Sum(nil)
 }
 
 // Run chạy worker fanout và vòng sửa chữa tới khi ctx hủy.

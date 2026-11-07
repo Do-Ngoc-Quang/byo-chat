@@ -83,7 +83,7 @@ func (w *world) boot(drop bool) (*app.App, *httptest.Server, context.CancelFunc)
 	cfg := gateway.DefaultConfig()
 	a, err := app.New(ctx, app.Config{
 		PostgresDSN: w.dsn, DynamoEndpoint: os.Getenv("TEST_DYNAMO_ENDPOINT"), DynamoPrefix: w.prefix,
-		NATSURL: w.nats, TokenKey: []byte(strings.Repeat("k", 32)), EnsureTables: true, Gateway: cfg,
+		NATSURL: w.nats, TokenKey: []byte(strings.Repeat("k", 32)), OTPSender: otpCap, EnsureTables: true, Gateway: cfg,
 		RepairEvery: time.Hour, // sửa chữa gọi tay trong test
 	})
 	if err != nil {

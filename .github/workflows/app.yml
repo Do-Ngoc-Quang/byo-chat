@@ -1,0 +1,38 @@
+name: app
+on:
+  pull_request:
+    paths: ["app/**", "chatcore/**", "proto/**", ".github/workflows/app.yml"]
+  push:
+    branches: [main]
+    paths: ["app/**", "chatcore/**", "proto/**", ".github/workflows/app.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: wasm32-unknown-unknown }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: chatcore }
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+      # Mã Dart từ proto (plugin remote của BSR).
+      - uses: bufbuild/buf-setup-action@v1
+      - run: buf generate --template buf.gen.app.yaml
+        working-directory: proto
+      # Lõi native cho test FFI trên máy chạy CI.
+      - run: cargo build --release -p chatcore-ffi
+        working-directory: chatcore
+      - run: flutter pub get
+        working-directory: app
+      - run: flutter analyze
+        working-directory: app
+      - run: flutter test
+        working-directory: app
+        env: { CHATCORE_LIB: "${{ github.workspace }}/chatcore/target/release/libchatcore_ffi.so" }
+      # Web: build WASM rồi build app để chắc cầu nối Worker biên dịch được.
+      - run: cargo install wasm-pack --locked
+      - run: wasm-pack build wasm --release --target web --out-dir ../../app/web/pkg
+        working-directory: chatcore
+      - run: flutter build web
+        working-directory: app

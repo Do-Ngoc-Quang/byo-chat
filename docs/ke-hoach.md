@@ -13,7 +13,7 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 | 0 | PoC | Bốn PoC đạt tiêu chí (trừ mục chưa kiểm) | Xong; 3 mục còn lại tạm hoãn (pending) |
 | 1 | Proto, CI, `chatcore` | 5 bất biến đúng trên Windows, WASM, Android (emulator là đủ); `buf breaking` chạy trong CI; test hiệu năng không tệ hơn mốc | Xong (PR #3 đã merge; mục cần thiết bị thật hoãn, xem bên dưới) |
 | 2 | Server tối thiểu | Gateway và Message Service chạy cục bộ; `SendMessage` từ chối `EPOCH_MISMATCH`; con trỏ hộp thư idempotent; qua kiểm thử chèn lỗi | Xong (PR #5; CI `server.yml` xanh; còn chờ merge) |
-| 3 | Lát cắt dọc | Đăng nhập và chat 1-1 E2EE giữa Android và Web, đầu cuối | Chưa bắt đầu |
+| 3 | Lát cắt dọc | Đăng nhập và chat 1-1 E2EE giữa Android và Web, đầu cuối | Đang làm (khung app và cầu nối xong) |
 | 4 | Nhóm, đa thiết bị, backup | Nhóm, thêm thiết bị bằng External Commit, khôi phục có và không có backup; 5 bất biến đúng | Chưa bắt đầu |
 | 5 | Media | Gửi nhận ảnh/tệp mã hóa qua R2 | Chưa bắt đầu |
 | 6 | Gọi video | Cuộc gọi 4 người có E2EE trên mọi nền tảng, đổi khóa SFrame đúng quy tắc | Chưa bắt đầu |
@@ -54,11 +54,18 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 - [ ] (hoãn sang giai đoạn sau, không chặn cổng) Server kiểm tra credential của External Commit (cần phân tích `PublicMessage` MLS ở Go); `KeyService`/`DeviceService`/`AuthService`; presence, `DeliveredReceipt`, HTTP streaming `/v1/stream`, rời nhóm (`leaving`), cache Valkey cho thành viên; GSI thưa thay Scan cho `PendingFanouts`; nhiều node gateway (đóng kết nối cũ ở node khác bằng 4010)
 
 ## Giai đoạn 3 — Lát cắt dọc
-- [ ] `app/`: khung Flutter, tích hợp `chatcore` (FFI Android, WASM Web)
-- [ ] Đăng nhập: OTP, passkey
-- [ ] Chat 1-1 E2EE Android và Web
+- [x] `app/`: khung Flutter, tích hợp `chatcore` (FFI Android, WASM Web): cầu nối theo ADR 0006; đã chạy thật trên emulator Android x86_64 (API 37, trang 16 KB) và Chrome
+- [x] Cầu nối: API MLS byte-in/byte-out (`chatcore::api::Core`: key_package, create_group, add_members, join_welcome, apply_commit, external_join, encrypt/decrypt, epoch, sframe_key) qua FFI và WASM; kịch bản 1-1 + External Commit + SFrame qua trên Windows (FFI), Android emulator x86_64, Chrome. Chưa có: lưu bền trạng thái MLS, remove/update, mã hóa `Payload`/credential theo 6.1
+- [x] Server `AuthService` (OTP, RefreshToken), `DeviceService.RegisterDevice`, `KeyService` (ADR 0007, spec 1.1.1): chạy thật trên Postgres, qua Connect HTTP; credential 136 byte
+- [ ] Server: passkey (`Begin/FinishPasskey*`), gửi OTP thật (SMS/email), giới hạn tốc độ `FetchKeyPackages`, RPC thay last resort, kiểm sâu KeyPackage MLS ở Go
+- [x] chatcore: khóa danh tính tài khoản, credential 136 byte, 100 KeyPackage một lần + last resort, kiểm KeyPackage nhận từ server (6.1, 6.2 bước 2); qua cầu nối, chạy thật trên FFI Windows, emulator Android x86_64, Chrome; vector credential Rust↔Go chung
+- [x] Client Connect (Dart, `package:http` + protobuf sinh từ proto) và đăng nhập OTP: màn hình, `LoginController` (RequestOtp → VerifyOtp → khóa + credential + 100 KeyPackage → RegisterDevice); e2e với server thật qua FFI Windows, emulator Android, Chrome (CORS)
+- [x] Lưu bền khóa thiết bị/khóa danh tính/trạng thái MLS và phiên (ADR 0008): snapshot AES-256-GCM trong chatcore, khóa ở Keystore (`flutter_secure_storage`), blob ở tệp/localStorage; khôi phục khi mở app, làm mới token, đăng xuất; chạy thật trên FFI Windows, emulator Android (Keystore thật), Chrome
+- [ ] Lưu từng phần cho trạng thái lớn (SQLCipher native, OPFS Web); khóa Web dẫn xuất từ passkey; tài khoản đã có (liên kết thiết bị/khôi phục, giai đoạn 4); passkey
+- [x] Chat 1-1 E2EE Android và Web (ADR 0009): `LookupAccount`, tạo hội thoại + Welcome, WebSocket (Hello, tồn đọng, Ack sau khi ghi bền, heartbeat, backoff), gửi/nhận/giải mã, hàng chờ gửi, kho cục bộ cùng snapshot MLS, lấp khoảng trống bằng FetchLog, giao diện danh sách + chat; e2e hai thiết bị với server thật qua FFI Windows, emulator Android, Chrome (WebSocket cross-origin)
+- [ ] Chat 1-1: media/phản ứng/sửa/xóa/đã xem/typing, vào lại nhóm khi giải mã lỗi (6.7), xoay khóa (6.8), tự refresh token khi chạy lâu, thông báo đẩy, kho có chỉ mục (SQLCipher/OPFS)
 - [ ] Đo ngưỡng payload push FCM
-- [ ] CI `app.yml`: `flutter analyze`, `flutter test`
+- [ ] CI `app.yml`: đã viết (`flutter analyze`, `flutter test`, build web), chưa chạy trên GitHub; chưa có job Android emulator
 
 ## Giai đoạn 4 — Nhóm, đa thiết bị, backup
 - [ ] Nhóm, thêm/gỡ thành viên

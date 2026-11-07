@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	chatv1 "byo-chat/server/gen/chat/v1"
 	"byo-chat/server/gen/chat/v1/chatv1connect"
@@ -56,15 +57,20 @@ func toConnect(e *message.Error) error {
 
 // device xác thực Bearer token và trả thiết bị đang hoạt động.
 func (c *Conversation) device(ctx context.Context, h http.Header) (store.DeviceInfo, *message.Error) {
+	return authDevice(ctx, h, c.Verifier, c.Svc.Meta, c.Svc.Now())
+}
+
+// authDevice dùng chung cho mọi service cần đăng nhập (Conversation, Key, ...).
+func authDevice(ctx context.Context, h http.Header, v auth.Verifier, meta store.MetaStore, now time.Time) (store.DeviceInfo, *message.Error) {
 	tok, ok := strings.CutPrefix(h.Get("Authorization"), "Bearer ")
 	if !ok {
 		return store.DeviceInfo{}, &message.Error{Code: chatv1.ErrorCode_ERROR_CODE_UNAUTHENTICATED, Msg: "thiếu token"}
 	}
-	cl, err := c.Verifier.Verify(tok, c.Svc.Now())
+	cl, err := v.Verify(tok, now)
 	if err != nil {
 		return store.DeviceInfo{}, &message.Error{Code: chatv1.ErrorCode_ERROR_CODE_UNAUTHENTICATED, Msg: "token không hợp lệ hoặc hết hạn"}
 	}
-	dev, err := c.Svc.Meta.GetDevice(ctx, cl.Device)
+	dev, err := meta.GetDevice(ctx, cl.Device)
 	if err != nil || dev.AccountID != cl.Account {
 		return store.DeviceInfo{}, &message.Error{Code: chatv1.ErrorCode_ERROR_CODE_UNAUTHENTICATED, Msg: "thiết bị không tồn tại"}
 	}

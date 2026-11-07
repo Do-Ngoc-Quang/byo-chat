@@ -424,3 +424,28 @@ func asConnect(err error, out **connect.Error) bool {
 }
 
 var _ sync.Locker = (*sync.Mutex)(nil)
+
+// Trình duyệt gửi Origin: khác origin với server thì bị từ chối (chống CSWSH) trừ khi host nằm trong OriginPatterns.
+func TestWebSocketOrigin(t *testing.T) {
+	cfg := fastCfg()
+	cfg.OriginPatterns = []string{"app.example.test:8142"}
+	s := newStack(t, cfg)
+	dial := func(origin string) error {
+		ws, _, err := websocket.Dial(context.Background(), "ws"+strings.TrimPrefix(s.ts.URL, "http")+"/v1/connect",
+			&websocket.DialOptions{Subprotocols: []string{"chat.v1"}, HTTPHeader: http.Header{"Origin": {origin}}})
+		if err == nil {
+			ws.CloseNow()
+		}
+		return err
+	}
+	if err := dial("http://app.example.test:8142"); err != nil {
+		t.Fatalf("origin được phép phải kết nối được: %v", err)
+	}
+	if err := dial("http://evil.example:9"); err == nil {
+		t.Fatal("origin lạ phải bị từ chối")
+	}
+	// không có Origin (app native) luôn được
+	if err := dial(""); err != nil {
+		t.Fatalf("không có Origin phải kết nối được: %v", err)
+	}
+}

@@ -24,6 +24,7 @@ type Meta struct {
 	direct  map[[32]byte]ids.ID
 	gi      map[ids.ID]giVal
 	groups  map[string]ids.ID
+	acc     accState
 }
 
 func NewMeta() *Meta {
@@ -34,6 +35,7 @@ func NewMeta() *Meta {
 		direct:  map[[32]byte]ids.ID{},
 		gi:      map[ids.ID]giVal{},
 		groups:  map[string]ids.ID{},
+		acc:     newAccState(),
 	}
 }
 

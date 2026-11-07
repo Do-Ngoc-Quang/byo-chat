@@ -222,6 +222,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "chatcore-ffi"
+version = "0.1.0"
+dependencies = [
+ "chatcore",
+]
+
+[[package]]
 name = "chatcore-wasm"
 version = "0.1.0"
 dependencies = [

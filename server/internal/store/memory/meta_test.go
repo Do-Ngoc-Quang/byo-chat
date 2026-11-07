@@ -17,3 +17,10 @@ func TestMetaContract(t *testing.T) {
 }
 
 var _ store.MetaStore = (*memory.Meta)(nil)
+
+func TestAccountContract(t *testing.T) {
+	storetest.RunAccount(t, func(testing.TB) (store.AccountStore, store.MetaStore) {
+		m := memory.NewMeta()
+		return m, m
+	})
+}
