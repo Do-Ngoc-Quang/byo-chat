@@ -5,12 +5,12 @@ import (
 	"sync"
 	"testing"
 
-	chatv1 "github.com/Do-Ngoc-Quang/byo-chat/server/gen/chat/v1"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/ids"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/message"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/store"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/store/memory"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/store/storetest"
+	chatv1 "byo-chat/server/gen/chat/v1"
+	"byo-chat/server/internal/ids"
+	"byo-chat/server/internal/message"
+	"byo-chat/server/internal/store"
+	"byo-chat/server/internal/store/memory"
+	"byo-chat/server/internal/store/storetest"
 )
 
 // Env: Alice (A1, A2), Bob (B1), Carol (C1).

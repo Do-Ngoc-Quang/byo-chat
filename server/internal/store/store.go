@@ -6,8 +6,8 @@ import (
 	"context"
 	"errors"
 
-	chatv1 "github.com/Do-Ngoc-Quang/byo-chat/server/gen/chat/v1"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/ids"
+	chatv1 "byo-chat/server/gen/chat/v1"
+	"byo-chat/server/internal/ids"
 )
 
 var (

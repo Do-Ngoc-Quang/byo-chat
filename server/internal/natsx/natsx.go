@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/ids"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/message"
+	"byo-chat/server/internal/ids"
+	"byo-chat/server/internal/message"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )

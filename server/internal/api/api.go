@@ -9,11 +9,11 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	chatv1 "github.com/Do-Ngoc-Quang/byo-chat/server/gen/chat/v1"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/gen/chat/v1/chatv1connect"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/auth"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/message"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/store"
+	chatv1 "byo-chat/server/gen/chat/v1"
+	"byo-chat/server/gen/chat/v1/chatv1connect"
+	"byo-chat/server/internal/auth"
+	"byo-chat/server/internal/message"
+	"byo-chat/server/internal/store"
 )
 
 type Conversation struct {

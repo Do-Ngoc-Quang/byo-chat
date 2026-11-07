@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/sha256"
 
-	chatv1 "github.com/Do-Ngoc-Quang/byo-chat/server/gen/chat/v1"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/ids"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/store"
+	chatv1 "byo-chat/server/gen/chat/v1"
+	"byo-chat/server/internal/ids"
+	"byo-chat/server/internal/store"
 )
 
 func idemHash(k string) []byte { h := sha256.Sum256([]byte(k)); return h[:16] }

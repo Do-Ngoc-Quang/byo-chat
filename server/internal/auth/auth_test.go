@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/ids"
+	"byo-chat/server/internal/ids"
 )
 
 func TestHMACRoundTripExpiryTamper(t *testing.T) {

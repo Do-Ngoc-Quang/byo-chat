@@ -10,3 +10,4 @@ Mẫu: Trạng thái · Bối cảnh · Quyết định · Hệ quả.
 | [0002](0002-tach-proto-chat-v1.md) | Cách tách file proto `chat.v1` | Chấp nhận |
 | [0003](0003-xoa-poc.md) | Xóa `poc/` | Chấp nhận |
 | [0004](0004-fanout-ben-server-toi-thieu.md) | Fanout bền, idempotency và giới hạn của server tối thiểu | Chấp nhận |
+| [0005](0005-ten-module-go-trung-lap.md) | Tên module Go không gắn host (`byo-chat/server`) | Chấp nhận |

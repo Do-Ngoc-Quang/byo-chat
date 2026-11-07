@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/app"
-	"github.com/Do-Ngoc-Quang/byo-chat/server/internal/gateway"
+	"byo-chat/server/internal/app"
+	"byo-chat/server/internal/gateway"
 )
 
 func env(k, def string) string {
