@@ -345,7 +345,7 @@ func TestLeaveFallbackByMember(t *testing.T) {
 	}
 }
 
-func add2(conv ids.ID, e *env)*chatv1.SubmitCommitRequest {
+func add2(conv ids.ID, e *env) *chatv1.SubmitCommitRequest {
 	r := commitReq(conv, 1)
 	r.Added = []*chatv1.Member{member(e.carol, chatv1.Role_ROLE_MEMBER)}
 	r.Welcomes = []*chatv1.WelcomeEnvelope{welcome(e.C1)}
