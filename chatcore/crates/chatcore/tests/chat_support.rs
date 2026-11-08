@@ -146,3 +146,21 @@ fn roi_nhom_proposal_roi_admin_commit() {
     // Proposal đã được dùng: không còn gì để commit.
     assert!(a.call("stage_commit_pending", &pack(&[b"g"])).is_err());
 }
+
+#[test]
+fn ten_nhom_nam_trong_chat_policy_nguoi_vao_doc_duoc() {
+    let mut a = Core::new_device(&[1; 16], &[10; 16], None, 1).unwrap();
+    let mut b = Core::new_device(&[2; 16], &[20; 16], None, 1).unwrap();
+    let kp = call(&mut b, "key_packages", &[&1u32.to_le_bytes()]).remove(0);
+    call(&mut a, "create_group", &[b"g", "Nhóm bạn bè".as_bytes()]);
+    assert_eq!(call(&mut a, "group_name", &[b"g"])[0], "Nhóm bạn bè".as_bytes());
+    let out = call(&mut a, "add_members", &[b"g", &kp]);
+    call(&mut b, "join_welcome", &[b"g", &out[1]]);
+    assert_eq!(call(&mut b, "group_name", &[b"g"])[0], "Nhóm bạn bè".as_bytes(), "người nhận Welcome đọc được tên");
+    let ct = call(&mut a, "encrypt", &[b"g", b"hi"]).remove(0);
+    assert_eq!(call(&mut b, "decrypt", &[b"g", &ct])[0], b"hi");
+    // nhóm không tên (1-1): rỗng; tên quá dài bị từ chối
+    let (mut a2, _b2) = pair();
+    assert_eq!(call(&mut a2, "group_name", &[b"g"])[0], b"");
+    assert!(a.call("create_group", &pack(&[b"g2", &[b'x'; 101]])).is_err());
+}

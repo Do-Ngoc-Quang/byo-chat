@@ -325,7 +325,34 @@ func (s *Service) RegisterDevice(ctx context.Context, r *chatv1.RegisterDeviceRe
 	case err != nil:
 		return nil, internal(s, "RegisterDevice", err)
 	}
+	if r.ResetIdentity && len(stored) > 0 {
+		s.revokeAllExcept(ctx, acct, dev)
+	}
 	return &chatv1.RegisterDeviceResponse{Tokens: tokens}, nil
+}
+
+// revokeAllExcept thu hồi mọi thiết bị khác của tài khoản sau reset_identity (6.14): khóa danh tính cũ đã mất nên
+// credential của chúng không còn kiểm được, và chúng không được nhận thêm tin. Không có statement (khóa cũ đã mất);
+// client coi lá cũ là đã thu hồi vì credential không khớp khóa mới (`trust_identity`). Lỗi từng thiết bị chỉ ghi log:
+// thu hồi idempotent và chạy lại được bằng RevokeDevice.
+func (s *Service) revokeAllExcept(ctx context.Context, acct, keep ids.ID) {
+	rows, err := s.Store.ListDevices(ctx, acct)
+	if err != nil {
+		s.Log.Warn("reset_identity: không liệt kê được thiết bị cũ", "err", err)
+		return
+	}
+	for _, r := range rows {
+		if r.DeviceID == keep || r.Revoked {
+			continue
+		}
+		if err := s.Store.RevokeAccountDevice(ctx, acct, r.DeviceID, []byte{}, s.Now()); err != nil {
+			s.Log.Warn("reset_identity: không thu hồi được thiết bị cũ", "err", err)
+			continue
+		}
+		if s.OnRevoke != nil {
+			s.OnRevoke(r.DeviceID)
+		}
+	}
 }
 
 // checkKeyPackages kiểm kích thước, số lượng và tiêu đề MLSMessage; gán hạn dùng phía server.

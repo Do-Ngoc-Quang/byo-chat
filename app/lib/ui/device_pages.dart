@@ -11,8 +11,9 @@ import '../chat/local_doc.dart';
 import '../gen/chat/v1/common.pbenum.dart';
 import '../gen/chat/v1/services.pb.dart';
 import 'errors.dart';
+import 'theme.dart';
 
-/// Danh sách thiết bị của tài khoản (giao-thuc.md 6.5, 6.6): thêm thiết bị mới, thu hồi thiết bị.
+/// Thiết bị đã liên kết (Mobile-Devices.dc.html): thẻ từng thiết bị, "Thiết bị này", nút Gỡ, nút Liên kết thiết bị mới.
 class DevicesPage extends StatefulWidget {
   const DevicesPage({super.key, required this.engine});
 
@@ -35,7 +36,12 @@ class _DevicesPageState extends State<DevicesPage> {
         content: Text('"${d.deviceName}" sẽ bị đăng xuất và gỡ khỏi mọi cuộc trò chuyện. Thao tác này không hoàn tác được.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
-          FilledButton(key: const Key('confirm-revoke'), onPressed: () => Navigator.pop(ctx, true), child: const Text('Thu hồi')),
+          FilledButton(
+            key: const Key('confirm-revoke'),
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(minimumSize: const Size(110, 44)),
+            child: const Text('Thu hồi'),
+          ),
         ],
       ),
     );
@@ -50,47 +56,61 @@ class _DevicesPageState extends State<DevicesPage> {
   @override
   Widget build(BuildContext context) {
     final me = hex(widget.engine.session.deviceId);
-    return Scaffold(
+    return ScreenScaffold(
       key: const Key('devices-page'),
-      appBar: AppBar(title: const Text('Thiết bị của tôi')),
-      floatingActionButton: FloatingActionButton.extended(
+      title: 'Thiết bị đã liên kết',
+      subtitle: 'Gỡ những thiết bị bạn không còn sử dụng.',
+      bottom: FilledButton(
         key: const Key('add-device'),
-        icon: const Icon(Icons.add_to_home_screen),
-        label: const Text('Thêm thiết bị'),
         onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => LinkApprovePage(engine: widget.engine))),
+        child: const Text('Liên kết thiết bị mới'),
       ),
-      body: FutureBuilder<List<DeviceInfo>>(
-        future: _devices,
-        builder: (context, snap) {
-          if (snap.hasError) return Center(child: Text('Không tải được danh sách: ${snap.error}'));
-          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-          return ListView(
-            children: [
-              for (final d in snap.data!)
-                ListTile(
-                  key: Key('device-${hex(d.deviceId)}'),
-                  leading: Icon(_icon(d.platform)),
-                  title: Text(d.deviceName.isEmpty ? 'Thiết bị' : d.deviceName),
-                  subtitle: Text(
-                    hex(d.deviceId) == me
-                        ? 'Thiết bị này'
-                        : d.revoked
-                        ? 'Đã thu hồi'
-                        : 'Đăng ký ${_date(d.createdMs.toInt())}',
+      children: [
+        FutureBuilder<List<DeviceInfo>>(
+          future: _devices,
+          builder: (context, snap) {
+            if (snap.hasError) return Text('Không tải được danh sách: ${snap.error}', style: const TextStyle(color: Ui.danger));
+            if (!snap.hasData) {
+              return const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            return Column(
+              children: [
+                for (final d in snap.data!)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: InfoCard(
+                      key: Key('device-${hex(d.deviceId)}'),
+                      icon: _icon(d.platform),
+                      title: d.deviceName.isEmpty ? 'Thiết bị' : d.deviceName,
+                      subtitle: d.revoked ? 'Đã thu hồi' : 'Đăng ký ${_date(d.createdMs.toInt())}',
+                      trailing: hex(d.deviceId) == me
+                          ? const _Pill('Thiết bị này')
+                          : d.revoked
+                          ? null
+                          : OutlinedButton(
+                              key: Key('revoke-${hex(d.deviceId)}'),
+                              onPressed: () => _revoke(d),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(56, 36),
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                foregroundColor: const Color(0xFFB91C1C),
+                                side: const BorderSide(color: Ui.fieldBorder),
+                                backgroundColor: Colors.white,
+                                shape: const StadiumBorder(),
+                                textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                              ),
+                              child: const Text('Gỡ'),
+                            ),
+                    ),
                   ),
-                  trailing: hex(d.deviceId) == me || d.revoked
-                      ? null
-                      : IconButton(
-                          key: Key('revoke-${hex(d.deviceId)}'),
-                          tooltip: 'Thu hồi',
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () => _revoke(d),
-                        ),
-                ),
-            ],
-          );
-        },
-      ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -106,8 +126,26 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 }
 
-/// Thiết bị CŨ duyệt thiết bị mới (6.5 bước 2): dán mã liên kết hiển thị ở máy mới, so khớp mã 6 số, xác nhận.
-/// (Quét QR bằng camera chưa có: cần plugin camera và thiết bị thật; hiện dán chuỗi mã.)
+/// Nhãn xanh lục "Thiết bị này" (nền #DCFCE7, chữ #166534).
+class _Pill extends StatelessWidget {
+  const _Pill(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 24,
+    padding: const EdgeInsets.symmetric(horizontal: 10),
+    alignment: Alignment.center,
+    decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(12)),
+    child: Text(
+      text,
+      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF166534)),
+    ),
+  );
+}
+
+/// Thiết bị CŨ duyệt thiết bị mới (6.5 bước 2, Mobile-Link.dc.html): dán mã liên kết hiển thị ở máy mới, so khớp mã 6 số,
+/// phê duyệt. (Quét QR bằng camera chưa có: cần plugin camera và thiết bị thật; hiện dán chuỗi mã.)
 class LinkApprovePage extends StatefulWidget {
   const LinkApprovePage({super.key, required this.engine});
 
@@ -151,57 +189,67 @@ class _LinkApprovePageState extends State<LinkApprovePage> {
   @override
   Widget build(BuildContext context) {
     final o = _offer;
-    return Scaffold(
+    final locked = _busy || _done;
+    return ScreenScaffold(
       key: const Key('link-approve-page'),
-      appBar: AppBar(title: const Text('Thêm thiết bị mới')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text('Trên thiết bị mới, chọn "Đăng nhập bằng thiết bị khác" rồi dán mã hiển thị ở đó vào đây.'),
-          const SizedBox(height: 12),
-          TextField(
-            key: const Key('link-code-field'),
-            controller: _code,
-            enabled: !_busy && !_done,
-            minLines: 2,
-            maxLines: 4,
-            decoration: InputDecoration(
-              labelText: 'Mã liên kết',
-              border: const OutlineInputBorder(),
-              suffixIcon: IconButton(
-                tooltip: 'Dán',
-                icon: const Icon(Icons.paste),
-                onPressed: () async {
-                  final t = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
-                  if (t != null) _code.text = t;
-                },
-              ),
+      title: 'Liên kết thiết bị mới',
+      subtitle: 'Trên thiết bị mới, chọn "Đăng nhập bằng thiết bị khác" rồi dán mã hiển thị ở đó vào đây.',
+      bottom: o == null
+          ? null
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FilledButton(key: const Key('link-approve'), onPressed: locked ? null : _approve, child: const Text('Phê duyệt thiết bị')),
+                const SizedBox(height: 10),
+                OutlinedButton(onPressed: locked ? null : () => Navigator.of(context).maybePop(), child: const Text('Từ chối')),
+                const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: Text(
+                    'Chỉ phê duyệt nếu chính bạn đang đăng nhập. Thiết bị mới sẽ đọc được tin nhắn mới, không đọc được tin cũ.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: Ui.muted, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+      children: [
+        TextField(
+          key: const Key('link-code-field'),
+          controller: _code,
+          enabled: !locked,
+          minLines: 2,
+          maxLines: 4,
+          decoration: InputDecoration(
+            hintText: 'Mã liên kết',
+            suffixIcon: IconButton(
+              tooltip: 'Dán',
+              icon: const Icon(Icons.paste),
+              onPressed: () async {
+                final t = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+                if (t != null) _code.text = t;
+              },
             ),
           ),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton(key: const Key('link-read'), onPressed: locked ? null : _read, child: const Text('Đọc mã')),
+        if (o != null) ...[
+          const SizedBox(height: 24),
+          const Text('Mã xác nhận trên thiết bị mới phải khớp:', style: TextStyle(fontSize: 13, color: Ui.muted)),
           const SizedBox(height: 8),
-          OutlinedButton(key: const Key('link-read'), onPressed: _busy || _done ? null : _read, child: const Text('Đọc mã')),
-          if (o != null) ...[
-            const SizedBox(height: 24),
-            Text('Mã xác nhận', style: Theme.of(context).textTheme.titleSmall),
-            Text(o.shortCode, key: const Key('link-short-code'), style: Theme.of(context).textTheme.displaySmall),
-            const SizedBox(height: 8),
-            const Text(
-              'Chỉ xác nhận nếu mã này TRÙNG với mã đang hiện trên thiết bị mới. Nếu không trùng, có người khác đang cố vào tài khoản của bạn.',
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              key: const Key('link-approve'),
-              onPressed: _busy || _done ? null : _approve,
-              child: const Text('Mã trùng, cho phép thiết bị này'),
-            ),
-          ],
-          if (_done)
-            const Padding(
-              padding: EdgeInsets.only(top: 16),
-              child: Text('Đã duyệt. Thiết bị mới đang hoàn tất đăng nhập.', key: Key('link-done')),
-            ),
+          CodeBoxes(o.shortCode, key: const Key('link-short-code')),
+          const SizedBox(height: 8),
+          const Text(
+            'Nếu không trùng, có người khác đang cố vào tài khoản của bạn: đừng phê duyệt.',
+            style: TextStyle(fontSize: 13, color: Ui.muted, height: 1.4),
+          ),
         ],
-      ),
+        if (_done)
+          const Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: Text('Đã duyệt. Thiết bị mới đang hoàn tất đăng nhập.', key: Key('link-done')),
+          ),
+      ],
     );
   }
 }
@@ -257,42 +305,57 @@ class _LinkNewDevicePageState extends State<LinkNewDevicePage> {
   @override
   Widget build(BuildContext context) {
     final o = _offer;
-    return Scaffold(
+    return ScreenScaffold(
       key: const Key('link-new-page'),
-      appBar: AppBar(title: const Text('Đăng nhập bằng thiết bị khác')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (o == null && _error == null) const Center(child: CircularProgressIndicator()),
-          if (o != null) ...[
-            const Text('Mở BYO Chat trên thiết bị đã đăng nhập: Thiết bị của tôi > Thêm thiết bị, rồi nhập mã dưới đây.'),
-            const SizedBox(height: 16),
-            Center(
+      title: 'Đăng nhập bằng thiết bị khác',
+      subtitle: 'Mở BYO Chat trên thiết bị đã đăng nhập: Thiết bị của tôi > Liên kết thiết bị mới, rồi nhập mã dưới đây.',
+      children: [
+        if (o == null && _error == null)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        if (o != null) ...[
+          Container(
+            height: 280,
+            decoration: BoxDecoration(color: Ui.text, borderRadius: BorderRadius.circular(20)),
+            alignment: Alignment.center,
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
               child: QrImageView(data: o.encode(), size: 220, backgroundColor: Colors.white),
             ),
-            const SizedBox(height: 16),
-            Text('Mã xác nhận', style: Theme.of(context).textTheme.titleSmall),
-            Text(o.shortCode, key: const Key('new-short-code'), style: Theme.of(context).textTheme.displaySmall),
-            const Text('Mã này phải TRÙNG với mã hiện trên thiết bị đã đăng nhập.'),
-            const SizedBox(height: 12),
-            SelectableText(o.encode(), key: const Key('link-offer-text'), style: Theme.of(context).textTheme.bodySmall),
-            TextButton.icon(
-              icon: const Icon(Icons.copy),
-              label: const Text('Chép mã'),
-              onPressed: () => Clipboard.setData(ClipboardData(text: o.encode())),
+          ),
+          const SizedBox(height: 20),
+          const Text('Mã xác nhận (phải khớp với thiết bị đã đăng nhập):', style: TextStyle(fontSize: 13, color: Ui.muted)),
+          const SizedBox(height: 8),
+          CodeBoxes(o.shortCode, key: const Key('new-short-code')),
+          const SizedBox(height: 16),
+          SelectableText(
+            o.encode(),
+            key: const Key('link-offer-text'),
+            style: const TextStyle(fontSize: 12, color: Ui.muted),
+          ),
+          TextButton.icon(
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text('Chép mã'),
+            onPressed: () => Clipboard.setData(ClipboardData(text: o.encode())),
+          ),
+          if (_error == null)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text('Đang chờ phê duyệt…', style: TextStyle(color: Ui.muted)),
             ),
-            if (_error == null) const Padding(padding: EdgeInsets.only(top: 8), child: Text('Đang chờ thiết bị kia xác nhận…')),
-          ],
-          if (_error != null) ...[
-            Text(
-              _error!,
-              key: const Key('link-error'),
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-            TextButton(key: const Key('link-retry'), onPressed: _begin, child: const Text('Thử lại')),
-          ],
         ],
-      ),
+        if (_error != null) ...[
+          Text(
+            _error!,
+            key: const Key('link-error'),
+            style: const TextStyle(color: Ui.danger),
+          ),
+          TextButton(key: const Key('link-retry'), onPressed: _begin, child: const Text('Thử lại')),
+        ],
+      ],
     );
   }
 }

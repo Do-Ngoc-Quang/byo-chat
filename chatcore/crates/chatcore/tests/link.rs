@@ -87,11 +87,58 @@ fn thu_hoi_thiet_bi_go_la_khoi_nhom_va_ky_statement() {
     // A1 gỡ riêng A3 (thiết bị 30): A1 còn, B1 áp dụng được, A3 bị loại khỏi epoch mới.
     let rm = call(&mut a1, "stage_remove_devices", &[b"g", &[30; 16]]);
     call(&mut a1, "merge_commit", &[b"g"]);
+    // Spec 6.6 bước 4: B1 chưa có statement thì không tin Commit gỡ một phần thiết bị của Alice (nhóm giữ nguyên epoch).
+    let e0 = call(&mut b1, "epoch", &[b"g"]);
+    let err = b1.call("apply_commit", &pack(&[b"g", &rm[0]])).unwrap_err().to_string();
+    assert!(err.contains("NEED_REVOCATION:") && err.contains(&"1e".repeat(16)), "{err}");
+    assert_eq!(call(&mut b1, "epoch", &[b"g"]), e0);
+    // Statement ký bằng khóa khác (Bob giả mạo) bị từ chối; statement đúng của Alice thì được, rồi áp dụng được.
+    let alice_pub = call(&mut a1, "credential", &[]).remove(2);
+    let forged = call(&mut b1, "revocation_sign", &[&[30; 16], &9u64.to_le_bytes()]).remove(0);
+    assert!(b1.call("add_revocation", &pack(&[&alice_pub, &forged])).is_err());
+    assert!(b1.call("add_revocation", &pack(&[&alice_pub, &s[..87]])).is_err());
+    call(&mut b1, "add_revocation", &[&alice_pub, &s]);
     call(&mut b1, "apply_commit", &[b"g", &rm[0]]);
-    call(&mut a3, "apply_commit", &[b"g", &rm[0]]);
+    call(&mut a3, "apply_commit", &[b"g", &rm[0]]); // thiết bị bị gỡ không cần statement
     assert_eq!(call(&mut a3, "is_active", &[b"g"])[0], [0]);
     assert_eq!(call(&mut a1, "group_members", &[b"g"]).len(), 2);
     let ct = call(&mut a1, "encrypt", &[b"g", b"sau thu hoi"]).remove(0);
     assert_eq!(call(&mut b1, "decrypt", &[b"g", &ct])[0], b"sau thu hoi");
     assert!(a3.call("decrypt", &pack(&[b"g", &ct])).is_err());
+}
+
+#[test]
+fn reset_identity_lien_ket_lai_vao_nhom_va_go_la_cu_khong_can_statement() {
+    let mut a1 = Core::new_device(&[1; 16], &[10; 16], None, 1).unwrap();
+    let mut b = Core::new_device(&[2; 16], &[20; 16], None, 1).unwrap();
+    let kb = call(&mut b, "key_packages", &[&1u32.to_le_bytes()]).remove(0);
+    call(&mut a1, "create_group", &[b"g"]);
+    let out = call(&mut a1, "add_members", &[b"g", &kb]);
+    call(&mut b, "join_welcome", &[b"g", &out[1]]);
+    let old_pub = call(&mut a1, "credential", &[]).remove(2);
+
+    // Alice mất hết thiết bị và không có sao lưu: máy mới sinh khóa danh tính MỚI (cùng account_id) rồi External Commit.
+    let mut a9 = Core::new_device(&[1; 16], &[90; 16], None, 2).unwrap();
+    let new_pub = call(&mut a9, "credential", &[]).remove(2);
+    assert_ne!(old_pub, new_pub);
+    let gi = call(&mut a1, "group_info", &[b"g"]).remove(0);
+    let ext = call(&mut a9, "external_join", &[b"g", &gi]).remove(0);
+    call(&mut b, "apply_commit", &[b"g", &ext]);
+    // a1 (máy cũ đã mất) không áp dụng nữa; a9 phải thấy lá cũ của chính tài khoản mình là lá cũ.
+    let stale = call(&mut a9, "stale_devices", &[b"g"]);
+    assert_eq!(stale, vec![vec![10u8; 16]], "chỉ lá cũ (device 10) là lá cũ, không phải chính a9");
+
+    // a9 gỡ lá cũ. Bob chưa tin khóa mới nên chặn (cần statement); sau khi biết khóa danh tính mới thì chấp nhận.
+    let rm = call(&mut a9, "stage_remove_devices", &[b"g", &[10; 16]]);
+    call(&mut a9, "merge_commit", &[b"g"]);
+    let err = b.call("apply_commit", &pack(&[b"g", &rm[0]])).unwrap_err().to_string();
+    assert!(err.contains("NEED_REVOCATION:"), "{err}");
+    let n = call(&mut b, "trust_identity", &[&[1u8; 16], &new_pub]).remove(0);
+    assert_eq!(n, 1u32.to_le_bytes(), "đánh dấu đúng một lá cũ");
+    call(&mut b, "apply_commit", &[b"g", &rm[0]]);
+    // Khóa danh tính cũ không làm lá cũ thành "cũ": lá của a9 khớp khóa mới nên không bị đánh dấu.
+    assert_eq!(call(&mut b, "trust_identity", &[&[1u8; 16], &new_pub]).remove(0), 0u32.to_le_bytes());
+    let ct = call(&mut a9, "encrypt", &[b"g", b"sau reset"]).remove(0);
+    assert_eq!(call(&mut b, "decrypt", &[b"g", &ct])[0], b"sau reset");
+    assert!(call(&mut a9, "stale_devices", &[b"g"]).is_empty());
 }

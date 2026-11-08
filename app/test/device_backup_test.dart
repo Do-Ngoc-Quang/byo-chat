@@ -39,6 +39,9 @@ void main() {
   });
 
   testWidgets('đăng nhập: luôn có nút liên kết; tài khoản đã có thì thêm nút khôi phục', (tester) async {
+    tester.view.physicalSize = const Size(800, 1400); // màn dài hơn mặc định để ListView dựng đủ nút
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final srv = FakeServer(newAccount: false);
     final c = LoginController(api: srv.api, openCore: () async => FakeCore());
     await tester.pumpWidget(MaterialApp(home: LoginPage(controller: c)));

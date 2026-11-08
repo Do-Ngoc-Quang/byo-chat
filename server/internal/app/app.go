@@ -7,6 +7,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -17,7 +18,9 @@ import (
 	"byo-chat/server/internal/blob"
 	"byo-chat/server/internal/gateway"
 	"byo-chat/server/internal/message"
+	"byo-chat/server/internal/mlswire"
 	"byo-chat/server/internal/natsx"
+	"byo-chat/server/internal/store"
 	"byo-chat/server/internal/store/dynamo"
 	"byo-chat/server/internal/store/postgres"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -36,7 +39,9 @@ type Config struct {
 	TokenKey       []byte            // khóa HMAC ký access token; khóa băm liên hệ/OTP suy ra từ đây
 	OTPSender      account.OTPSender // bắt buộc; dev dùng account.LogSender
 	DevFixedOTP    string            // chỉ dev/e2e: mã OTP cố định
-	DevBlobURL     string            // chỉ dev/e2e: URL công khai của chính server; bật kho sao lưu trong bộ nhớ (R2 là việc dở)
+	DevBlobURL     string            // chỉ dev/e2e: URL công khai của chính server; bật kho sao lưu trong bộ nhớ (dùng S3 thì đặt S3)
+	S3             *blob.S3Config    // kho sao lưu/media trên Amazon S3 (ADR 0014); nil = không có (hoặc DevBlobURL)
+	S3Ensure       bool              // dev/test: tạo bucket và quy tắc lifecycle nếu thiếu
 	EnsureTables   bool              // tạo bảng DynamoDB nếu thiếu (dev/test)
 	RepairEvery    time.Duration
 	Gateway        gateway.Config
@@ -111,13 +116,35 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 	acc := account.New(meta, meta, tok, cfg.OTPSender, contactKey(cfg.TokenKey))
 	acc.Log = cfg.Log
 	acc.DevFixedCode = cfg.DevFixedOTP
+	if cfg.S3 != nil {
+		s3, err := blob.NewS3(ctx, *cfg.S3)
+		if err != nil {
+			pool.Close()
+			nc.Close()
+			return nil, err
+		}
+		if cfg.S3Ensure {
+			if err := s3.EnsureBucket(ctx); err != nil {
+				pool.Close()
+				nc.Close()
+				return nil, fmt.Errorf("app: tạo bucket S3: %w", err)
+			}
+			if err := s3.EnsureLifecycle(ctx, "backups/", 365); err != nil {
+				cfg.Log.Warn("không đặt được lifecycle S3 (đặt bằng hạ tầng khi chạy thật)", "err", err)
+			}
+		}
+		acc.Blobs = s3
+	}
 	var devBlob *blob.Dev
-	if cfg.DevBlobURL != "" {
+	if cfg.DevBlobURL != "" && cfg.S3 == nil {
 		devBlob = blob.NewDev(cfg.DevBlobURL, contactKey(append([]byte("blob:"), cfg.TokenKey...)))
 		acc.Blobs = devBlob
 	}
 	svc := message.New(meta, mb, q, natsx.NewBus(nc))
 	svc.Log = cfg.Log
+	svc.CheckExternal = func(ctx context.Context, dev store.DeviceInfo, leaf mlswire.ExternalLeaf) error {
+		return account.CheckExternalLeaf(ctx, meta, dev, leaf.Identity, leaf.SignatureKey)
+	}
 	gw := gateway.New(svc, tok, cfg.Gateway)
 	gw.Log = cfg.Log
 	acc.OnRevoke = gw.CloseDevice

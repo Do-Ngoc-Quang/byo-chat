@@ -18,5 +18,9 @@ services:
   valkey:
     image: valkey/valkey:8
     ports: ["6379:6379"]   # presence, rate limit, cache thành viên: chưa dùng ở giai đoạn 2
+  s3:
+    image: localstack/localstack:3
+    environment: { SERVICES: s3, S3_SKIP_SIGNATURE_VALIDATION: "0" }   # kiểm chữ ký URL ký sẵn như S3 thật
+    ports: ["4566:4566"]   # kho đối tượng tương thích S3 (ADR 0014): CHAT_S3_ENDPOINT=http://localhost:4566
 volumes:
   nats-data: {}

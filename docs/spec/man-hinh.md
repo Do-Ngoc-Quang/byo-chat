@@ -6,6 +6,9 @@
 
 ## 1. Phạm vi và quy ước
 
+> **Bắt buộc:** bản vẽ trong `docs/ui/` là chuẩn của mọi màn hình khi viết mã. Triển khai phải khớp bản vẽ (bố cục, màu, chữ, kích thước, trạng thái), cả mobile và desktop; không tự đổi kiểu. Xem `CLAUDE.md`, mục "Giao diện".
+
+
 Tài liệu này chốt 18 màn hình của ứng dụng chat cá nhân và nhóm nhỏ trên mobile (Android; iOS để sau) và desktop/web, làm căn cứ để vẽ giao diện và viết mã. Phiên bản hiện tại là 1.0.0, chốt cùng đặc tả giao thức 1.0.0 (06/11/2026).
 
 - **Phạm vi sản phẩm:** chat 1-1 và nhóm nhỏ, gọi video, đa thiết bị. Không có tổ chức, kênh hay tính năng doanh nghiệp.

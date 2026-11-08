@@ -7,6 +7,7 @@ import (
 
 	chatv1 "byo-chat/server/gen/chat/v1"
 	"byo-chat/server/internal/ids"
+	"byo-chat/server/internal/mlswire"
 	"byo-chat/server/internal/store"
 )
 
@@ -32,6 +33,9 @@ type Service struct {
 	Bus     Bus
 	Now     func() time.Time
 	Log     *slog.Logger
+	// CheckExternal (tùy chọn) kiểm lá mới của External Commit (6.5 bước 6): credential của đúng thiết bị gửi, do khóa
+	// danh tính của tài khoản ký. nil thì bỏ qua (test không dựng MLS thật).
+	CheckExternal func(ctx context.Context, dev store.DeviceInfo, leaf mlswire.ExternalLeaf) error
 }
 
 func New(meta store.MetaStore, mb store.MailboxStore, q Queue, bus Bus) *Service {

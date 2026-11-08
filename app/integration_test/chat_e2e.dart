@@ -10,6 +10,7 @@ import 'package:byo_chat/chat/chat_engine.dart';
 import 'package:byo_chat/chat/local_doc.dart';
 import 'package:byo_chat/core/chatcore.dart';
 import 'package:byo_chat/gen/chat/v1/services.pb.dart';
+import 'package:byo_chat/gen/chat/v1/common.pbenum.dart' show Role;
 import 'package:byo_chat/net/api.dart';
 import 'package:byo_chat/net/connect_client.dart';
 import 'package:byo_chat/storage/blob_store.dart';
@@ -38,10 +39,7 @@ class TestUser {
   late ChatEngine engine;
 
   Future<void> startEngine() async {
-    engine = ChatEngine(
-      session: session, api: api, store: store, apiBase: serverUrl,
-      backoffBase: const Duration(milliseconds: 100),
-    );
+    engine = ChatEngine(session: session, api: api, store: store, apiBase: serverUrl, backoffBase: const Duration(milliseconds: 100));
     await engine.start();
     await engine.whenOnline();
   }
@@ -128,12 +126,21 @@ Future<void> runChatE2E(Uri serverUrl) async {
   await alice.session.core.dispose();
   final s = await alice.store.restore(ChatApi(ConnectClient(serverUrl)), openChatCore);
   alice.session = s!;
-  alice.engine = ChatEngine(session: alice.session, api: alice.api, store: alice.store, apiBase: serverUrl, backoffBase: const Duration(milliseconds: 100));
+  alice.engine = ChatEngine(
+    session: alice.session,
+    api: alice.api,
+    store: alice.store,
+    apiBase: serverUrl,
+    backoffBase: const Duration(milliseconds: 100),
+  );
   await alice.engine.start(); // chưa chờ online: gửi ngay khi gateway chưa sẵn sàng
   final convA3 = alice.engine.conversations.single;
   await alice.engine.sendText(convA3.hexId, 'gửi khi vừa mở app');
   await _waitFor('Bob nhận tin Alice gửi lúc vừa mở app', () => bob.msgs(convB2).where((m) => m.text == 'gửi khi vừa mở app').length == 1);
-  await _waitFor('tin đó được đánh dấu đã gửi', () => alice.msgs(convA3).where((m) => m.text == 'gửi khi vừa mở app').every((m) => m.state == MsgState.sent));
+  await _waitFor(
+    'tin đó được đánh dấu đã gửi',
+    () => alice.msgs(convA3).where((m) => m.text == 'gửi khi vừa mở app').every((m) => m.state == MsgState.sent),
+  );
 
   await alice.engine.stop();
   await bob.engine.stop();
@@ -175,7 +182,10 @@ Future<void> runGroupE2E(Uri serverUrl) async {
   // Carol không đọc được tin trước khi vào (không có khóa epoch cũ), nhưng đọc được tin sau.
   _check(carol.msgs(gc).isEmpty, 'Carol không thấy tin cũ');
   await bob.engine.sendText(gb.hexId, 'Carol có đọc được không');
-  await _waitFor('Carol và Alice nhận tin của Bob', () => carol.msgs(gc).any((m) => m.text == 'Carol có đọc được không') && alice.msgs(g).any((m) => m.text == 'Carol có đọc được không'));
+  await _waitFor(
+    'Carol và Alice nhận tin của Bob',
+    () => carol.msgs(gc).any((m) => m.text == 'Carol có đọc được không') && alice.msgs(g).any((m) => m.text == 'Carol có đọc được không'),
+  );
 
   // Tên người gửi trong nhóm: Carol thấy tài khoản của Bob (chỉ biết mã rút gọn), Alice thấy số điện thoại đã nhập.
   final fromBob = carol.msgs(gc).firstWhere((m) => m.text == 'Carol có đọc được không');
@@ -249,12 +259,26 @@ Future<void> runLinkE2E(Uri serverUrl) async {
   // Bob gửi vào 1-1 và nhóm: cả A1 và A3 đọc được (MLS đã có thêm thiết bị).
   await bob.engine.sendText(dm.hexId, 'gửi cho cả hai máy của Alice');
   await bob.engine.sendText(grp.hexId, 'nhóm: gửi cho cả hai máy');
-  await _waitFor('A1 và A3 nhận tin 1-1', () => alice.msgs(dm).any((m) => m.text == 'gửi cho cả hai máy của Alice') && a3.msgs(dm3).any((m) => m.text == 'gửi cho cả hai máy của Alice'));
-  await _waitFor('A1 và A3 nhận tin nhóm', () => alice.msgs(grp).any((m) => m.text == 'nhóm: gửi cho cả hai máy') && a3.msgs(grp3).any((m) => m.text == 'nhóm: gửi cho cả hai máy'));
+  await _waitFor(
+    'A1 và A3 nhận tin 1-1',
+    () =>
+        alice.msgs(dm).any((m) => m.text == 'gửi cho cả hai máy của Alice') &&
+        a3.msgs(dm3).any((m) => m.text == 'gửi cho cả hai máy của Alice'),
+  );
+  await _waitFor(
+    'A1 và A3 nhận tin nhóm',
+    () =>
+        alice.msgs(grp).any((m) => m.text == 'nhóm: gửi cho cả hai máy') && a3.msgs(grp3).any((m) => m.text == 'nhóm: gửi cho cả hai máy'),
+  );
 
   // A3 gửi: Bob và A1 đọc được.
   await a3.engine.sendText(dm3.hexId, 'từ máy thứ hai');
-  await _waitFor('Bob và A1 nhận tin của A3', () => bob.msgs(bob.engine.conversations.firstWhere((c) => !c.isGroup)).any((m) => m.text == 'từ máy thứ hai') && alice.msgs(dm).any((m) => m.text == 'từ máy thứ hai'));
+  await _waitFor(
+    'Bob và A1 nhận tin của A3',
+    () =>
+        bob.msgs(bob.engine.conversations.firstWhere((c) => !c.isGroup)).any((m) => m.text == 'từ máy thứ hai') &&
+        alice.msgs(dm).any((m) => m.text == 'từ máy thứ hai'),
+  );
 
   // Chạy lại joinAllConversations là no-op.
   _check(await a3.engine.joinAllConversations() == 0, 'chạy lại không vào thêm');
@@ -316,6 +340,101 @@ Future<void> runLeaveE2E(Uri serverUrl) async {
   _check(sendBlocked, 'Bob đã rời không được gửi');
 
   for (final u in [alice, bob, carol]) {
+    await u.engine.stop();
+    await u.session.core.dispose();
+  }
+}
+
+/// Đổi vai trò và chuyển quyền chủ nhóm (spec 6.3): Bob lên ADMIN rồi nhận quyền chủ; chủ cũ rời được.
+Future<void> runRoleE2E(Uri serverUrl) async {
+  final alice = await signUpForTest(serverUrl, 'rlalice.');
+  final bob = await signUpForTest(serverUrl, 'rlbob.');
+  final carol = await signUpForTest(serverUrl, 'rlcarol.');
+  for (final u in [alice, bob, carol]) {
+    await u.startEngine();
+  }
+  alice.engine.autoCommitDelayMs = 50;
+  const sms = OtpChannel.OTP_CHANNEL_SMS;
+  final g = await alice.engine.createGroup('Nhóm vai trò', [(sms, bob.phone), (sms, carol.phone)]);
+  await _waitFor('Bob và Carol vào nhóm', () => bob.engine.conversations.length == 1 && carol.engine.conversations.length == 1);
+  final gb = bob.engine.conversations.single;
+  final gc = carol.engine.conversations.single;
+  final bobId = bob.session.accountId;
+  _check(gb.title == 'Nhóm vai trò' && gc.title == 'Nhóm vai trò', 'người nhận Welcome đọc tên nhóm từ chat_policy: ${gb.title}');
+
+  var denied = false;
+  try {
+    await bob.engine.changeRole(gb.hexId, carol.session.accountId, Role.ROLE_ADMIN); // Bob chưa là ADMIN
+  } on ChatException {
+    denied = true;
+  }
+  _check(denied, 'MEMBER không đổi được vai trò');
+
+  await alice.engine.changeRole(g.hexId, bobId, Role.ROLE_ADMIN);
+  await _waitFor('Bob thành ADMIN', () => gb.admin && !gb.owner);
+  _check(!gc.admin, 'Carol vẫn là MEMBER');
+  var ownerDenied = false;
+  try {
+    await bob.engine.changeRole(gb.hexId, carol.session.accountId, Role.ROLE_OWNER);
+  } on ChatException {
+    ownerDenied = true;
+  }
+  _check(ownerDenied, 'ADMIN không trao được OWNER');
+
+  await alice.engine.transferOwnership(g.hexId, bobId);
+  _check(!g.owner && g.admin, 'Alice xuống ADMIN');
+  await _waitFor('Bob thành OWNER', () => gb.owner);
+
+  // Alice không còn là chủ nên rời được; Bob (chủ mới) tự commit gỡ Alice.
+  bob.engine.autoCommitDelayMs = 50;
+  await alice.engine.leaveGroup(g.hexId);
+  await _waitFor('Alice bị gỡ khỏi nhóm', () => g.removed);
+  await bob.engine.sendText(gb.hexId, 'chủ mới');
+  await _waitFor('Carol nhận tin', () => carol.msgs(gc).any((m) => m.text == 'chủ mới'));
+
+  for (final u in [alice, bob, carol]) {
+    await u.engine.stop();
+    await u.session.core.dispose();
+  }
+}
+
+/// Tranh chấp epoch (spec 6.3): hai ADMIN cùng lúc gỡ hai người khác nhau; một bên nhận EPOCH_MISMATCH, đồng bộ rồi dựng lại.
+Future<void> runEpochRaceE2E(Uri serverUrl) async {
+  final alice = await signUpForTest(serverUrl, 'eralice.');
+  final bob = await signUpForTest(serverUrl, 'erbob.');
+  final carol = await signUpForTest(serverUrl, 'ercarol.');
+  final dave = await signUpForTest(serverUrl, 'erdave.');
+  final all = [alice, bob, carol, dave];
+  for (final u in all) {
+    await u.startEngine();
+  }
+  const sms = OtpChannel.OTP_CHANNEL_SMS;
+  final g = await alice.engine.createGroup('Nhóm đua epoch', [(sms, bob.phone), (sms, carol.phone), (sms, dave.phone)]);
+  await _waitFor('cả ba vào nhóm', () => all.skip(1).every((u) => u.engine.conversations.length == 1));
+  final gb = bob.engine.conversations.single;
+  await alice.engine.changeRole(g.hexId, bob.session.accountId, Role.ROLE_ADMIN);
+  await _waitFor('Bob thành ADMIN', () => gb.admin);
+
+  await Future.wait([
+    alice.engine.removeMember(g.hexId, carol.session.accountId),
+    bob.engine.removeMember(gb.hexId, dave.session.accountId),
+  ]);
+  final gc = carol.engine.conversations.single;
+  final gd = dave.engine.conversations.single;
+  await _waitFor('Carol và Dave bị gỡ', () => gc.removed && gd.removed);
+  await _waitFor('hai ADMIN cùng epoch', () => g.lastSeq == gb.lastSeq);
+  _check((await alice.engine.memberAccounts(g.hexId)).length == 2, 'Alice thấy 2 người');
+  _check((await bob.engine.memberAccounts(gb.hexId)).length == 2, 'Bob thấy 2 người');
+
+  await alice.engine.sendText(g.hexId, 'sau đua epoch');
+  await _waitFor('Bob đọc được', () => bob.msgs(gb).any((m) => m.text == 'sau đua epoch'));
+  await Future<void>.delayed(const Duration(milliseconds: 300));
+  _check(
+    !carol.msgs(gc).any((m) => m.text == 'sau đua epoch') && !dave.msgs(gd).any((m) => m.text == 'sau đua epoch'),
+    'người bị gỡ không đọc được',
+  );
+
+  for (final u in all) {
     await u.engine.stop();
     await u.session.core.dispose();
   }

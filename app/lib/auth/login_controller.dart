@@ -101,8 +101,20 @@ class LoginController extends ChangeNotifier {
     await _register();
   });
 
+  bool _resetMode = false;
+
+  /// Khôi phục KHÔNG có bản sao lưu (giao-thuc.md 6.14): sinh khóa danh tính mới và `RegisterDevice(reset_identity)`.
+  /// Tài khoản giữ nguyên nhưng mọi tin cũ mất; app tự vào lại từng hội thoại và gỡ lá cũ (`needsJoin`).
+  Future<void> resetIdentity() => _run(() async {
+    if (!existing || _ticket == null) throw StateError('chỉ dùng sau khi OTP đúng cho tài khoản đã có');
+    _resetMode = true;
+    step = LoginStep.registering;
+    notifyListeners();
+    await _register(reset: true);
+  });
+
   /// Thử lại đăng ký sau khi lỗi (ticket còn dùng được vì server chỉ tiêu thụ khi thành công).
-  Future<void> retryRegister() => _run(_register);
+  Future<void> retryRegister() => _run(() => _register(reset: _resetMode));
 
   /// true khi phiên vừa tới từ liên kết/khôi phục: app phải gọi `ChatEngine.joinAllConversations` (External Commit).
   bool needsJoin = false;
@@ -150,7 +162,7 @@ class LoginController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _register() async {
+  Future<void> _register({bool reset = false}) async {
     final ticket = _ticket ?? (throw StateError('chưa có ticket'));
     final accountId = _accountId!;
     final deviceId = newUuidV7(now: _now());
@@ -168,7 +180,8 @@ class LoginController extends ChangeNotifier {
           deviceName: _deviceName(),
           devicePublicKey: cred.devicePublicKey,
           credential: cred.credential,
-          accountIdentityPublicKey: cred.identityPublicKey, // thiết bị đầu tiên
+          accountIdentityPublicKey: cred.identityPublicKey, // thiết bị đầu tiên (hoặc reset_identity)
+          resetIdentity: reset,
           keyPackages: kps,
           lastResortKeyPackage: last,
         ),
@@ -180,6 +193,11 @@ class LoginController extends ChangeNotifier {
       await store?.save(s);
       session = s;
       _ticket = null;
+      if (reset) {
+        _resetMode = false;
+        existing = false;
+        needsJoin = true; // app vào lại từng hội thoại rồi gỡ lá cũ
+      }
       step = LoginStep.done;
     } catch (_) {
       await core.dispose(); // lần thử lại sẽ dựng lõi mới

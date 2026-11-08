@@ -97,6 +97,21 @@ pub fn revocation_sign(identity: &SignatureKeyPair, device_id: &[u8; 16], revoke
     Ok(out)
 }
 
+/// Kiểm statement thu hồi (88 byte) bằng khóa danh tính công khai của tài khoản; trả device_id bị thu hồi.
+pub fn revocation_verify(identity_public_key: &[u8], statement: &[u8]) -> Result<[u8; 16]> {
+    if statement.len() != 88 {
+        return Err("statement thu hồi phải 88 byte".into());
+    }
+    let mut msg = b"chat.v1.revocation".to_vec();
+    msg.extend_from_slice(&statement[..24]);
+    use openmls_traits::{crypto::OpenMlsCrypto, OpenMlsProvider};
+    OpenMlsRustCrypto::default()
+        .crypto()
+        .verify_signature(CIPHERSUITE.signature_algorithm(), &msg, identity_public_key, &statement[24..])
+        .map_err(|e| format!("chữ ký statement thu hồi sai: {e:?}"))?;
+    Ok(statement[..16].try_into()?)
+}
+
 /// Nội dung identity của BasicCredential trong KeyPackage (để kiểm khớp credential).
 pub fn leaf_identity(kp: &KeyPackage) -> Result<Vec<u8>> {
     Ok(BasicCredential::try_from(kp.leaf_node().credential().clone())?.identity().to_vec())

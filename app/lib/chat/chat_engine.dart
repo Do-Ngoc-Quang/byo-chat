@@ -248,6 +248,16 @@ class ChatEngine extends ChangeNotifier {
     return Uint8List.fromList(found.profile.accountId);
   }
 
+  /// Tên nhóm đưa vào chat_policy: bỏ khoảng trắng thừa, cắt ở 100 byte UTF-8 theo ranh giới ký tự.
+  static String _groupTitle(String t) {
+    var n = t.trim();
+    if (n.isEmpty) return 'Nhóm';
+    while (utf8.encode(n).length > 100) {
+      n = n.substring(0, n.length - 1);
+    }
+    return n;
+  }
+
   /// Tạo nhóm với [contacts] (số điện thoại/email), mình là OWNER. Một Commit thêm tối đa 50 thiết bị.
   Future<ConvState> createGroup(String title, List<(OtpChannel, String)> contacts) async {
     final peers = <String, Uint8List>{};
@@ -267,7 +277,7 @@ class ChatEngine extends ChangeNotifier {
     if (keys.adds.length > 50) throw ChatException('Tối đa 50 thiết bị mỗi lần tạo nhóm; tạo nhóm nhỏ rồi thêm dần');
     final groupId = Uint8List.fromList(List.generate(32, (_) => _rng.nextInt(256)));
     return _mu.run(() async {
-      await _core.createGroup(groupId);
+      await _core.createGroup(groupId, name: _groupTitle(title));
       CreateConversationResponse resp;
       try {
         final out = await _core.addMembers(groupId, keys.adds);
@@ -293,7 +303,7 @@ class ChatEngine extends ChangeNotifier {
       await _core.renameGroup(groupId, convId);
       final cs = ConvState(
         convId: convId,
-        title: title.trim().isEmpty ? 'Nhóm' : title.trim(),
+        title: _groupTitle(title),
         lastSeq: resp.seq.toInt(),
         lastActivityMs: _nowMs,
         isGroup: true,
@@ -359,6 +369,60 @@ class ChatEngine extends ChangeNotifier {
     );
   }
 
+  /// Đổi vai trò thành viên (ADMIN/MEMBER) bằng Commit chỉ có path update + `role_changes` (spec 6.3). Chỉ OWNER trao OWNER.
+  Future<void> changeRole(String convHex, Uint8List account, Role role) async {
+    final cs = _adminGroup(convHex);
+    if (hex(account) == hex(session.accountId)) throw ChatException('Không tự đổi vai trò của mình');
+    if (role == Role.ROLE_OWNER && !cs.owner) throw ChatException('Chỉ chủ nhóm mới trao quyền chủ nhóm');
+    await _roleCommit(cs, [Member(accountId: account, role: role)]);
+  }
+
+  /// Chuyển quyền chủ nhóm: [account] thành OWNER, mình xuống ADMIN, trong cùng một Commit. Sau đó mới rời nhóm được.
+  Future<void> transferOwnership(String convHex, Uint8List account) async {
+    final cs = _adminGroup(convHex);
+    if (!cs.owner) throw ChatException('Chỉ chủ nhóm mới chuyển quyền');
+    if (hex(account) == hex(session.accountId)) throw ChatException('Chọn một thành viên khác');
+    await _roleCommit(cs, [Member(accountId: account, role: Role.ROLE_OWNER), Member(accountId: session.accountId, role: Role.ROLE_ADMIN)]);
+  }
+
+  Future<void> _roleCommit(ConvState cs, List<Member> changes) async {
+    await _groupCommit(
+      cs,
+      () => _core.stageUpdate(cs.convId),
+      (out, epoch) => SubmitCommitRequest(
+        convId: cs.convId,
+        expectedEpoch: Int64(epoch),
+        commit: out.commit,
+        groupInfo: out.groupInfo,
+        roleChanges: changes,
+      ),
+    );
+    // Server áp dụng vai trò bất đồng bộ (fanout) nên không đọc lại ngay; người nhận đọc lại khi nhận Commit.
+    for (final c in changes) {
+      if (hex(c.accountId) == hex(session.accountId)) {
+        cs.owner = c.role == Role.ROLE_OWNER;
+        cs.admin = c.role != Role.ROLE_MEMBER;
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Đọc lại vai trò của mình trong mọi nhóm từ server (vai trò không nằm trong MLS nên Commit không báo cho người khác).
+  Future<void> refreshRoles() async {
+    try {
+      final l = await api.listConversations();
+      for (final s in l.conversations) {
+        final cs = doc.convs[hex(s.convId)];
+        if (cs == null || !cs.isGroup) continue;
+        cs.admin = s.role == Role.ROLE_ADMIN || s.role == Role.ROLE_OWNER;
+        cs.owner = s.role == Role.ROLE_OWNER;
+      }
+      notifyListeners();
+    } catch (_) {
+      // offline: giữ vai trò cũ, thử lại ở Commit sau
+    }
+  }
+
   ConvState _adminGroup(String convHex) {
     final cs = doc.convs[convHex] ?? (throw ChatException('Hội thoại không tồn tại'));
     if (!cs.isGroup) throw ChatException('Không phải nhóm');
@@ -417,6 +481,33 @@ class ChatEngine extends ChangeNotifier {
   /// Thiết bị MỚI sau khi đăng ký (bước 5): tự vào mọi hội thoại của tài khoản bằng External Commit, tối đa 4 hội
   /// thoại song song theo thứ tự hoạt động gần nhất (server trả theo thứ tự đó). Trả số hội thoại đã vào; hội thoại
   /// lỗi được bỏ qua (chạy lại hàm này sẽ thử lại, hội thoại đã vào thì bỏ qua).
+  /// Sau reset_identity (6.14): gỡ lá cũ của chính tài khoản mình (credential không khớp khóa danh tính mới) khỏi từng
+  /// nhóm bằng Commit `removed_device_ids`. Server cho phép vì đó là thiết bị của chính tài khoản gửi. Trả số hội thoại đã gỡ.
+  Future<int> removeStaleLeaves() async {
+    var n = 0;
+    for (final cs in conversations.where((c) => !c.removed)) {
+      try {
+        final stale = await _core.staleDevices(cs.convId);
+        if (stale.isEmpty) continue;
+        await _groupCommit(
+          cs,
+          () => _core.stageRemoveDevices(cs.convId, stale),
+          (out, epoch) => SubmitCommitRequest(
+            convId: cs.convId,
+            expectedEpoch: Int64(epoch),
+            commit: out.commit,
+            groupInfo: out.groupInfo,
+            removedDeviceIds: stale,
+          ),
+        );
+        n++;
+      } on ChatCoreException {
+        // không giữ khóa danh tính hoặc nhóm không có lá cũ: bỏ qua
+      }
+    }
+    return n;
+  }
+
   Future<int> joinAllConversations() async {
     final list = (await api.listConversations()).conversations.where((c) => !doc.convs.containsKey(hex(c.convId))).toList();
     var joined = 0;
@@ -450,10 +541,13 @@ class ChatEngine extends ChangeNotifier {
             }
           }
           final group = sum.kind == ConvKind.CONV_KIND_GROUP;
+          final groupName = group ? await _core.groupName(convId) : '';
           // Chỉ đọc từ thời điểm vào: các mục tới seq này là của epoch trước, thiết bị này không có khóa.
           doc.convs[hex(convId)] = ConvState(
             convId: convId,
-            title: group ? 'Nhóm' : (peer == null ? 'Hội thoại' : 'Tài khoản ${hex(peer).substring(0, 8)}'),
+            title: group
+                ? (groupName.isEmpty ? 'Nhóm' : groupName)
+                : (peer == null ? 'Hội thoại' : 'Tài khoản ${hex(peer).substring(0, 8)}'),
             peerAccount: peer,
             lastSeq: r.seq.toInt(),
             lastActivityMs: _nowMs,
@@ -556,9 +650,10 @@ class ChatEngine extends ChangeNotifier {
       // Offline: đoán theo số tài khoản, không sửa lại sau (chấp nhận, hiếm).
       group = (await _core.groupMembers(convId)).map((c) => hex(c.sublist(0, 16))).toSet().length > 2;
     }
+    final groupName = group ? await _core.groupName(convId) : '';
     doc.convs[hex(convId)] = ConvState(
       convId: convId,
-      title: group ? 'Nhóm' : (peer == null ? 'Hội thoại' : 'Tài khoản ${hex(peer).substring(0, 8)}'),
+      title: group ? (groupName.isEmpty ? 'Nhóm' : groupName) : (peer == null ? 'Hội thoại' : 'Tài khoản ${hex(peer).substring(0, 8)}'),
       peerAccount: group ? null : peer,
       isGroup: group,
       admin: admin,
@@ -593,11 +688,12 @@ class ChatEngine extends ChangeNotifier {
     if (!mine) {
       switch (e.kind) {
         case EntryKind.ENTRY_KIND_COMMIT:
-          await _core.applyCommit(cs.convId, Uint8List.fromList(e.ct));
+          await _applyCommitChecked(cs, Uint8List.fromList(e.ct));
           if (!await _core.isActive(cs.convId)) {
             cs.removed = true;
             cs.leaving = false;
           } // Commit gỡ mình là tin cuối (6.4)
+          if (cs.isGroup && !cs.removed) unawaited(refreshRoles()); // Commit có thể đổi vai trò (server giữ bản sao)
         case EntryKind.ENTRY_KIND_APPLICATION:
           await _receiveApplication(cs, e);
         case EntryKind.ENTRY_KIND_PROPOSAL:
@@ -609,6 +705,42 @@ class ChatEngine extends ChangeNotifier {
     cs.lastSeq = e.seq;
     cs.lastActivityMs = max(cs.lastActivityMs, e.tsMs);
     _advanceSkips(cs);
+  }
+
+  /// Áp dụng Commit; nếu lõi báo Commit gỡ một phần thiết bị của một tài khoản mà chưa có statement (6.6 bước 4) thì lấy
+  /// statement từ key directory (kiểm bằng khóa danh tính đã ghim của tài khoản đó) rồi áp dụng lại. Thiếu hoặc sai
+  /// statement: ném lỗi, không áp dụng, và hộp thư dừng ở Commit này (không chấp nhận gỡ thiết bị không có bằng chứng).
+  Future<void> _applyCommitChecked(ConvState cs, Uint8List commit) async {
+    const tag = 'NEED_REVOCATION:';
+    try {
+      await _core.applyCommit(cs.convId, commit);
+      return;
+    } on ChatCoreException catch (ex) {
+      final at = ex.message.indexOf(tag);
+      if (at < 0) rethrow;
+      final devices = ex.message.substring(at + tag.length).trim().split(',').map(unhex).toList();
+      final byAccount = <String, Uint8List>{};
+      for (final cred in await _core.groupMembers(cs.convId)) {
+        if (devices.any((d) => hex(d) == hex(cred.sublist(16, 32)))) byAccount[hex(cred.sublist(0, 16))] = cred.sublist(0, 16);
+      }
+      final resp = await api.fetchKeyPackages(FetchKeyPackagesRequest(accountIds: byAccount.values.toList()));
+      for (final a in resp.accounts) {
+        final identity = Uint8List.fromList(a.accountIdentityPublicKey);
+        final acct = hex(a.accountId);
+        final seen = doc.peerIdentities[acct];
+        if (seen != null && !listEquals(seen, identity)) {
+          // Khóa danh tính đổi (reset_identity, 6.14): người khác chấp nhận ngay, không cảnh báo. Rủi ro SIM swap đã
+          // chấp nhận trong spec.
+          doc.peerIdentities[acct] = identity;
+        }
+        // Lá của tài khoản này mà credential không khớp khóa hiện tại là lá cũ trước reset_identity: coi như đã thu hồi.
+        await _core.trustIdentity(Uint8List.fromList(a.accountId), identity);
+        // Thu hồi do reset_identity không có statement (khóa cũ đã mất): bỏ qua mục rỗng.
+        final stmts = a.revocationStatements.where((x) => x.length == 88).map(Uint8List.fromList).toList();
+        if (stmts.isNotEmpty) await _core.addRevocation(identity, stmts);
+      }
+    }
+    await _core.applyCommit(cs.convId, commit); // vẫn thiếu statement thì lõi ném NEED_REVOCATION lần nữa
   }
 
   /// Proposal của người khác (xin rời nhóm, 6.4): xếp hàng chờ; admin online tự commit gỡ người đó sau một khoảng

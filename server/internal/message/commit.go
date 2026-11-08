@@ -6,6 +6,7 @@ import (
 
 	chatv1 "byo-chat/server/gen/chat/v1"
 	"byo-chat/server/internal/ids"
+	"byo-chat/server/internal/mlswire"
 	"byo-chat/server/internal/store"
 )
 
@@ -191,6 +192,15 @@ func (s *Service) SubmitCommit(ctx context.Context, dev store.DeviceInfo, idem s
 			return nil, errf(chatv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT, "External Commit không đổi thành viên/vai trò")
 		}
 		fo.RoleChanges = nil
+		if s.CheckExternal != nil {
+			leaf, err := mlswire.ParseExternalCommit(req.Commit)
+			if err != nil {
+				return nil, errf(chatv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT, "%v", err)
+			}
+			if err := s.CheckExternal(ctx, dev, leaf); err != nil {
+				return nil, errf(chatv1.ErrorCode_ERROR_CODE_PERMISSION_DENIED, "%v", err)
+			}
+		}
 	} else {
 		// Thêm/gỡ thành viên và đổi vai trò cần ADMIN/OWNER. Commit chỉ có path update (xoay khóa, 6.8)
 		// và gỡ thiết bị của chính tài khoản mình (thu hồi, 6.6) thì thành viên nào cũng gửi được.
