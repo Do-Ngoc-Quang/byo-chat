@@ -13,7 +13,7 @@ import (
 	"byo-chat/server/internal/store"
 )
 
-// MaxBackupBytes là kích thước tối đa một bản sao lưu (khởi điểm; chốt theo chi phí R2 đo được).
+// MaxBackupBytes là kích thước tối đa một bản sao lưu (khởi điểm; chốt theo chi phí S3 đo được).
 const MaxBackupBytes = 256 << 20
 
 // CreateBackupUpload (BackupService): cấp URL tải lên. Bản ghi được tạo ngay; GetLatestBackup chỉ trả bản đã có đối tượng.

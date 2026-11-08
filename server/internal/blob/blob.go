@@ -1,5 +1,5 @@
 // Package blob: kho đối tượng cho bản sao lưu đã mã hóa (spec BackupService, tài liệu chính mục 10).
-// Sản phẩm dùng Cloudflare R2 qua URL ký sẵn; R2 chưa có trong môi trường phát triển nên có `Dev`:
+// Sản phẩm dùng Amazon S3 qua URL ký sẵn (ADR 0014); S3 chưa có trong môi trường phát triển nên có `Dev`:
 // lưu trong bộ nhớ và phục vụ PUT/GET qua HTTP với URL ký HMAC, cùng hình dạng như URL ký sẵn.
 package blob
 
@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-// Signer cấp URL tải lên/xuống có thời hạn. Cài đặt R2 thật là việc dở (cần tài khoản R2).
+// Signer cấp URL tải lên/xuống có thời hạn. Cài đặt S3 thật: `NewS3`.
 type Signer interface {
 	// PresignPut trả các URL PUT theo từng phần (một phần với Dev) và kích thước mỗi phần.
 	PresignPut(ctx context.Context, key string, size uint64) (urls []string, partSize uint32, err error)
@@ -80,7 +80,7 @@ func (d *Dev) Exists(_ context.Context, key string) (bool, error) {
 // Handler phục vụ PUT/GET cho URL của Dev; gắn vào mux tại "/v1/dev-blob/".
 func (d *Dev) Handler() (string, http.Handler) {
 	return prefix, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// App Web ở origin khác tải thẳng lên URL ký (như R2). URL đã ký nên cho mọi origin; chỉ bản Dev.
+		// App Web ở origin khác tải thẳng lên URL ký (như S3). URL đã ký nên cho mọi origin; chỉ bản Dev.
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "*")

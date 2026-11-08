@@ -48,7 +48,7 @@ class BackupService {
     final up = await api.createBackupUpload(
       CreateBackupUploadRequest(sizeBytes: Int64(blob.length), ciphertextSha256: crypto.sha256.convert(blob).bytes),
     );
-    // Một phần (part_size >= kích thước). Tải nhiều phần khi R2 thật có giới hạn phần: việc dở.
+    // Một phần (part_size >= kích thước). Tải nhiều phần khi S3 thật có giới hạn phần: việc dở.
     if (up.partUrls.length != 1 || up.partSize < blob.length) throw BackupException('Máy chủ cấp URL tải lên không dùng được');
     final r = await _http.put(Uri.parse(up.partUrls.single), body: blob);
     if (r.statusCode != 200) throw BackupException('Tải bản sao lưu lên thất bại (${r.statusCode})');
