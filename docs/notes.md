@@ -184,3 +184,9 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Cách giải: thiết bị mới tự gỡ lá cũ của chính tài khoản (credential không khớp khóa mới, lõi `stale_devices`); người khác khi gặp NEED_REVOCATION lấy khóa hiện tại, ghim không cảnh báo (đúng 6.14: rủi ro SIM swap đã chấp nhận) và `trust_identity` coi lá không khớp là đã thu hồi. Spec lên 1.3.1.
 - Bẫy công cụ: các tệp Dart/Rust trong repo dùng CRLF; thay chuỗi nhiều dòng bằng Python `replace` KHÔNG khớp và không báo lỗi nếu chỉ kiểm "có thay đổi nào" (mất vài lượt mới thấy). Dùng công cụ Edit, hoặc kiểm từng lần thay. `dart format lib` cũng định dạng lại cả tệp không liên quan: chỉ format tệp đã sửa.
 - Windows desktop build được sau khi bật Developer Mode. Giai đoạn 4 đóng; việc hoãn ghi ở "Đóng giai đoạn 4" trong `docs/ke-hoach.md`.
+
+## Phiên rời nhóm khi không admin online (08/11/2026)
+- Không dùng cờ `chat_policy` như spec 1.2.2 dự kiến: quyền commit do server thi hành mà server không đọc được `chat_policy`. Thay bằng cột `leaving` (có sẵn, chưa ai ghi): `SubmitProposal` đặt, `SubmitCommit` của thành viên thường nhận khi chỉ gỡ tài khoản đang `leaving`. ADR 0015, spec 1.3.2.
+- Đóng thêm lỗ hổng cũ: `apply_proposal` nhận mọi proposal nên thành viên gửi Remove cho người khác khiến commit-theo-hàng-chờ của admin gỡ nhầm; nay lõi chỉ nhận Remove tự gỡ. Chưa có test âm cho ca này (API lõi không dựng được proposal gỡ người khác).
+- Giới hạn: client chưa kiểm vai trò người commit nên thành viên thường độc hại có thể nhét thêm Remove vào Commit tự rời; hẹn giờ dự phòng không sống qua khởi động lại app. Cả hai nằm trong `docs/ke-hoach.md`.
+- Kiểm: `go test` (bộ nhớ, Postgres, DynamoDB thật), `cargo test --release`, 16 test FFI qua gateway thật, `flutter analyze`/`test` sạch. Chưa kiểm giao diện (không đổi UI).

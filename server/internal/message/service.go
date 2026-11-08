@@ -156,6 +156,11 @@ func (s *Service) SubmitProposal(ctx context.Context, dev store.DeviceInfo, idem
 	if e != nil {
 		return nil, e
 	}
+	// Proposal duy nhất client gửi là Remove tự gỡ (lõi từ chối loại khác): đánh dấu đang rời để thành viên thường
+	// được commit dự phòng khi không admin online (ADR 0015).
+	if err := s.Meta.SetLeaving(ctx, conv, dev.AccountID); err != nil {
+		return nil, toErr(err)
+	}
 	// Khử trùng nhờ khóa dedup theo (conv, Idempotency-Key) như client_msg_id.
 	cmid := ids.ID{}
 	copy(cmid[:], idemHash(idem))

@@ -313,7 +313,39 @@ func TestMemberCommitRules(t *testing.T) {
 	wantCode(t, err, chatv1.ErrorCode_ERROR_CODE_PERMISSION_DENIED)
 }
 
-func add2(conv ids.ID, e *env) *chatv1.SubmitCommitRequest {
+// Rời nhóm khi không admin online (ADR 0015): proposal đánh dấu `leaving`; khi đó thành viên thường gỡ được đúng người
+// đang rời, không ai khác.
+func TestLeaveFallbackByMember(t *testing.T) {
+	e := newEnv(t)
+	conv := e.group()
+	ctx := context.Background()
+	_, err := e.svc.SubmitCommit(ctx, e.A1, ids.New().String(), add2(conv, e))
+	e.mustOK(err)
+	e.drain()
+	rm := func(a ids.ID) *chatv1.SubmitCommitRequest {
+		r := commitReq(conv, 2)
+		r.RemovedAccountIds = [][]byte{a.Bytes()}
+		return r
+	}
+	_, err = e.svc.SubmitCommit(ctx, e.C1, ids.New().String(), rm(e.bob)) // Bob chưa xin rời
+	wantCode(t, err, chatv1.ErrorCode_ERROR_CODE_PERMISSION_DENIED)
+	_, err = e.svc.SubmitProposal(ctx, e.B1, ids.New().String(), &chatv1.SubmitProposalRequest{ConvId: conv.Bytes(), Proposal: []byte("p"), MlsEpoch: 2})
+	e.mustOK(err)
+	_, err = e.svc.SubmitCommit(ctx, e.C1, ids.New().String(), rm(e.alice)) // Alice không rời
+	wantCode(t, err, chatv1.ErrorCode_ERROR_CODE_PERMISSION_DENIED)
+	both := rm(e.bob)
+	both.RemovedAccountIds = append(both.RemovedAccountIds, e.carol.Bytes()) // kèm người không rời
+	_, err = e.svc.SubmitCommit(ctx, e.C1, ids.New().String(), both)
+	wantCode(t, err, chatv1.ErrorCode_ERROR_CODE_PERMISSION_DENIED)
+	_, err = e.svc.SubmitCommit(ctx, e.C1, ids.New().String(), rm(e.bob))
+	e.mustOK(err)
+	e.drain()
+	if _, mErr := e.meta.GetMember(ctx, conv, e.bob); mErr != store.ErrNotFound {
+		t.Fatalf("Bob phải bị gỡ: %v", mErr)
+	}
+}
+
+func add2(conv ids.ID, e *env)*chatv1.SubmitCommitRequest {
 	r := commitReq(conv, 1)
 	r.Added = []*chatv1.Member{member(e.carol, chatv1.Role_ROLE_MEMBER)}
 	r.Welcomes = []*chatv1.WelcomeEnvelope{welcome(e.C1)}

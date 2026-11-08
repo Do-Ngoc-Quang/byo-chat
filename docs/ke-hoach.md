@@ -76,7 +76,8 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 - [x] Tên nhóm trong group context extension `chat_policy` (ADR 0013, spec 1.3.0): chatcore `create_group` có tên + `group_name`, KeyPackage và lá External Commit khai báo hỗ trợ loại `0xF001`; người nhận Welcome/External Commit hiện đúng tên (e2e)
 - [x] Proposal chờ commit lưu bền trong snapshot (phiên bản 3, đọc được bản 2): tắt app trước khi commit gỡ người xin rời vẫn commit được; test `proposal_cho_commit_song_sot_qua_khoi_dong_lai`
 - [x] Tranh chấp epoch hai ADMIN cùng gỡ hai người khác nhau ở tầng engine (EPOCH_MISMATCH, đồng bộ rồi dựng lại): e2e FFI `runEpochRaceE2E`
-- [ ] (hoãn) Nhóm: đường rời khi không admin online (cờ `chat_policy`)
+- [x] Nhóm: đường rời khi không admin online (ADR 0015, spec 1.3.2): server đặt `leaving` khi nhận Proposal và cho thành viên thường commit gỡ đúng người đang rời; lõi chỉ nhận Remove tự gỡ; client thường commit dự phòng sau 60 giây; test dịch vụ `TestLeaveFallbackByMember` (bộ nhớ, Postgres, DynamoDB thật), e2e FFI `runLeaveNoAdminE2E`
+- [ ] (hoãn) Kiểm vai trò người commit ở client (chặn thành viên thường nhét thêm Remove vào Commit tự rời, ADR 0015); hẹn lại commit dự phòng khi khởi động app
 - [x] Server liên kết thiết bị (6.5): `StartLink`/`ApproveLink`/`CompleteLink` (kho bộ nhớ + Postgres chung hợp đồng `storetest`, test dịch vụ)
 - [x] Client liên kết thiết bị (ADR 0010): chatcore `link_start/link_approve/link_finish` (HPKE), `LinkController`, `ChatEngine.approveLink/joinAllConversations` (External Commit vào từng hội thoại, tối đa 4 song song, thử lại EPOCH_MISMATCH); e2e Alice 2 thiết bị + Bob qua FFI Windows
 - [x] Client kiểm statement trước khi tin Commit gỡ MỘT PHẦN thiết bị của một tài khoản (6.6 bước 4): chatcore `apply_commit_checked` + `add_revocation`, lỗi `NEED_REVOCATION:<device_id>`; `ChatEngine._applyCommitChecked` lấy statement từ `FetchKeyPackages` rồi áp dụng lại; test `thu_hoi_thiet_bi_go_la_khoi_nhom_va_ky_statement` + e2e FFI
@@ -101,7 +102,7 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 Cổng nghiệm thu đạt: nhóm; thêm thiết bị bằng External Commit; khôi phục có backup (recovery key) và không có backup (reset_identity); thu hồi thiết bị; 5 bất biến đúng (`cargo test --release`, e2e FFI Windows với Postgres/DynamoDB/NATS thật, Android emulator cho bản trước đó). Việc hoãn, không chặn đóng (theo CLAUDE.md: cần thiết bị thật hoặc hạ tầng thật thì hoãn):
 - Cần thiết bị/hạ tầng thật: quét QR bằng camera; AWS S3 thật (CORS, lifecycle, IAM, SSE-KMS); đo payload FCM; macOS/Linux.
 - Làm khi mở rộng nhiều node: đóng kết nối 4003 giữa các node, giới hạn `StartLink` sau proxy (X-Forwarded-For, Valkey).
-- Cần thiết kế trước: rời nhóm khi không admin online (cờ `chat_policy`), đổi tên nhóm sau khi tạo, tải nhiều phần (giai đoạn 5), chuyển lịch sử giữa thiết bị, tin tự hủy khi đổi `chat_policy`, ảnh nhóm, passphrase Argon2id, sao lưu định kỳ.
+- Cần thiết kế trước: đổi tên nhóm sau khi tạo, tải nhiều phần (giai đoạn 5), chuyển lịch sử giữa thiết bị, tin tự hủy khi đổi `chat_policy`, ảnh nhóm, passphrase Argon2id, sao lưu định kỳ.
 - UI còn lệch thiết kế `docs/ui`: xem mục "Đưa giao diện về đúng thiết kế" (màn chưa có, Desktop nhiều cột, đối chiếu ảnh chụp).
 
 ## Giai đoạn 5 — Media

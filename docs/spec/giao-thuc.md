@@ -2,7 +2,7 @@
 
 Nov 3, 2026 · @Quang
 
-**Phiên bản:** 1.3.1
+**Phiên bản:** 1.3.2
 
 ## 1. Phạm vi và phiên bản
 
@@ -547,11 +547,13 @@ Hai quy tắc đi kèm. Thứ nhất, `SendMessage` mang epoch cũ cũng bị t�
 **Rời nhóm.** MLS không cho thành viên tự gỡ chính mình, nên luồng gồm hai bước:
 
 1. Thiết bị gọi `SubmitProposal` với Remove proposal cho chính mình. Server đánh dấu tài khoản là đang rời, ngừng gửi push của hội thoại này tới tài khoản đó.
-2. Client của một admin đang online tự động dựng Commit gỡ lá đó. Nếu 60 giây (cộng jitter) không có admin nào làm, thành viên bất kỳ được phép làm, nhờ cờ `chat_policy` cho phép commit việc tự rời.
+2. Client của một admin đang online tự động dựng Commit gỡ lá đó. Nếu 60 giây (cộng jitter) không có admin nào làm, thành viên bất kỳ được phép làm (làm rõ ở 1.3.2, ADR 0015: quyền này do server thi hành nhờ cờ `leaving`, không cần cờ trong `chat_policy`).
 
 Chủ nhóm (`OWNER`) phải chuyển quyền trước khi rời; client không cho phép bỏ qua bước này.
 
 Làm rõ ở 1.2.2 (bản hiện thực): client nhận Proposal chỉ GIỮ lại (không xếp vào nhóm ngay vì OpenMLS cấm gửi tin ứng dụng khi còn proposal chờ); admin online xếp proposal rồi commit gỡ sau một khoảng ngẫu nhiên, mọi client xếp proposal đã giữ ngay trước khi xử lý Commit tham chiếu nó. Người xin rời vẫn đọc được cho tới khi Commit tới và không gửi được tin trong lúc chờ. Chưa có đường dự phòng khi không admin nào online (cờ `chat_policy` cho thành viên thường commit, đòi server kiểm proposal đang chờ) và proposal chờ commit được lưu trong snapshot lõi (phiên bản 3) nên không mất khi tắt app.
+
+Làm rõ ở 1.3.2 (ADR 0015): `SubmitProposal` đặt `members_by_conv.leaving` cho tài khoản gửi; `SubmitCommit` của thành viên không phải admin được nhận khi chỉ có `removed_account_ids` và mọi tài khoản bị gỡ đều đang `leaving` (không thêm người, không đổi vai trò, không gỡ OWNER). Lõi chỉ nhận proposal Remove tự gỡ chính lá của người gửi. Client thành viên thường commit sau 60 giây cộng jitter nếu proposal còn chờ.
 
 ### 6.5 Thêm thiết bị mới vào tài khoản đã có
 

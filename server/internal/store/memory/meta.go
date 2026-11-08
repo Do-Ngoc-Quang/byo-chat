@@ -139,6 +139,18 @@ func (m *Meta) Members(_ context.Context, c ids.ID) ([]store.MemberRow, error) {
 	return out, nil
 }
 
+func (m *Meta) SetLeaving(_ context.Context, c, a ids.ID) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	r, ok := m.members[c][a]
+	if !ok {
+		return store.ErrNotFound
+	}
+	r.Leaving = true
+	m.members[c][a] = r
+	return nil
+}
+
 func (m *Meta) ApplyMembership(_ context.Context, c ids.ID, added []*chatv1.Member, removed []ids.ID, roles []*chatv1.Member) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

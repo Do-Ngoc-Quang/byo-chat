@@ -290,7 +290,14 @@ impl Device {
         let msg = MlsMessageIn::tls_deserialize_exact(bytes)?;
         let processed = g.process_message(&self.provider, msg.try_into_protocol_message()?)?;
         match processed.into_content() {
-            ProcessedMessageContent::ProposalMessage(p) => Ok(g.store_pending_proposal(self.provider.storage(), *p)?),
+            ProcessedMessageContent::ProposalMessage(p) => {
+                // Chỉ nhận Remove tự gỡ (ADR 0015): proposal khác, hoặc gỡ người khác, sẽ bị admin commit nhầm theo hàng chờ.
+                let self_remove = matches!(p.proposal(), Proposal::Remove(r) if matches!(p.sender(), Sender::Member(s) if *s == r.removed()));
+                if !self_remove {
+                    return Err("proposal không phải tự gỡ".into());
+                }
+                Ok(g.store_pending_proposal(self.provider.storage(), *p)?)
+            }
             _ => Err("không phải proposal".into()),
         }
     }

@@ -345,6 +345,44 @@ Future<void> runLeaveE2E(Uri serverUrl) async {
   }
 }
 
+/// Rời nhóm khi không admin online (ADR 0015): chủ nhóm (admin duy nhất) tắt máy, Bob xin rời, Carol (thành viên
+/// thường) commit dự phòng gỡ Bob; Carol không gỡ được người không xin rời.
+Future<void> runLeaveNoAdminE2E(Uri serverUrl) async {
+  final alice = await signUpForTest(serverUrl, 'lnalice.');
+  final bob = await signUpForTest(serverUrl, 'lnbob.');
+  final carol = await signUpForTest(serverUrl, 'lncarol.');
+  for (final u in [alice, bob, carol]) {
+    await u.startEngine();
+  }
+  carol.engine.fallbackCommitDelayMs = 100;
+  const sms = OtpChannel.OTP_CHANNEL_SMS;
+  await alice.engine.createGroup('Nhóm không admin', [(sms, bob.phone), (sms, carol.phone)]);
+  await _waitFor('Bob và Carol vào nhóm', () => bob.engine.conversations.length == 1 && carol.engine.conversations.length == 1);
+  final gb = bob.engine.conversations.single;
+  final gc = carol.engine.conversations.single;
+  _check(!gc.admin, 'Carol chỉ là thành viên thường');
+  await alice.engine.stop(); // không còn admin online
+
+  await bob.engine.leaveGroup(gb.hexId);
+  await _waitFor('Bob bị gỡ bởi Commit của Carol', () => gb.removed);
+  _check((await carol.engine.memberAccounts(gc.hexId)).length == 2, 'còn Alice và Carol');
+
+  // Carol vẫn nhận/gửi tin ở epoch mới; Bob đã ra.
+  await carol.engine.sendText(gc.hexId, 'Carol gỡ Bob thay admin');
+  var blocked = false;
+  try {
+    await bob.engine.sendText(gb.hexId, 'còn gửi được không');
+  } on ChatException {
+    blocked = true;
+  }
+  _check(blocked, 'Bob đã rời không được gửi');
+
+  for (final u in [alice, bob, carol]) {
+    await u.engine.stop();
+    await u.session.core.dispose();
+  }
+}
+
 /// Đổi vai trò và chuyển quyền chủ nhóm (spec 6.3): Bob lên ADMIN rồi nhận quyền chủ; chủ cũ rời được.
 Future<void> runRoleE2E(Uri serverUrl) async {
   final alice = await signUpForTest(serverUrl, 'rlalice.');

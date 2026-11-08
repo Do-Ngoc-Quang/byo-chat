@@ -218,7 +218,7 @@ func (s *Service) SubmitCommit(ctx context.Context, dev store.DeviceInfo, idem s
 				}
 			}
 		}
-		if needAdmin && !isAdmin(row.Role) {
+		if needAdmin && !isAdmin(row.Role) && !s.onlyLeavers(ctx, conv, req) {
 			return nil, errf(chatv1.ErrorCode_ERROR_CODE_PERMISSION_DENIED, "cần vai trò ADMIN hoặc OWNER")
 		}
 		if kind == chatv1.ConvKind_CONV_KIND_DIRECT && (len(req.Added)+len(req.RemovedAccountIds)+len(req.RoleChanges) > 0) {
@@ -284,6 +284,23 @@ func (s *Service) SubmitCommit(ctx context.Context, dev store.DeviceInfo, idem s
 		s.enqueue(ctx, conv, res.Seq)
 	}
 	return &chatv1.SubmitCommitResponse{Seq: res.Seq, NewEpoch: res.NewEpoch}, nil
+}
+
+// onlyLeavers: Commit dự phòng của thành viên thường (6.4, ADR 0015) chỉ gỡ tài khoản đang xin rời, không đổi gì khác.
+func (s *Service) onlyLeavers(ctx context.Context, conv ids.ID, req *chatv1.SubmitCommitRequest) bool {
+	if len(req.RemovedAccountIds) == 0 || len(req.Added)+len(req.RoleChanges)+len(req.RemovedDeviceIds) > 0 {
+		return false
+	}
+	for _, b := range req.RemovedAccountIds {
+		a, e := parseID(b, "removed_account_ids")
+		if e != nil {
+			return false
+		}
+		if r, err := s.Meta.GetMember(ctx, conv, a); err != nil || !r.Leaving {
+			return false
+		}
+	}
+	return true
 }
 
 func welcomeDevs(ws []store.Welcome) []ids.ID {

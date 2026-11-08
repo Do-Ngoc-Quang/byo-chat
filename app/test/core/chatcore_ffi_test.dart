@@ -69,6 +69,13 @@ void main() {
   );
 
   test(
+    'rời nhóm khi không admin online: thành viên thường commit dự phòng (FFI)',
+    () => runLeaveNoAdminE2E(Uri.parse(api!)),
+    timeout: const Timeout(Duration(minutes: 3)),
+    skip: api == null || skip != false ? 'đặt CHAT_API và CHATCORE_LIB để chạy' : false,
+  );
+
+  test(
     'đổi vai trò + chuyển quyền chủ nhóm với server thật (FFI)',
     () => runRoleE2E(Uri.parse(api!)),
     timeout: const Timeout(Duration(minutes: 3)),

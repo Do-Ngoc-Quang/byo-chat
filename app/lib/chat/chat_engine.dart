@@ -753,16 +753,18 @@ class ChatEngine extends ChangeNotifier {
       return;
     }
     final leaver = await _senderAccount(cs, e.sender);
-    if (cs.admin && leaver != null && leaver != hex(session.accountId)) {
-      unawaited(
-        Future<void>.delayed(Duration(milliseconds: autoCommitDelayMs + _rng.nextInt(1500)))
-            .then((_) => _commitLeave(cs.hexId, unhex(leaver))),
-      );
+    if (leaver != null && leaver != hex(session.accountId)) {
+      // Admin làm trước; thành viên thường chỉ là đường dự phòng sau 60 giây (ADR 0015). Hẹn giờ nằm trong bộ nhớ.
+      final base = cs.admin ? autoCommitDelayMs : fallbackCommitDelayMs;
+      unawaited(Future<void>.delayed(Duration(milliseconds: base + _rng.nextInt(1500))).then((_) => _commitLeave(cs.hexId, unhex(leaver))));
     }
   }
 
   /// Độ trễ tối thiểu (ms) trước khi admin tự commit gỡ người xin rời; test đặt nhỏ.
   int autoCommitDelayMs = 300;
+
+  /// Như trên cho thành viên thường (đường rời khi không admin online, 6.4).
+  int fallbackCommitDelayMs = 60000;
 
   Future<void> _commitLeave(String convHex, Uint8List leaver) async {
     final cs = doc.convs[convHex];
@@ -786,8 +788,8 @@ class ChatEngine extends ChangeNotifier {
     }
   }
 
-  /// Rời nhóm (6.4): gửi Remove proposal cho chính mình; admin online sẽ commit gỡ. Chủ nhóm không rời được (cần
-  /// chuyển quyền trước, chưa có). Chưa có đường rời khi không có admin online (cần cờ `chat_policy`, việc dở).
+  /// Rời nhóm (6.4): gửi Remove proposal cho chính mình; admin online commit gỡ, hoặc thành viên bất kỳ sau 60 giây
+  /// (ADR 0015). Chủ nhóm phải chuyển quyền trước.
   Future<void> leaveGroup(String convHex) async {
     final cs = doc.convs[convHex] ?? (throw ChatException('Hội thoại không tồn tại'));
     if (!cs.isGroup) throw ChatException('Không phải nhóm');

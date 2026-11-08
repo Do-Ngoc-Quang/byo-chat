@@ -162,6 +162,8 @@ type MetaStore interface {
 	CreateConversation(ctx context.Context, convID ids.ID, kind chatv1.ConvKind, groupID []byte, members []*chatv1.Member) (ids.ID, bool, error)
 	GetMember(ctx context.Context, convID, account ids.ID) (MemberRow, error)
 	Members(ctx context.Context, convID ids.ID) ([]MemberRow, error)
+	// SetLeaving đánh dấu tài khoản đang xin rời (6.4); idempotent, ErrNotFound nếu không phải thành viên.
+	SetLeaving(ctx context.Context, convID, account ids.ID) error
 	// ApplyMembership áp dụng thay đổi thành viên của một Commit. Idempotent.
 	ApplyMembership(ctx context.Context, convID ids.ID, added []*chatv1.Member, removed []ids.ID, roles []*chatv1.Member) error
 	PutGroupInfo(ctx context.Context, convID ids.ID, epoch uint64, groupInfo []byte) error
