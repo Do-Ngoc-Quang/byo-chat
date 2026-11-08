@@ -11,3 +11,6 @@ Mẫu: Trạng thái · Bối cảnh · Quyết định · Hệ quả.
 | [0003](0003-xoa-poc.md) | Xóa `poc/` | Chấp nhận |
 | [0004](0004-fanout-ben-server-toi-thieu.md) | Fanout bền, idempotency và giới hạn của server tối thiểu | Chấp nhận |
 | [0005](0005-ten-module-go-trung-lap.md) | Tên module Go không gắn host (`byo-chat/server`) | Chấp nhận |
+| [0013](0013-ten-nhom-trong-chat-policy.md) | Tên nhóm trong group context extension `chat_policy` | Chấp nhận |
+| [0014](0014-dung-s3-thay-r2.md) | Dùng Amazon S3 thay Cloudflare R2 cho kho đối tượng | Chấp nhận |
+| [0015](0015-roi-nhom-khi-khong-admin-online.md) | Rời nhóm khi không có admin online | Chấp nhận |

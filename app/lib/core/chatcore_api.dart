@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 /// Bề mặt API của lõi. Mọi hàm bất đồng bộ vì trên Web lõi chạy trong Web Worker.
@@ -64,17 +65,64 @@ class CommitOut {
 /// Các thao tác MLS, ánh xạ một-một với `chatcore::api::Core::call`. `conv` là khóa nhóm
 /// phía app đặt (thường là `group_id`).
 extension ChatCoreMls on ChatCore {
-  Future<List<Uint8List>> _call(String op, List<Uint8List> args) async =>
-      unpackList(await callRaw(op, packList(args)));
+  Future<List<Uint8List>> _call(String op, List<Uint8List> args) async => unpackList(await callRaw(op, packList(args)));
 
   Future<Uint8List> keyPackage() async => (await _call('key_package', []))[0];
 
-  Future<void> createGroup(Uint8List conv) => _call('create_group', [conv]);
+  /// [name] (nếu có) được ghi vào group context extension `chat_policy` (ADR 0013, tối đa 100 byte UTF-8).
+  Future<void> createGroup(Uint8List conv, {String? name}) =>
+      _call('create_group', [conv, if (name != null) Uint8List.fromList(utf8.encode(name))]);
+
+  /// Tên nhóm trong `chat_policy`; chuỗi rỗng nếu nhóm không có tên.
+  Future<String> groupName(Uint8List conv) async => utf8.decode((await _dcall('group_name', [conv]))[0]);
 
   Future<CommitOut> addMembers(Uint8List conv, List<Uint8List> keyPackages) async {
     final r = await _call('add_members', [conv, ...keyPackages]);
     return CommitOut(r[0], r[1], r[2]);
   }
+
+  /// Dựng Commit thêm thiết bị vào nhóm đã có mà CHƯA áp dụng: gọi [mergeCommit] sau khi server nhận,
+  /// hoặc [clearCommit] nếu bị từ chối (EPOCH_MISMATCH).
+  Future<CommitOut> stageAdd(Uint8List conv, List<Uint8List> keyPackages) async {
+    final r = await _call('stage_add', [conv, ...keyPackages]);
+    return CommitOut(r[0], r[1], r[2]);
+  }
+
+  /// Dựng Commit gỡ mọi thiết bị của các tài khoản (chưa áp dụng, như [stageAdd]).
+  Future<CommitOut> stageRemove(Uint8List conv, List<Uint8List> accountIds) async {
+    final r = await _call('stage_remove', [conv, ...accountIds]);
+    return CommitOut(r[0], r[1], r[2]);
+  }
+
+  /// Dựng Commit gỡ các thiết bị theo device_id (chưa áp dụng, như [stageAdd]); lỗi nếu không thiết bị nào có trong nhóm.
+  /// Commit chỉ có path update (đổi vai trò, xoay khóa), chưa áp dụng.
+  Future<CommitOut> stageUpdate(Uint8List conv) async {
+    final r = await _call('stage_update', [conv]);
+    return CommitOut(r[0], r[1], r[2]);
+  }
+
+  Future<CommitOut> stageRemoveDevices(Uint8List conv, List<Uint8List> deviceIds) async {
+    final r = await _call('stage_remove_devices', [conv, ...deviceIds]);
+    return CommitOut(r[0], r[1], r[2]);
+  }
+
+  /// Xin rời nhóm (6.4): Remove proposal cho chính mình, gửi qua `SubmitProposal`.
+  Future<Uint8List> leaveProposal(Uint8List conv) async => (await _call('leave_proposal', [conv]))[0];
+
+  /// Nhận Proposal của người khác từ log; sẽ được gom khi [stageCommitPending] hoặc khi áp dụng Commit.
+  Future<void> applyProposal(Uint8List conv, Uint8List proposal) => _call('apply_proposal', [conv, proposal]);
+
+  /// Commit gom các proposal đang chờ (gỡ người xin rời), chưa áp dụng; lỗi nếu không có proposal nào.
+  Future<CommitOut> stageCommitPending(Uint8List conv) async {
+    final r = await _call('stage_commit_pending', [conv]);
+    return CommitOut(r[0], r[1], r[2]);
+  }
+
+  Future<void> mergeCommit(Uint8List conv) => _call('merge_commit', [conv]);
+  Future<void> clearCommit(Uint8List conv) => _call('clear_commit', [conv]);
+
+  /// false khi thiết bị này đã bị gỡ khỏi nhóm.
+  Future<bool> isActive(Uint8List conv) async => (await _call('is_active', [conv]))[0][0] == 1;
 
   Future<Uint8List> groupInfo(Uint8List conv) async => (await _call('group_info', [conv]))[0];
 
@@ -82,15 +130,17 @@ extension ChatCoreMls on ChatCore {
 
   Future<void> applyCommit(Uint8List conv, Uint8List commit) => _call('apply_commit', [conv, commit]);
 
+  /// Nạp statement thu hồi (88 byte) của một tài khoản, kiểm bằng khóa danh tính công khai của chính tài khoản đó.
+  /// `applyCommit` ném lỗi `NEED_REVOCATION:<hex device_id>,...` khi Commit gỡ một phần thiết bị mà chưa có statement.
+  Future<void> addRevocation(Uint8List identityPublicKey, List<Uint8List> statements) =>
+      _call('add_revocation', [identityPublicKey, ...statements]);
+
   /// Tự vào nhóm bằng External Commit; trả Commit để gửi `SubmitCommit(external: true)`.
-  Future<Uint8List> externalJoin(Uint8List conv, Uint8List groupInfo) async =>
-      (await _call('external_join', [conv, groupInfo]))[0];
+  Future<Uint8List> externalJoin(Uint8List conv, Uint8List groupInfo) async => (await _call('external_join', [conv, groupInfo]))[0];
 
-  Future<Uint8List> encrypt(Uint8List conv, Uint8List plaintext) async =>
-      (await _call('encrypt', [conv, plaintext]))[0];
+  Future<Uint8List> encrypt(Uint8List conv, Uint8List plaintext) async => (await _call('encrypt', [conv, plaintext]))[0];
 
-  Future<Uint8List> decrypt(Uint8List conv, Uint8List ciphertext) async =>
-      (await _call('decrypt', [conv, ciphertext]))[0];
+  Future<Uint8List> decrypt(Uint8List conv, Uint8List ciphertext) async => (await _call('decrypt', [conv, ciphertext]))[0];
 
   Future<int> epoch(Uint8List conv) async {
     final b = (await _call('epoch', [conv]))[0];
@@ -99,8 +149,13 @@ extension ChatCoreMls on ChatCore {
     return d.getUint32(0, Endian.little) + d.getUint32(4, Endian.little) * 0x100000000;
   }
 
-  Future<Uint8List> sframeKey(Uint8List conv, Uint8List callId) async =>
-      (await _call('sframe_key', [conv, callId]))[0];
+  Future<Uint8List> sframeKey(Uint8List conv, Uint8List callId) async => (await _call('sframe_key', [conv, callId]))[0];
+}
+
+Uint8List _u64(int v) {
+  final b = ByteData(8)..setUint32(0, v & 0xffffffff, Endian.little);
+  b.setUint32(4, v ~/ 0x100000000, Endian.little); // dart2js không có setUint64
+  return b.buffer.asUint8List();
 }
 
 /// Khóa và credential của thiết bị (spec 6.1). Khóa danh tính tài khoản chỉ có ở thiết bị đầu tiên
@@ -115,16 +170,59 @@ class DeviceCredential {
 extension ChatCoreDevice on ChatCore {
   /// Tạo thiết bị: sinh khóa ký, và khóa danh tính tài khoản nếu `identityKey` rỗng/null
   /// (thiết bị đầu tiên); có `identityKey` (từ [identityExport]) khi khôi phục.
-  Future<void> openDevice({
-    required Uint8List accountId,
-    required Uint8List deviceId,
-    Uint8List? identityKey,
-    required int createdMs,
-  }) {
-    final ms = ByteData(8)..setUint32(0, createdMs & 0xffffffff, Endian.little);
-    ms.setUint32(4, createdMs ~/ 0x100000000, Endian.little); // dart2js không có setUint64
-    return openDeviceRaw(packList([accountId, deviceId, identityKey ?? Uint8List(0), ms.buffer.asUint8List()]));
+  Future<void> openDevice({required Uint8List accountId, required Uint8List deviceId, Uint8List? identityKey, required int createdMs}) {
+    return openDeviceRaw(packList([accountId, deviceId, identityKey ?? Uint8List(0), _u64(createdMs)]));
   }
+
+  /// Bản xác nhận thu hồi thiết bị (88 byte) ký bằng khóa danh tính; chỉ thiết bị giữ khóa danh tính ký được.
+  Future<Uint8List> revocationSign(Uint8List deviceId, int revokedMs) async =>
+      (await _dcall('revocation_sign', [deviceId, _u64(revokedMs)]))[0];
+
+  /// Thiết bị cùng tài khoản của mình trong nhóm mà credential không khớp khóa danh tính hiện tại (lá cũ sau
+  /// reset_identity, 6.14); gỡ bằng [stageRemoveDevices].
+  Future<List<Uint8List>> staleDevices(Uint8List conv) => _dcall('stale_devices', [conv]);
+
+  /// Khóa danh tính hiện tại của [account]: lá của tài khoản đó không khớp khóa này coi như đã thu hồi (6.14).
+  /// Trả số lá mới được đánh dấu.
+  Future<int> trustIdentity(Uint8List account, Uint8List identityPublicKey) async =>
+      ByteData.sublistView((await _dcall('trust_identity', [account, identityPublicKey]))[0]).getUint32(0, Endian.little);
+
+  /// Recovery key mới (32 byte ngẫu nhiên từ lõi) cho sao lưu (giao-thuc.md 6.14, ADR 0012).
+  Future<Uint8List> backupKeyNew() async => (await _dcall('backup_key_new', []))[0];
+
+  /// Bản sao lưu đã mã hóa: khóa danh tính + lịch sử (`app_state`), không gồm trạng thái MLS.
+  Future<Uint8List> backupSeal(Uint8List recoveryKey) async => (await _dcall('backup_seal', [recoveryKey]))[0];
+
+  /// Mở bản sao lưu: (khóa danh tính, app_state). Sai recovery key hoặc dữ liệu bị sửa ném [ChatCoreException].
+  Future<(Uint8List, Uint8List)> backupOpen(Uint8List recoveryKey, Uint8List blob) async {
+    final r = await _dcall('backup_open', [recoveryKey, blob]);
+    return (r[0], r[1]);
+  }
+
+  /// Thiết bị mới chờ liên kết (giao-thuc.md 6.5): `accountId` rỗng. Sau đó [linkStart], rồi [linkFinish].
+  Future<void> openPending(Uint8List deviceId) => openDeviceRaw(packList([Uint8List(0), deviceId, Uint8List(0), _u64(0)]));
+
+  /// Thiết bị mới: (khóa công khai thiết bị, khóa X25519 tạm) để gửi `StartLink`.
+  Future<(Uint8List, Uint8List)> linkStart() async {
+    final r = await _dcall('link_start', []);
+    return (r[0], r[1]);
+  }
+
+  /// Thiết bị cũ: credential ký cho thiết bị mới + gói khóa danh tính đã mã hóa, để gửi `ApproveLink`.
+  Future<(Uint8List, Uint8List)> linkApprove({
+    required Uint8List linkId,
+    required Uint8List newDeviceId,
+    required Uint8List newDevicePublicKey,
+    required Uint8List ephemeralPublicKey,
+    required int createdMs,
+  }) async {
+    final r = await _dcall('link_approve', [linkId, newDeviceId, newDevicePublicKey, ephemeralPublicKey, _u64(createdMs)]);
+    return (r[0], r[1]);
+  }
+
+  /// Thiết bị mới: mở gói, kiểm credential, trở thành thiết bị đầy đủ của tài khoản.
+  Future<void> linkFinish(Uint8List linkId, Uint8List credential, Uint8List sealedBundle) =>
+      _dcall('link_finish', [linkId, credential, sealedBundle]);
 
   /// Đổi khóa nhóm (nhóm tạo bằng `group_id` tạm, sau khi server cấp `conv_id` thì đổi sang `conv_id`).
   Future<void> renameGroup(Uint8List from, Uint8List to) => _dcall('rename_group', [from, to]);
@@ -146,8 +244,7 @@ extension ChatCoreDevice on ChatCore {
   /// Snapshot trạng thái đã mã hóa bằng [key] (32 byte) để ghi bền. Gọi sau MỖI thay đổi trạng thái MLS.
   Future<Uint8List> snapshot(Uint8List key) async => (await _dcall('snapshot', [key]))[0];
 
-  Future<List<Uint8List>> _dcall(String op, List<Uint8List> args) async =>
-      unpackList(await callRaw(op, packList(args)));
+  Future<List<Uint8List>> _dcall(String op, List<Uint8List> args) async => unpackList(await callRaw(op, packList(args)));
 
   Future<DeviceCredential> deviceCredential() async {
     final r = await _dcall('credential', []);
@@ -172,6 +269,5 @@ extension ChatCoreDevice on ChatCore {
     required Uint8List credential,
     required Uint8List identityPublicKey,
     required Uint8List expectedAccountId,
-  }) =>
-      _dcall('verify_key_package', [keyPackage, credential, identityPublicKey, expectedAccountId]);
+  }) => _dcall('verify_key_package', [keyPackage, credential, identityPublicKey, expectedAccountId]);
 }

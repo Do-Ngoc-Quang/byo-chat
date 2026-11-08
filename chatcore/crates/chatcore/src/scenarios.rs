@@ -266,7 +266,7 @@ pub mod scale {
     /// Tiện ích in log (stdout native; WASM bỏ qua).
     fn log(s: &str) { #[cfg(not(target_arch = "wasm32"))] println!("{s}"); let _ = s; }
 
-    pub fn group_of_1000_devices() {
+    pub fn group_at_device_limit() {
         let creator = Device::new(b"acc0/dev0").unwrap();
         let mut g = creator.create_group().unwrap();
         let devs: Vec<Device> = (1..MAX_DEVICES_PER_GROUP).map(|i| Device::new(format!("acc{i}/dev{i}").as_bytes()).unwrap()).collect();
@@ -299,10 +299,10 @@ pub mod scale {
         let (best_create, best_recv) = (tail(&creates), tail(&recvs));
         log(&format!("commit cuối: {} KB, tạo {last_create} ms (tốt nhất 4 lần cuối {best_create}), nhận {last_recv} ms (tốt nhất {best_recv})", last_size / 1024));
         if !cfg!(debug_assertions) {
-            let k = if cfg!(target_arch = "wasm32") { 3 } else if cfg!(target_os = "android") { 3 } else { 1 }; // CLAUDE.md: WASM ~5 lần, emulator Android ~3 lần so với Windows
-            assert!(last_size < 120 * 1024, "Commit {last_size} B (mốc 92 KB)");
-            assert!(best_create < 170 * k, "tạo {best_create} ms tốt nhất trong 4 lần cuối (mốc 33 ms)");
-            assert!(best_recv < 60 * k, "nhận {best_recv} ms tốt nhất trong 4 lần cuối (mốc 11 ms)");
+            let k = if cfg!(target_arch = "wasm32") { 3 } else if cfg!(target_os = "android") { 3 } else { 1 }; // CLAUDE.md: WASM ~5 lần, emulator Android ~3 lần so với Windows; mốc 256 thiết bị, ADR 0011
+            assert!(last_size < 40 * 1024, "Commit {last_size} B (mốc 22 KB)");
+            assert!(best_create < 60 * k, "tạo {best_create} ms tốt nhất trong 4 lần cuối (mốc 8 ms)");
+            assert!(best_recv < 25 * k, "nhận {best_recv} ms tốt nhất trong 4 lần cuối (mốc 2 ms)");
         }
     }
 

@@ -2,7 +2,7 @@
 
 Nov 3, 2026 · @Quang
 
-**Phiên bản:** 1.1.2
+**Phiên bản:** 1.3.2
 
 ## 1. Phạm vi và phiên bản
 
@@ -46,9 +46,9 @@ Các quy ước này áp dụng cho mọi thông điệp, ở cả WebSocket l�
 | Ciphertext của một tin | 64 KiB; nội dung lớn hơn đi qua media |
 | Commit | 128 KiB (chỉnh sau khi đo ở giai đoạn 4) |
 | GroupInfo | 128 KiB (chỉnh sau khi đo ở giai đoạn 4) |
-| Tổng Welcome mỗi Commit | 3 MiB (chưa đo kích thước Welcome; chỉnh ở giai đoạn 4) |
+| Tổng Welcome mỗi Commit | 3 MiB (đã đo: một Welcome 48 KB ở nhóm 256 thiết bị, 50 phong bì 2,4 MB; ADR 0011) |
 | KeyPackage | 4 KiB mỗi cái, tối đa 200 cái mỗi lần tải lên |
-| Thiết bị trong một nhóm | 1.000 (PoC MLS sẽ xác nhận) |
+| Thiết bị trong một nhóm | 256 (hạ từ 1.000 ở bản 1.2.0 sau khi đo Welcome/GroupInfo, ADR 0011) |
 | Tốc độ gửi tin | 10 tin/giây mỗi thiết bị, burst 30 |
 | Đăng ký presence | 500 tài khoản mỗi kết nối |
 
@@ -515,7 +515,7 @@ Ví dụ: A1 tạo hội thoại 1-1 với Bob (hai thiết bị B1, B2); Alice 
 
 1. A1 gọi `FetchKeyPackages([alice, bob])`. Server trả một KeyPackage cho mỗi thiết bị còn hiệu lực của hai tài khoản và tiêu thụ gói một lần; hết gói một lần thì trả gói last resort và đánh dấu `last_resort`. A1 bỏ gói của chính mình.
 2. A1 kiểm tra: credential của từng thiết bị được khóa danh tính tài khoản ký đúng; khóa danh tính của Bob khớp lần đã thấy trước (lần đầu thì ghi nhận, lần sau khác thì cảnh báo người dùng); bỏ qua thiết bị có `revocation_statements` hợp lệ.
-3. A1 tạo nhóm MLS với `group_id` ngẫu nhiên 32 byte. Group context extension chứa `chat_policy`: bảng vai trò theo tài khoản, cờ cho phép External Commit của cùng một tài khoản, thời gian tự hủy tin, và tên nhóm (nếu là nhóm). A1 thêm A2, B1, B2 bằng một Commit, sinh Welcome cho từng thiết bị mới và `GroupInfo`.
+3. A1 tạo nhóm MLS với `group_id` ngẫu nhiên 32 byte. Group context extension chứa `chat_policy`: bảng vai trò theo tài khoản, cờ cho phép External Commit của cùng một tài khoản, thời gian tự hủy tin, và tên nhóm (nếu là nhóm). Làm rõ ở 1.3.0 (ADR 0013): extension loại `0xF001`, bản 1 là `version(1)=1 ‖ tên UTF-8 (≤100 byte)`, mọi KeyPackage khai báo hỗ trợ loại này; các trường còn lại của `chat_policy` thêm sau bằng cách tăng `version`. A1 thêm A2, B1, B2 bằng một Commit, sinh Welcome cho từng thiết bị mới và `GroupInfo`.
 4. A1 gọi `CreateConversation` với `kind`, `group_id`, `members` (hội thoại 1-1: cả hai là `MEMBER`; nhóm: người tạo là `OWNER`), `commit`, `welcomes`, `group_info`.
 5. Server kiểm tra: người gọi nằm trong `members`; mọi `recipient_device_id` thuộc tài khoản trong `members`; hội thoại 1-1 có đúng hai tài khoản. Nếu hai tài khoản đã có hội thoại 1-1, server trả `existed = true` kèm `conv_id` cũ và không ghi gì; client bỏ nhóm vừa tạo và vào hội thoại cũ theo luồng 6.5.
 6. Nếu là hội thoại mới, server tạo `conv_id`, ghi Commit vào `conv_log` ở `seq = 1`, đặt `epoch = 1` trong `conv_head`, ghi Welcome vào hộp thư của từng thiết bị nhận (kind `WELCOME`, ciphertext nằm trực tiếp trong mục hộp thư), lưu `GroupInfo`, cập nhật `members_by_conv` và `convs_by_account`, rồi trả `conv_id`, `seq = 1`, `epoch = 1`.
@@ -547,16 +547,20 @@ Hai quy tắc đi kèm. Thứ nhất, `SendMessage` mang epoch cũ cũng bị t�
 **Rời nhóm.** MLS không cho thành viên tự gỡ chính mình, nên luồng gồm hai bước:
 
 1. Thiết bị gọi `SubmitProposal` với Remove proposal cho chính mình. Server đánh dấu tài khoản là đang rời, ngừng gửi push của hội thoại này tới tài khoản đó.
-2. Client của một admin đang online tự động dựng Commit gỡ lá đó. Nếu 60 giây (cộng jitter) không có admin nào làm, thành viên bất kỳ được phép làm, nhờ cờ `chat_policy` cho phép commit việc tự rời.
+2. Client của một admin đang online tự động dựng Commit gỡ lá đó. Nếu 60 giây (cộng jitter) không có admin nào làm, thành viên bất kỳ được phép làm (làm rõ ở 1.3.2, ADR 0015: quyền này do server thi hành nhờ cờ `leaving`, không cần cờ trong `chat_policy`).
 
 Chủ nhóm (`OWNER`) phải chuyển quyền trước khi rời; client không cho phép bỏ qua bước này.
+
+Làm rõ ở 1.2.2 (bản hiện thực): client nhận Proposal chỉ GIỮ lại (không xếp vào nhóm ngay vì OpenMLS cấm gửi tin ứng dụng khi còn proposal chờ); admin online xếp proposal rồi commit gỡ sau một khoảng ngẫu nhiên, mọi client xếp proposal đã giữ ngay trước khi xử lý Commit tham chiếu nó. Người xin rời vẫn đọc được cho tới khi Commit tới và không gửi được tin trong lúc chờ. Chưa có đường dự phòng khi không admin nào online (cờ `chat_policy` cho thành viên thường commit, đòi server kiểm proposal đang chờ) và proposal chờ commit được lưu trong snapshot lõi (phiên bản 3) nên không mất khi tắt app.
+
+Làm rõ ở 1.3.2 (ADR 0015): `SubmitProposal` đặt `members_by_conv.leaving` cho tài khoản gửi; `SubmitCommit` của thành viên không phải admin được nhận khi chỉ có `removed_account_ids` và mọi tài khoản bị gỡ đều đang `leaving` (không thêm người, không đổi vai trò, không gỡ OWNER). Lõi chỉ nhận proposal Remove tự gỡ chính lá của người gửi. Client thành viên thường commit sau 60 giây cộng jitter nếu proposal còn chờ.
 
 ### 6.5 Thêm thiết bị mới vào tài khoản đã có
 
 Ví dụ: A3 là thiết bị mới của Alice, A1 là thiết bị đã được tin cậy.
 
 1. A3 sinh `device_id`, cặp khóa ký và cặp khóa X25519 tạm, gọi `StartLink` và nhận `link_id`, `short_code` (6 chữ số, hạn 5 phút). A3 hiển thị mã QR chứa `link_id`, khóa công khai của thiết bị, khóa X25519 tạm và `short_code`.
-2. A1 quét QR. Khi người dùng xác nhận `short_code` khớp ở cả hai máy, A1 gọi `ApproveLink` với credential ký cho A3 (bằng khóa danh tính tài khoản) và `sealed_bundle`: khóa danh tính tài khoản, mã hóa bằng ECDH giữa khóa tạm của A1 và khóa tạm của A3 cùng một thuật toán mã hóa có xác thực.
+2. A1 quét QR. Khi người dùng xác nhận `short_code` khớp ở cả hai máy, A1 gọi `ApproveLink` với credential ký cho A3 (bằng khóa danh tính tài khoản) và `sealed_bundle`: khóa danh tính tài khoản, mã hóa bằng ECDH giữa khóa tạm của A1 và khóa tạm của A3 cùng một thuật toán mã hóa có xác thực. Làm rõ ở 1.1.3 (ADR 0010): `sealed_bundle` là HPKE single-shot (X25519, HKDF-SHA256, AES-128-GCM) tới khóa tạm của A3, `info` = `chat.v1.link`, `aad` = `link_id`; `device_id` do A3 sinh trước `StartLink` và có trong mã QR; server kiểm credential đúng tài khoản người duyệt, đúng khóa thiết bị của A3 và chữ ký đúng khóa danh tính đã lưu, và chỉ cho duyệt một lần.
 3. A3 gọi `CompleteLink` (chờ tối đa 30 giây), nhận credential, `sealed_bundle` và `session_ticket`, rồi giải `sealed_bundle`.
 4. A3 gọi `RegisterDevice` như luồng 6.1, không gửi `account_identity_public_key`.
 5. Với mỗi hội thoại trong `ListConversations`, ưu tiên hoạt động gần nhất, tối đa 4 hội thoại song song: A3 gọi `GetGroupInfo`, dựng External Commit (kèm path update) để tự vào nhóm, rồi `SubmitCommit(expected_epoch = epoch của GroupInfo, external = true)`. Nếu gặp `EPOCH_MISMATCH` thì lấy lại `GroupInfo` và thử lại, tối đa 5 lần với backoff.
@@ -568,7 +572,7 @@ Sau bước 2, A1 không cần online nữa. Đây là điểm khác với mô t
 
 ### 6.6 Thu hồi thiết bị
 
-1. Từ một thiết bị còn tin cậy (A1), người dùng chọn thu hồi A3. A1 tạo `revocation_statement` gồm `device_id` và thời điểm thu hồi, ký bằng khóa danh tính tài khoản.
+1. Từ một thiết bị còn tin cậy (A1), người dùng chọn thu hồi A3. A1 tạo `revocation_statement` gồm `device_id` và thời điểm thu hồi, ký bằng khóa danh tính tài khoản. Bố cục cố định 88 byte (làm rõ ở 1.2.1, ADR 0012): `device_id(16) ‖ revoked_ms(8, BE) ‖ chữ ký Ed25519(64)` lên `"chat.v1.revocation" ‖ 24 byte đầu`; một thiết bị không tự thu hồi chính mình.
 2. A1 gọi `RevokeDevice`. Server đánh dấu thu hồi, đóng kết nối của A3 bằng mã 4003, vô hiệu token, xóa KeyPackage còn lại của A3, ngừng ghi hộp thư cho A3, và lưu statement vào key directory (trả về trong `FetchKeyPackages.revocation_statements`).
 3. A1 (hoặc thiết bị khác của Alice) gỡ A3 khỏi từng nhóm bằng Remove proposal và Commit với `removed_device_ids`, ưu tiên hội thoại gần đây.
 4. Client của các thành viên khác kiểm tra statement trước khi tin rằng Commit gỡ thiết bị là hợp lệ.
@@ -624,7 +628,9 @@ Danh sách chặn nằm ở server. Với người bị chặn, server từ ch�
 
 ### 6.14 Khôi phục tài khoản khi mất hết thiết bị
 
-Người dùng đăng nhập lại bằng OTP hoặc passkey để có `session_ticket`. Thiết bị gọi `GetLatestBackup` kèm `session_ticket` (chưa có token vì chưa có thiết bị). Có bản sao lưu: client tải về, giải mã bằng khóa sao lưu của người dùng, lấy lại khóa danh tính tài khoản và lịch sử, rồi `RegisterDevice` như bình thường. Không có bản sao lưu: client tạo khóa danh tính mới và gọi `RegisterDevice` với `reset_identity = true`; tài khoản giữ nguyên nhưng mọi tin cũ mất. Server tin khóa mới vì tài khoản vừa qua OTP hoặc passkey, ghi nhận khóa này là khóa danh tính hiện tại của account\_id và chấp nhận External Commit (6.5) của thiết bị mới vào mọi cuộc trò chuyện mà account\_id đang là thành viên (PoC 05/11/2026: External Commit với khóa ký mới không tự gỡ leaf cũ, chỉ resync với cùng khóa ký mới tự gỡ). Quy tắc client: khi xử lý một External Commit có credential trùng account\_id với một leaf hiện có nhưng khác khóa ký, thành viên có leaf index nhỏ nhất đang online gửi Commit Remove leaf cũ; không thêm RPC hay khung mới. Client của người khác chấp nhận ngay và không hiện cảnh báo. Đây là rủi ro đã chấp nhận: ai chiếm được số điện thoại (ví dụ qua SIM swap) có thể mạo danh người dùng mà không ai biết; Key Transparency ở giai đoạn 4 sẽ giảm rủi ro này.
+Người dùng đăng nhập lại bằng OTP hoặc passkey để có `session_ticket`. Thiết bị gọi `GetLatestBackup` kèm `session_ticket` (chưa có token vì chưa có thiết bị). Có bản sao lưu: client tải về, giải mã bằng khóa sao lưu của người dùng, lấy lại khóa danh tính tài khoản và lịch sử, rồi `RegisterDevice` như bình thường (không gửi khóa danh tính) và vào lại từng nhóm bằng External Commit. Bản sao lưu gồm khóa danh tính và lịch sử, không gồm trạng thái MLS; mã hóa và định dạng theo ADR 0012 (làm rõ ở 1.2.1). Không có bản sao lưu: client tạo khóa danh tính mới và gọi `RegisterDevice` với `reset_identity = true`; tài khoản giữ nguyên nhưng mọi tin cũ mất. Server tin khóa mới vì tài khoản vừa qua OTP hoặc passkey, ghi nhận khóa này là khóa danh tính hiện tại của account\_id và chấp nhận External Commit (6.5) của thiết bị mới vào mọi cuộc trò chuyện mà account\_id đang là thành viên (PoC 05/11/2026: External Commit với khóa ký mới không tự gỡ leaf cũ, chỉ resync với cùng khóa ký mới tự gỡ). Quy tắc client: khi xử lý một External Commit có credential trùng account\_id với một leaf hiện có nhưng khác khóa ký, thành viên có leaf index nhỏ nhất đang online gửi Commit Remove leaf cũ; không thêm RPC hay khung mới. Client của người khác chấp nhận ngay và không hiện cảnh báo. Đây là rủi ro đã chấp nhận: ai chiếm được số điện thoại (ví dụ qua SIM swap) có thể mạo danh người dùng mà không ai biết; Key Transparency ở giai đoạn 4 sẽ giảm rủi ro này.
+
+Làm rõ ở 1.3.1 (bản hiện thực): (1) sau `RegisterDevice(reset_identity)` server thu hồi mọi thiết bị khác của tài khoản (khóa danh tính cũ đã mất nên credential của chúng không kiểm được; không có statement, bản ghi `revocations` để trống) và đóng kết nối của chúng bằng mã 4003; (2) thiết bị mới sau khi vào lại các cuộc trò chuyện bằng External Commit tự gỡ lá cũ của chính tài khoản mình (lá có credential không khớp khóa danh tính mới) bằng Commit `removed_device_ids`, server cho phép vì đó là thiết bị của chính tài khoản gửi; (3) client của người khác, khi gặp Commit gỡ một phần thiết bị mà chưa có statement (mục 6.6 bước 4), lấy khóa danh tính hiện tại của tài khoản đó, ghim khóa mới không cảnh báo, và coi mọi lá của tài khoản đó mà credential không khớp khóa này là đã thu hồi (lõi: `trust_identity`). Mục 6.6 bước 4 được thực thi ở lõi: Commit gỡ MỘT PHẦN thiết bị của một tài khoản còn lá khác chỉ được áp dụng khi có statement hợp lệ hoặc theo (3); tự xin rời, gỡ cả tài khoản và chính mình bị gỡ không cần statement.
 
 ## 7. Máy trạng thái và nội dung bên trong MLS
 

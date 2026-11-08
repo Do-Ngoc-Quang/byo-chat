@@ -7,6 +7,7 @@ import (
 
 	chatv1 "byo-chat/server/gen/chat/v1"
 	"byo-chat/server/internal/ids"
+	"byo-chat/server/internal/mlswire"
 	"byo-chat/server/internal/store"
 )
 
@@ -18,10 +19,10 @@ const (
 	MaxGroupInfo    = 128 << 10
 	MaxWelcomes     = 50 // thiết bị mỗi Commit
 	MaxWelcomeBytes = 3 << 20
-	MaxGroupDevs    = 1000
+	MaxGroupDevs    = 256 // ADR 0011
 	MaxFetchLimit   = 200
 	DefaultFetch    = 100
-	maxMembersCall  = 1000
+	maxMembersCall  = 256
 )
 
 // Service là Message Service.
@@ -32,6 +33,9 @@ type Service struct {
 	Bus     Bus
 	Now     func() time.Time
 	Log     *slog.Logger
+	// CheckExternal (tùy chọn) kiểm lá mới của External Commit (6.5 bước 6): credential của đúng thiết bị gửi, do khóa
+	// danh tính của tài khoản ký. nil thì bỏ qua (test không dựng MLS thật).
+	CheckExternal func(ctx context.Context, dev store.DeviceInfo, leaf mlswire.ExternalLeaf) error
 }
 
 func New(meta store.MetaStore, mb store.MailboxStore, q Queue, bus Bus) *Service {
@@ -151,6 +155,11 @@ func (s *Service) SubmitProposal(ctx context.Context, dev store.DeviceInfo, idem
 	recips, e := s.recipients(ctx, conv, dev.DeviceID)
 	if e != nil {
 		return nil, e
+	}
+	// Proposal duy nhất client gửi là Remove tự gỡ (lõi từ chối loại khác): đánh dấu đang rời để thành viên thường
+	// được commit dự phòng khi không admin online (ADR 0015).
+	if err := s.Meta.SetLeaving(ctx, conv, dev.AccountID); err != nil {
+		return nil, toErr(err)
 	}
 	// Khử trùng nhờ khóa dedup theo (conv, Idempotency-Key) như client_msg_id.
 	cmid := ids.ID{}

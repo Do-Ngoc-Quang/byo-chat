@@ -72,3 +72,95 @@ fn app_state_di_cung_snapshot() {
     // trạng thái MLS và app_state cùng một lần ghi: nhóm vẫn đó
     assert_eq!(call(&mut r, "epoch", &[b"g"])[0], call(&mut a, "epoch", &[b"g"])[0]);
 }
+
+#[test]
+fn nhom_3_nguoi_them_va_go_tai_khoan() {
+    let (mut a, mut b) = pair();
+    // Carol có hai thiết bị cùng tài khoản; Alice thêm cả hai bằng một Commit.
+    let mut c1 = Core::new_device(&[3; 16], &[30; 16], None, 1).unwrap();
+    let mut c2 = Core::new_device(&[3; 16], &[31; 16], Some(&call(&mut c1, "identity_export", &[])[0]), 1).unwrap();
+    let kp1 = call(&mut c1, "key_packages", &[&1u32.to_le_bytes()]).remove(0);
+    let kp2 = call(&mut c2, "key_packages", &[&1u32.to_le_bytes()]).remove(0);
+    call(&mut a, "stage_add", &[b"g", &kp1, &kp2]);
+    // Bị từ chối thì hủy: nhóm giữ nguyên epoch, rồi dựng lại và được nhận.
+    call(&mut a, "clear_commit", &[b"g"]);
+    assert_eq!(call(&mut a, "group_members", &[b"g"]).len(), 2);
+    let add = call(&mut a, "stage_add", &[b"g", &kp1, &kp2]);
+    call(&mut a, "merge_commit", &[b"g"]);
+    call(&mut b, "apply_commit", &[b"g", &add[0]]);
+    call(&mut c1, "join_welcome", &[b"g", &add[1]]);
+    call(&mut c2, "join_welcome", &[b"g", &add[1]]);
+    assert_eq!(call(&mut a, "group_members", &[b"g"]).len(), 4);
+
+    // Alice gỡ Carol: cả hai thiết bị của Carol biến mất; Bob áp dụng được; Carol không đọc được tin mới.
+    let rm = call(&mut a, "stage_remove", &[b"g", &[3u8; 16]]);
+    call(&mut a, "merge_commit", &[b"g"]);
+    call(&mut b, "apply_commit", &[b"g", &rm[0]]);
+    assert_eq!(call(&mut a, "group_members", &[b"g"]).len(), 2);
+    let ct = call(&mut a, "encrypt", &[b"g", b"sau khi go"]).remove(0);
+    assert_eq!(call(&mut b, "decrypt", &[b"g", &ct])[0], b"sau khi go");
+    call(&mut c1, "apply_commit", &[b"g", &rm[0]]);
+    assert_eq!(call(&mut c1, "is_active", &[b"g"])[0], [0]);
+    assert_eq!(call(&mut b, "is_active", &[b"g"])[0], [1]);
+    assert!(c1.call("decrypt", &pack(&[b"g", &ct])).is_err());
+    assert!(c2.call("decrypt", &pack(&[b"g", &ct])).is_err());
+
+    // Gỡ tài khoản không có trong nhóm, hoặc account_id sai độ dài: lỗi.
+    assert!(a.call("stage_remove", &pack(&[b"g", &[9u8; 16]])).is_err());
+    assert!(a.call("stage_remove", &pack(&[b"g", b"ngan"])).is_err());
+}
+
+#[test]
+fn roi_nhom_proposal_roi_admin_commit() {
+    let (mut a, mut b) = pair();
+    let mut c = Core::new_device(&[3; 16], &[30; 16], None, 1).unwrap();
+    let kc = call(&mut c, "key_packages", &[&1u32.to_le_bytes()]).remove(0);
+    let add = call(&mut a, "stage_add", &[b"g", &kc]);
+    call(&mut a, "merge_commit", &[b"g"]);
+    call(&mut b, "apply_commit", &[b"g", &add[0]]);
+    call(&mut c, "join_welcome", &[b"g", &add[1]]);
+
+    // Chưa có proposal: không commit được.
+    assert!(a.call("stage_commit_pending", &pack(&[b"g"])).is_err());
+
+    // C xin rời: A và B xếp proposal vào hàng chờ; C vẫn ở trong nhóm và còn đọc được.
+    let prop = call(&mut c, "leave_proposal", &[b"g"]).remove(0);
+    call(&mut a, "apply_proposal", &[b"g", &prop]);
+    call(&mut b, "apply_proposal", &[b"g", &prop]);
+    assert_eq!(call(&mut c, "is_active", &[b"g"])[0], [1]);
+    // Trong lúc chờ commit, A và B vẫn gửi tin được (proposal chưa xếp vào nhóm) và C vẫn đọc được.
+    let ct = call(&mut a, "encrypt", &[b"g", b"truoc khi roi"]).remove(0);
+    assert_eq!(call(&mut c, "decrypt", &[b"g", &ct])[0], b"truoc khi roi");
+    assert_eq!(call(&mut b, "decrypt", &[b"g", &ct])[0], b"truoc khi roi");
+
+    // A commit gom proposal: B và C áp dụng; C bị gỡ, còn lại 2 người nói chuyện tiếp.
+    let rm = call(&mut a, "stage_commit_pending", &[b"g"]);
+    call(&mut a, "merge_commit", &[b"g"]);
+    call(&mut b, "apply_commit", &[b"g", &rm[0]]);
+    call(&mut c, "apply_commit", &[b"g", &rm[0]]);
+    assert_eq!(call(&mut c, "is_active", &[b"g"])[0], [0]);
+    assert_eq!(call(&mut a, "group_members", &[b"g"]).len(), 2);
+    let ct = call(&mut a, "encrypt", &[b"g", b"sau khi roi"]).remove(0);
+    assert_eq!(call(&mut b, "decrypt", &[b"g", &ct])[0], b"sau khi roi");
+    assert!(c.call("decrypt", &pack(&[b"g", &ct])).is_err());
+    // Proposal đã được dùng: không còn gì để commit.
+    assert!(a.call("stage_commit_pending", &pack(&[b"g"])).is_err());
+}
+
+#[test]
+fn ten_nhom_nam_trong_chat_policy_nguoi_vao_doc_duoc() {
+    let mut a = Core::new_device(&[1; 16], &[10; 16], None, 1).unwrap();
+    let mut b = Core::new_device(&[2; 16], &[20; 16], None, 1).unwrap();
+    let kp = call(&mut b, "key_packages", &[&1u32.to_le_bytes()]).remove(0);
+    call(&mut a, "create_group", &[b"g", "Nhóm bạn bè".as_bytes()]);
+    assert_eq!(call(&mut a, "group_name", &[b"g"])[0], "Nhóm bạn bè".as_bytes());
+    let out = call(&mut a, "add_members", &[b"g", &kp]);
+    call(&mut b, "join_welcome", &[b"g", &out[1]]);
+    assert_eq!(call(&mut b, "group_name", &[b"g"])[0], "Nhóm bạn bè".as_bytes(), "người nhận Welcome đọc được tên");
+    let ct = call(&mut a, "encrypt", &[b"g", b"hi"]).remove(0);
+    assert_eq!(call(&mut b, "decrypt", &[b"g", &ct])[0], b"hi");
+    // nhóm không tên (1-1): rỗng; tên quá dài bị từ chối
+    let (mut a2, _b2) = pair();
+    assert_eq!(call(&mut a2, "group_name", &[b"g"])[0], b"");
+    assert!(a.call("create_group", &pack(&[b"g2", &[b'x'; 101]])).is_err());
+}

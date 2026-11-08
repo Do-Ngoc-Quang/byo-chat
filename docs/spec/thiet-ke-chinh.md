@@ -2,7 +2,7 @@
 
 Nov 3, 2026 · @Quang
 
-**Phiên bản:** 1.3.0
+**Phiên bản:** 1.4.0
 
 ## 1. Tóm tắt điều hành
 
@@ -94,7 +94,7 @@ Stack chọn các thành phần mạnh, phổ biến và có cộng đồng lớ
 | Metadata | PostgreSQL (Aurora), khóa shard `account_id`, nâng lên Citus khi cần | Quan hệ, giao dịch, ecosystem lớn | CockroachDB |
 | Hộp thư ciphertext | DynamoDB on-demand, TTL có sẵn | Scale tự động, độ trễ ổn định, TTL xóa dữ liệu miễn phí | ScyllaDB Cloud |
 | Cache và presence | Valkey/Redis cluster (ElastiCache) | TTL, rate limit, pub/sub nhẹ | KeyDB, Dragonfly |
-| Media | Cloudflare R2 + CDN, upload qua presigned URL | Không tính phí egress, tương thích S3 | S3 + CloudFront |
+| Media | Amazon S3 (CloudFront khi cần), upload qua presigned URL | Cùng AWS với phần còn lại, IAM role thay khóa API, lifecycle và SSE-KMS sẵn có (ADR 0014) | Cloudflare R2 (không phí egress) |
 | Push | FCM HTTP v1, APNs HTTP/2, Web Push (VAPID), gọi từ push worker | Không phụ thuộc bên thứ ba cho token | OneSignal |
 | Gọi video | LiveKit (SFU + TURN nhúng), tự host trên Kubernetes | SFU mã nguồn mở, SDK đủ nền tảng, hỗ trợ E2EE | LiveKit Cloud ở giai đoạn đầu |
 | Xác thực | OTP (Twilio Verify) + passkey (WebAuthn); token Platform-Agnostic Security Tokens (PASETO) ngắn hạn gắn với thiết bị | Không lưu mật khẩu; khóa E2EE tách khỏi đăng nhập | Firebase Auth |
@@ -240,22 +240,22 @@ Mỗi thiết bị là một thành viên MLS độc lập. Thêm hoặc gỡ th
 **Lịch sử cho thiết bị mới.** Mặc định thiết bị mới không đọc được tin cũ. Có hai cách:
 
 1. **Chuyển trực tiếp** từ thiết bị cũ: gói lịch sử, mã hóa bằng khóa tạm trao đổi qua QR, gửi qua relay mã hóa.
-2. **Backup mã hóa:** client tạo recovery key 256 bit ngẫu nhiên (hiển thị dạng chuỗi dễ chép), mã hóa snapshot DB theo từng khối bằng Advanced Encryption Standard 256 bit, chế độ Galois/Counter (AES-256-GCM) với khóa dẫn xuất HMAC-based Key Derivation Function (HKDF), rồi upload lên R2 qua BackupService. Tùy chọn thêm passphrase với Argon2id. Server không giải mã được.
+2. **Backup mã hóa:** client tạo recovery key 256 bit ngẫu nhiên (hiển thị dạng chuỗi dễ chép), mã hóa snapshot DB theo từng khối bằng Advanced Encryption Standard 256 bit, chế độ Galois/Counter (AES-256-GCM) với khóa dẫn xuất HMAC-based Key Derivation Function (HKDF), rồi upload lên S3 qua BackupService. Tùy chọn thêm passphrase với Argon2id. Server không giải mã được.
 
 Mất hết thiết bị và quên recovery key đồng nghĩa mất lịch sử. UI phải nói rõ điều này khi bật backup.
 
 ## 11. Media mã hóa
 
-Client mã hóa file trước khi upload, nên R2 và CDN chỉ thấy blob ngẫu nhiên. Vì server không thấy nội dung, mọi xử lý ảnh và video (nén, thumbnail) diễn ra ở client.
+Client mã hóa file trước khi upload, nên S3 và CDN chỉ thấy blob ngẫu nhiên. Vì server không thấy nội dung, mọi xử lý ảnh và video (nén, thumbnail) diễn ra ở client.
 
 1. Client sinh khóa ngẫu nhiên 256 bit cho từng file và mã hóa theo khối bằng AES-256-GCM (mỗi khối một nonce, khối cuối được đánh dấu), để vừa stream vừa resume được.
 2. Client nén trước khi mã hóa: ảnh đổi kích thước và định dạng, video hạ độ phân giải bằng bộ mã hóa phần cứng, voice message dùng Opus.
-3. Client xin presigned URL từ MediaService, upload thẳng lên R2 (multipart cho file lớn, resume theo khối).
+3. Client xin presigned URL từ MediaService, upload thẳng lên S3 (multipart cho file lớn, resume theo khối).
 4. Thumbnail nhỏ và blurhash được mã hóa riêng và đính kèm trong tin.
 5. Tin MLS chứa `media_id`, khóa, tiền tố nonce, hash SHA-256 của ciphertext, kích thước, loại tệp và thumbnail.
 6. Người nhận tải qua CDN bằng URL ký có hạn ngắn, kiểm tra hash, giải mã và lưu vào bộ nhớ cục bộ.
 
-**Vòng đời.** Quy tắc lifecycle của R2 xóa media sau 30 ngày kể từ lúc upload, cùng thời hạn với TTL ciphertext. Người dùng giữ bản cục bộ và, nếu bật, trong backup. Media là khoản chi lớn nhất của hệ thống, nên giới hạn kích thước tệp cần được đặt từ đầu (giá trị ban đầu sẽ chốt theo chi phí đo được).
+**Vòng đời.** Quy tắc lifecycle của S3 xóa media sau 30 ngày kể từ lúc upload, cùng thời hạn với TTL ciphertext. Người dùng giữ bản cục bộ và, nếu bật, trong backup. Media là khoản chi lớn nhất của hệ thống, nên giới hạn kích thước tệp cần được đặt từ đầu (giá trị ban đầu sẽ chốt theo chi phí đo được).
 
 ## 12. Gọi thoại và video
 
@@ -302,7 +302,7 @@ Ba kho với ba vai trò: PostgreSQL cho dữ liệu quan hệ ít ghi, DynamoDB
 | `convs_by_account` | `account_id`, `conv_id`, hoạt động gần nhất | Truy vấn: danh sách chat của tôi |
 | `group_info` | `conv_id`, `epoch`, blob GroupInfo | Dùng cho External Commit |
 | `calls` | `call_id`, `conv_id`, người gọi, thời gian, kết quả | Chỉ metadata |
-| `media` | `media_id`, chủ sở hữu, kích thước, khóa object R2, `expires_at` |  |
+| `media` | `media_id`, chủ sở hữu, kích thước, khóa object S3, `expires_at` |  |
 | `backups` | `account_id`, khóa object, kích thước, `created_at` |  |
 | device\_links | link\_id, account\_id, khóa tạm, thời điểm hết hạn | Liên kết thiết bị mới; TTL 5 phút |
 | revocations | device\_id, account\_id, bản xác nhận thu hồi, revoked\_at | Chỉ thêm, không sửa; client lấy qua KeyService |
@@ -337,7 +337,7 @@ Phần lớn rủi ro nằm ở thiết bị và ở hành vi người dùng, kh
 
 **Trên server**
 
-- Mã hóa at-rest bằng Key Management Service (KMS) cho Aurora, DynamoDB, R2; bí mật nằm trong Secrets Manager; Identity and Access Management (IAM) tối thiểu theo dịch vụ.
+- Mã hóa at-rest bằng Key Management Service (KMS) cho Aurora, DynamoDB, S3; bí mật nằm trong Secrets Manager; Identity and Access Management (IAM) tối thiểu theo dịch vụ.
 - Không ghi log ciphertext hay payload; trace chỉ mang `message_id` và `conv_id`.
 
 **Chống lạm dụng**
@@ -427,14 +427,14 @@ Mỗi quyết định kèm phương án đã loại và điều kiện để xem
 | 6 | LiveKit | SFU hoàn chỉnh, có E2EE | Tự viết trên mediasoup hoặc Janus; Twilio, Agora | Giá hoặc E2EE không đạt |
 | 7 | Ciphertext có TTL 30 ngày | Chi phí và quyền riêng tư | Lưu vĩnh viễn trên server | Sản phẩm cần lịch sử phía server |
 | 8 | Tìm kiếm cục bộ | Tương thích E2EE | Chỉ mục phía server | Cần tìm kiếm xuyên thiết bị mà không tải lịch sử |
-| 9 | Cloudflare R2 cho media | Không phí egress | S3 + CloudFront | Vấn đề tuân thủ vùng hoặc độ ổn định |
+| 9 | Amazon S3 cho media và sao lưu (thay R2 từ 1.4.0, ADR 0014) | Cùng nhà cung cấp, IAM role, lifecycle, SSE-KMS | Cloudflare R2 | Chi phí egress media vượt ngân sách mà CloudFront không giảm đủ |
 | 10 | Postgres, shard sau bằng Citus | Đơn giản trước, khóa shard đặt sẵn | CockroachDB ngay từ đầu | Node ghi chạm trần |
 | 11 | Kiểm tra epoch ở server | Server từ chối tin mang epoch cũ nên client không giữ khóa của các epoch trước; Commit được xếp thứ tự bằng ghi có điều kiện | Client tự giữ khóa của nhiều epoch | Tỉ lệ EPOCH\_MISMATCH làm chậm việc gửi tin đáng kể |
 | 12 | External Commit cho thiết bị mới | Thiết bị mới tự vào từng nhóm, thiết bị cũ không cần online; PoC MLS xác nhận cách này chạy trên Windows, WASM và Android | Thiết bị cũ lần lượt Add thiết bị mới vào từng nhóm | Server không kiểm tra được credential của External Commit hoặc thư viện thiếu ổn định |
 
 ## 18. Phạm vi và phiên bản
 
-**Phiên bản hiện tại 1.3.0; Phạm vi đã chốt từ 1.0.0 ngày 03/11/2026; bản 1.1.0 đóng phần thiết kế bổ sung cho phiên bản đầu; bản 1.2.0 thu hẹp bản đầu xuống ba nền tảng; bản 1.3.0 đưa vào các điều chỉnh sau khi PoC đạt và đặc tả giao thức chốt 1.0.0, không mở rộng thêm.** Tài liệu này là bản thiết kế kiến trúc nền; phạm vi không mở rộng thêm, và mọi thay đổi sau ngày chốt đi qua quy trình ở cuối mục.
+**Phiên bản hiện tại 1.4.0 (đổi R2 thành S3, ADR 0014); Phạm vi đã chốt từ 1.0.0 ngày 03/11/2026; bản 1.1.0 đóng phần thiết kế bổ sung cho phiên bản đầu; bản 1.2.0 thu hẹp bản đầu xuống ba nền tảng; bản 1.3.0 đưa vào các điều chỉnh sau khi PoC đạt và đặc tả giao thức chốt 1.0.0, không mở rộng thêm.** Tài liệu này là bản thiết kế kiến trúc nền; phạm vi không mở rộng thêm, và mọi thay đổi sau ngày chốt đi qua quy trình ở cuối mục.
 
 | Phiên bản | Ngày | Nội dung |
 | --- | --- | --- |

@@ -45,3 +45,5 @@ dev/                 docker-compose.yml, scripts/
 
 ## Ngoại lệ: `docs/ui/`
 Giữ phẳng, không chia thư mục con: `canvas.json` tham chiếu từng màn bằng tên file (`Main.dc.html` là màn danh sách chat mobile, `Mobile-*`, `Desktop-*`). Đổi tên hoặc di chuyển sẽ làm hỏng canvas. Chỉ đổi khi công cụ thiết kế cập nhật cùng lúc.
+
+**Là chuẩn bắt buộc cho UI.** Mọi màn hình trong `app/lib/ui/` phải làm đúng bản vẽ ở đây (Mobile và Desktop); token chung nằm ở `app/lib/ui/theme.dart`. Quy tắc đầy đủ ở mục "Giao diện" của `CLAUDE.md`.

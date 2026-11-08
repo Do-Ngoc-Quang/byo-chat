@@ -17,6 +17,7 @@ import (
 	"byo-chat/server/internal/account"
 	"byo-chat/server/internal/api"
 	"byo-chat/server/internal/app"
+	"byo-chat/server/internal/blob"
 	"byo-chat/server/internal/gateway"
 )
 
@@ -73,6 +74,9 @@ func main() {
 		TokenKey:       []byte(key),
 		OTPSender:      account.LogSender{Log: log},
 		DevFixedOTP:    os.Getenv("CHAT_DEV_OTP_CODE"),
+		DevBlobURL:     os.Getenv("CHAT_DEV_BLOB_URL"),
+		S3:             s3Config(),
+		S3Ensure:       os.Getenv("CHAT_S3_ENSURE") == "1",
 		EnsureTables:   env("CHAT_ENSURE_TABLES", "1") == "1",
 		Gateway:        gwConfig(),
 		Log:            log,
@@ -101,5 +105,18 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("http", "err", err)
 		os.Exit(1)
+	}
+}
+
+// s3Config đọc cấu hình S3 (ADR 0014); nil nếu không đặt CHAT_S3_BUCKET. Chạy thật chỉ cần bucket và region, xác thực
+// bằng IAM role; CHAT_S3_ENDPOINT/ACCESS_KEY/SECRET_KEY/PATH_STYLE chỉ dùng cho dev (LocalStack).
+func s3Config() *blob.S3Config {
+	b := os.Getenv("CHAT_S3_BUCKET")
+	if b == "" {
+		return nil
+	}
+	return &blob.S3Config{
+		Bucket: b, Region: os.Getenv("CHAT_S3_REGION"), Endpoint: os.Getenv("CHAT_S3_ENDPOINT"),
+		PathStyle: os.Getenv("CHAT_S3_PATH_STYLE") == "1", AccessKey: os.Getenv("CHAT_S3_ACCESS_KEY"), SecretKey: os.Getenv("CHAT_S3_SECRET_KEY"),
 	}
 }

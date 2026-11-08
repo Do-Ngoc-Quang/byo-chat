@@ -56,6 +56,38 @@ type DeviceKeys struct {
 	Credential []byte
 }
 
+// DeviceLink là thiết bị mới đang chờ thiết bị cũ duyệt (giao-thuc.md 6.5). Account khác không
+// nghĩa là đã được duyệt.
+type DeviceLink struct {
+	ID         ids.ID
+	ShortCode  string
+	Platform   chatv1.Platform
+	Name       string
+	DevicePub  []byte
+	Ephemeral  []byte
+	Account    ids.ID
+	Credential []byte
+	Sealed     []byte
+	ExpiresAt  time.Time
+}
+
+// DeviceRow là một thiết bị của tài khoản kèm thông tin hiển thị (ListDevices).
+type DeviceRow struct {
+	DeviceID   ids.ID
+	Platform   chatv1.Platform
+	Name       string
+	CreatedMs  uint64
+	LastSeenMs uint64
+	Revoked    bool
+}
+
+// BackupRow là một bản sao lưu đã cấp URL (đối tượng có thể chưa được tải lên).
+type BackupRow struct {
+	ObjectKey string
+	Size      uint64
+	CreatedMs uint64
+}
+
 // AccountStore: tài khoản, OTP, ticket, token làm mới, thiết bị và KeyPackage (PostgreSQL).
 type AccountStore interface {
 	// UpsertAccount tìm tài khoản theo băm liên hệ, chưa có thì tạo với id mới.
@@ -89,6 +121,22 @@ type AccountStore interface {
 	// TakeKeyPackage lấy và xóa một gói một lần còn hạn; hết thì trả last resort (không xóa,
 	// lastResort=true). ErrNotFound nếu thiết bị không còn gói nào.
 	TakeKeyPackage(ctx context.Context, device ids.ID, now time.Time) (blob []byte, lastResort bool, err error)
+	PutLink(ctx context.Context, l DeviceLink) error
+	// GetLink: ErrNotFound nếu không có hoặc hết hạn.
+	GetLink(ctx context.Context, id ids.ID, now time.Time) (DeviceLink, error)
+	// ApproveLink ghi credential + sealed_bundle (nguyên tử, chỉ một lần): ErrNotFound nếu không có/hết hạn,
+	// ErrExists nếu đã duyệt.
+	ApproveLink(ctx context.Context, id, acct ids.ID, credential, sealed []byte, now time.Time) error
+	// TakeApprovedLink lấy và xóa liên kết đã duyệt (nguyên tử); ErrNotFound nếu chưa duyệt/không có/hết hạn.
+	TakeApprovedLink(ctx context.Context, id ids.ID, now time.Time) (DeviceLink, error)
+	// ListDevices trả mọi thiết bị của tài khoản, kể cả đã thu hồi, theo thứ tự đăng ký.
+	ListDevices(ctx context.Context, acct ids.ID) ([]DeviceRow, error)
+	// RevokeAccountDevice thu hồi một thiết bị của tài khoản trong một giao dịch: đánh dấu, xóa KeyPackage và refresh
+	// token, lưu statement. ErrNotFound nếu thiết bị không thuộc tài khoản; ErrExists nếu đã thu hồi.
+	RevokeAccountDevice(ctx context.Context, acct, device ids.ID, statement []byte, now time.Time) error
+	PutBackup(ctx context.Context, acct ids.ID, objectKey string, size uint64, now time.Time) error
+	// Backups trả các bản sao lưu của tài khoản, mới nhất trước, tối đa limit.
+	Backups(ctx context.Context, acct ids.ID, limit int) ([]BackupRow, error)
 	// AccountKeys trả khóa danh tính, thiết bị chưa thu hồi (kèm credential) và các bản thu hồi.
 	AccountKeys(ctx context.Context, acct ids.ID) (identity []byte, devices []DeviceKeys, revocations [][]byte, err error)
 }

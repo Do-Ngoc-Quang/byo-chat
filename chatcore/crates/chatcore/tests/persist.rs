@@ -122,3 +122,28 @@ fn nhieu_nhom_va_bridge_open_restore() {
     }
     assert!(Core::open_restore(&pack(&[&sealed])).is_err());
 }
+
+#[test]
+fn proposal_cho_commit_song_sot_qua_khoi_dong_lai() {
+    let mut a = Core::new_device(&[1; 16], &[10; 16], None, 1).unwrap();
+    let mut b = Core::new_device(&[2; 16], &[20; 16], None, 1).unwrap();
+    let mut c = Core::new_device(&[3; 16], &[30; 16], None, 1).unwrap();
+    let (kb, kc) = (call(&mut b, "key_packages", &[&1u32.to_le_bytes()]).remove(0), call(&mut c, "key_packages", &[&1u32.to_le_bytes()]).remove(0));
+    call(&mut a, "create_group", &[b"g"]);
+    let out = call(&mut a, "add_members", &[b"g", &kb, &kc]);
+    call(&mut b, "join_welcome", &[b"g", &out[1]]);
+    call(&mut c, "join_welcome", &[b"g", &out[1]]);
+    // C xin rời; A nhận proposal rồi "tắt app" trước khi kịp commit.
+    let prop = call(&mut c, "leave_proposal", &[b"g"]).remove(0);
+    call(&mut a, "apply_proposal", &[b"g", &prop]);
+    let mut a = restart(&mut a);
+    // Sau khi mở lại, A vẫn commit được gỡ C.
+    let rm = call(&mut a, "stage_commit_pending", &[b"g"]);
+    call(&mut a, "merge_commit", &[b"g"]);
+    call(&mut b, "apply_proposal", &[b"g", &prop]);
+    call(&mut b, "apply_commit", &[b"g", &rm[0]]);
+    assert_eq!(call(&mut a, "group_members", &[b"g"]).len(), 2);
+    // Snapshot không còn proposal đã dùng.
+    let mut a2 = restart(&mut a);
+    assert!(a2.call("stage_commit_pending", &pack(&[b"g"])).is_err());
+}

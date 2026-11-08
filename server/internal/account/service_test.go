@@ -329,6 +329,16 @@ func TestSecondDeviceAndReset(t *testing.T) {
 	if string(got) != string(stranger.Public().(ed25519.PublicKey)) {
 		t.Fatal("khóa danh tính phải đổi sau reset")
 	}
+	// Mọi thiết bị cũ (khóa danh tính cũ đã mất) bị thu hồi; chỉ thiết bị vừa đăng ký còn hiệu lực.
+	rows, err := e.svc.Store.ListDevices(context.Background(), acct)
+	if err != nil || len(rows) != 3 {
+		t.Fatalf("ListDevices: %d thiết bị, lỗi %v", len(rows), err)
+	}
+	for _, row := range rows {
+		if row.Revoked == (row.DeviceID == d.id) {
+			t.Fatalf("thiết bị %x: revoked=%v (chỉ thiết bị mới còn hiệu lực)", row.DeviceID[:4], row.Revoked)
+		}
+	}
 }
 
 func TestKeyPackageService(t *testing.T) {

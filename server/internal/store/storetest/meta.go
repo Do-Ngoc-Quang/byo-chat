@@ -110,6 +110,17 @@ func RunMeta(t *testing.T, mk func(testing.TB) MetaHarness) {
 		if r, _ := h.Meta.GetMember(ctx, c, bob); r.Role != chatv1.Role_ROLE_ADMIN {
 			t.Fatalf("vai trò Bob %v", r.Role)
 		}
+		for i := 0; i < 2; i++ { // idempotent
+			if err := h.Meta.SetLeaving(ctx, c, carol); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if r, _ := h.Meta.GetMember(ctx, c, carol); !r.Leaving {
+			t.Fatal("Carol phải đang rời")
+		}
+		if err := h.Meta.SetLeaving(ctx, c, ids.New()); err != store.ErrNotFound {
+			t.Fatalf("không phải thành viên: %v", err)
+		}
 		if l, _ := h.Meta.ListConversations(ctx, carol); len(l) != 1 || l[0] != c {
 			t.Fatalf("danh sách của Carol: %v", l)
 		}

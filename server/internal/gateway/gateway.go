@@ -86,6 +86,17 @@ func (s *Server) Drain() {
 	}
 }
 
+// CloseDevice đóng kết nối đang mở của một thiết bị bằng mã 4003 (thu hồi, giao-thuc.md 6.6 bước 2).
+// Không có kết nối thì không làm gì; gateway khác (nhiều node) cần kênh thông báo, việc dở.
+func (s *Server) CloseDevice(id ids.ID) {
+	s.mu.Lock()
+	c := s.conns[id]
+	s.mu.Unlock()
+	if c != nil {
+		go c.close(CloseRevoked, "thiết bị đã bị thu hồi")
+	}
+}
+
 // ConnCount cho test và số đo.
 func (s *Server) ConnCount() int {
 	s.mu.Lock()

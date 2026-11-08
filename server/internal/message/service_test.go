@@ -313,6 +313,38 @@ func TestMemberCommitRules(t *testing.T) {
 	wantCode(t, err, chatv1.ErrorCode_ERROR_CODE_PERMISSION_DENIED)
 }
 
+// Rời nhóm khi không admin online (ADR 0015): proposal đánh dấu `leaving`; khi đó thành viên thường gỡ được đúng người
+// đang rời, không ai khác.
+func TestLeaveFallbackByMember(t *testing.T) {
+	e := newEnv(t)
+	conv := e.group()
+	ctx := context.Background()
+	_, err := e.svc.SubmitCommit(ctx, e.A1, ids.New().String(), add2(conv, e))
+	e.mustOK(err)
+	e.drain()
+	rm := func(a ids.ID) *chatv1.SubmitCommitRequest {
+		r := commitReq(conv, 2)
+		r.RemovedAccountIds = [][]byte{a.Bytes()}
+		return r
+	}
+	_, err = e.svc.SubmitCommit(ctx, e.C1, ids.New().String(), rm(e.bob)) // Bob chưa xin rời
+	wantCode(t, err, chatv1.ErrorCode_ERROR_CODE_PERMISSION_DENIED)
+	_, err = e.svc.SubmitProposal(ctx, e.B1, ids.New().String(), &chatv1.SubmitProposalRequest{ConvId: conv.Bytes(), Proposal: []byte("p"), MlsEpoch: 2})
+	e.mustOK(err)
+	_, err = e.svc.SubmitCommit(ctx, e.C1, ids.New().String(), rm(e.alice)) // Alice không rời
+	wantCode(t, err, chatv1.ErrorCode_ERROR_CODE_PERMISSION_DENIED)
+	both := rm(e.bob)
+	both.RemovedAccountIds = append(both.RemovedAccountIds, e.carol.Bytes()) // kèm người không rời
+	_, err = e.svc.SubmitCommit(ctx, e.C1, ids.New().String(), both)
+	wantCode(t, err, chatv1.ErrorCode_ERROR_CODE_PERMISSION_DENIED)
+	_, err = e.svc.SubmitCommit(ctx, e.C1, ids.New().String(), rm(e.bob))
+	e.mustOK(err)
+	e.drain()
+	if _, mErr := e.meta.GetMember(ctx, conv, e.bob); mErr != store.ErrNotFound {
+		t.Fatalf("Bob phải bị gỡ: %v", mErr)
+	}
+}
+
 func add2(conv ids.ID, e *env) *chatv1.SubmitCommitRequest {
 	r := commitReq(conv, 1)
 	r.Added = []*chatv1.Member{member(e.carol, chatv1.Role_ROLE_MEMBER)}
@@ -490,4 +522,66 @@ func TestFetchLogAndGroupInfo(t *testing.T) {
 	if string(g.GroupInfo) != "gi1" || g.Epoch != 1 {
 		t.Fatalf("%+v", g)
 	}
+}
+
+// Giới hạn kích thước (giao-thuc.md mục 2): tối đa 50 Welcome mỗi Commit, mỗi Welcome <= 128 KiB, tổng <= 3 MiB.
+func TestCommitWelcomeLimits(t *testing.T) {
+	e := newEnv(t)
+	conv := e.group()
+	ctx := context.Background()
+	var devs []store.DeviceInfo
+	for i := 0; i < 51; i++ {
+		d := store.DeviceInfo{DeviceID: ids.New(), AccountID: e.carol, Platform: chatv1.Platform_PLATFORM_ANDROID}
+		e.meta.AddDevice(d)
+		devs = append(devs, d)
+	}
+	try := func(n, size int) *message.Error {
+		req := commitReq(conv, 1)
+		req.Added = []*chatv1.Member{member(e.carol, chatv1.Role_ROLE_MEMBER)}
+		for _, d := range devs[:n] {
+			req.Welcomes = append(req.Welcomes, &chatv1.WelcomeEnvelope{RecipientDeviceId: d.DeviceID.Bytes(), Welcome: make([]byte, size)})
+		}
+		_, err := e.svc.SubmitCommit(ctx, e.A1, ids.New().String(), req)
+		return err
+	}
+	wantCode(t, try(51, 10), chatv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT)                 // 51 > 50 thiết bị
+	wantCode(t, try(1, message.MaxCommit+1), chatv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT) // một Welcome quá lớn
+	wantCode(t, try(25, message.MaxCommit), chatv1.ErrorCode_ERROR_CODE_PAYLOAD_TOO_LARGE) // 25 x 128 KiB > 3 MiB
+	if err := try(50, 10); err != nil {                                                    // đúng 50: được
+		t.Fatalf("50 Welcome nhỏ phải được: %v", err)
+	}
+}
+
+// Nhóm tối đa MaxGroupDevs (256) thiết bị (ADR 0011): thêm bằng các Commit 50 Welcome cho tới khi đầy, thiết bị thứ 257 bị từ chối.
+func TestGroupDeviceLimit(t *testing.T) {
+	e := newEnv(t)
+	conv := e.group() // A1, A2, B1 = 3 thiết bị
+	ctx := context.Background()
+	epoch := uint64(1)
+	devices := 3
+	add := func(n int) *message.Error {
+		req := commitReq(conv, epoch)
+		acct := ids.New() // mỗi lần thêm một tài khoản mới (Welcome chỉ tới thiết bị của tài khoản trong added)
+		req.Added = []*chatv1.Member{member(acct, chatv1.Role_ROLE_MEMBER)}
+		for i := 0; i < n; i++ {
+			d := store.DeviceInfo{DeviceID: ids.New(), AccountID: acct, Platform: chatv1.Platform_PLATFORM_ANDROID}
+			e.meta.AddDevice(d)
+			req.Welcomes = append(req.Welcomes, welcome(d))
+		}
+		r, err := e.svc.SubmitCommit(ctx, e.A1, ids.New().String(), req)
+		if err == nil {
+			epoch = r.NewEpoch
+			devices += n
+			e.drain()
+		}
+		return err
+	}
+	for devices+50 <= message.MaxGroupDevs {
+		e.mustOK(add(50))
+	}
+	e.mustOK(add(message.MaxGroupDevs - devices)) // đúng đầy
+	if devices != message.MaxGroupDevs {
+		t.Fatalf("đã có %d thiết bị, muốn %d", devices, message.MaxGroupDevs)
+	}
+	wantCode(t, add(1), chatv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT)
 }

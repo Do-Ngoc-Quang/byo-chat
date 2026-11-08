@@ -224,6 +224,14 @@ func (s *Store) Members(ctx context.Context, conv ids.ID) ([]store.MemberRow, er
 	return out, rows.Err()
 }
 
+func (s *Store) SetLeaving(ctx context.Context, conv, acct ids.ID) error {
+	t, err := s.pool.Exec(ctx, `UPDATE members_by_conv SET leaving=true WHERE conv_id=$1 AND account_id=$2`, conv, acct)
+	if err == nil && t.RowsAffected() == 0 {
+		return store.ErrNotFound
+	}
+	return err
+}
+
 func (s *Store) ApplyMembership(ctx context.Context, conv ids.ID, added []*chatv1.Member, removed []ids.ID, roles []*chatv1.Member) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {

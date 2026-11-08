@@ -39,13 +39,17 @@ type accState struct {
 	order     map[ids.ID][]ids.ID // account -> thiết bị theo thứ tự đăng ký
 	kps       map[ids.ID][]kpRow
 	revs      map[ids.ID][][]byte
+	links     map[ids.ID]*store.DeviceLink
+	created   map[ids.ID]time.Time // thiết bị -> lúc đăng ký
+	names     map[ids.ID]string
+	backups   map[ids.ID][]store.BackupRow
 }
 
 func newAccState() accState {
 	return accState{
 		byContact: map[[32]byte]ids.ID{}, identity: map[ids.ID][]byte{}, otps: map[ids.ID]store.OTPChallenge{},
 		tickets: map[[32]byte]*ticket{}, refresh: map[[32]byte]refresh{}, creds: map[ids.ID][]byte{},
-		order: map[ids.ID][]ids.ID{}, kps: map[ids.ID][]kpRow{}, revs: map[ids.ID][][]byte{},
+		order: map[ids.ID][]ids.ID{}, kps: map[ids.ID][]kpRow{}, revs: map[ids.ID][][]byte{}, links: map[ids.ID]*store.DeviceLink{}, created: map[ids.ID]time.Time{}, names: map[ids.ID]string{}, backups: map[ids.ID][]store.BackupRow{},
 	}
 }
 
@@ -170,6 +174,7 @@ func (m *Meta) RegisterDevice(_ context.Context, r store.RegisterDeviceReq) (ids
 	}
 	m.devices[r.Device] = store.DeviceInfo{DeviceID: r.Device, AccountID: t.acct, Platform: r.Platform}
 	m.acc.creds[r.Device] = append([]byte(nil), r.Credential...)
+	m.acc.created[r.Device], m.acc.names[r.Device] = r.Now, r.Name
 	m.acc.order[t.acct] = append(m.acc.order[t.acct], r.Device)
 	for _, k := range r.KeyPackages {
 		m.acc.kps[r.Device] = append(m.acc.kps[r.Device], kpRow{k})

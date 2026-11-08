@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart';
 
+import '../auth/link_controller.dart' show LinkOffer;
 import '../auth/session.dart';
 import '../auth/uuid7.dart';
 import '../core/chatcore.dart';
@@ -14,6 +15,7 @@ import '../gen/chat/v1/payload.pb.dart';
 import '../gen/chat/v1/services.pb.dart';
 import '../gen/chat/v1/ws.pb.dart';
 import '../net/api.dart';
+import '../net/connect_client.dart' show ConnectException;
 import '../net/gateway_client.dart';
 import '../storage/session_store.dart';
 import 'local_doc.dart';
@@ -160,36 +162,12 @@ class ChatEngine extends ChangeNotifier {
     }
 
     // 1. Khóa của cả hai tài khoản; kiểm từng gói (6.2 bước 2).
-    final keys = await api.fetchKeyPackages(FetchKeyPackagesRequest(accountIds: [session.accountId, peer]));
-    final adds = <Uint8List>[];
-    final recipients = <Uint8List>[];
-    Uint8List? peerIdentity;
-    var peerDevices = 0;
-    for (final a in keys.accounts) {
-      final acct = Uint8List.fromList(a.accountId);
-      final identity = Uint8List.fromList(a.accountIdentityPublicKey);
-      final isPeer = hex(acct) == hex(peer);
-      if (isPeer) {
-        final seen = doc.peerIdentities[hex(acct)];
-        if (seen != null && !listEquals(seen, identity)) throw IdentityChangedException(hex(acct));
-        peerIdentity = identity;
-      }
-      for (final d in a.devices) {
-        if (hex(d.deviceId) == hex(session.deviceId)) continue; // bỏ gói của chính thiết bị này
-        await _core.verifyKeyPackage(
-          keyPackage: Uint8List.fromList(d.keyPackage),
-          credential: Uint8List.fromList(d.credential),
-          identityPublicKey: identity,
-          expectedAccountId: acct,
-        );
-        adds.add(Uint8List.fromList(d.keyPackage));
-        recipients.add(Uint8List.fromList(d.deviceId));
-        if (isPeer) peerDevices++;
-      }
-    }
-    if (peerIdentity == null || peerDevices == 0) {
+    final keys = await _fetchKeys([session.accountId, peer]);
+    final peerIdentity = keys.identities[hex(peer)];
+    if (peerIdentity == null || (keys.devices[hex(peer)] ?? 0) == 0) {
       throw ChatException('Người này chưa có thiết bị nào sẵn sàng nhận tin');
     }
+    final adds = keys.adds, recipients = keys.recipients;
 
     // 2. Tạo nhóm MLS dưới khóa tạm (group_id), gửi lên server, rồi đổi sang conv_id.
     final groupId = Uint8List.fromList(List.generate(32, (_) => _rng.nextInt(256)));
@@ -198,17 +176,20 @@ class ChatEngine extends ChangeNotifier {
       CreateConversationResponse resp;
       try {
         final out = await _core.addMembers(groupId, adds);
-        resp = await api.createConversation(CreateConversationRequest(
-          kind: ConvKind.CONV_KIND_DIRECT,
-          groupId: groupId,
-          members: [
-            Member(accountId: session.accountId, role: Role.ROLE_MEMBER),
-            Member(accountId: peer, role: Role.ROLE_MEMBER),
-          ],
-          commit: out.commit,
-          welcomes: [for (final r in recipients) WelcomeEnvelope(recipientDeviceId: r, welcome: out.welcome)],
-          groupInfo: out.groupInfo,
-        ), idempotencyKey: hex(newUuidV7()));
+        resp = await api.createConversation(
+          CreateConversationRequest(
+            kind: ConvKind.CONV_KIND_DIRECT,
+            groupId: groupId,
+            members: [
+              Member(accountId: session.accountId, role: Role.ROLE_MEMBER),
+              Member(accountId: peer, role: Role.ROLE_MEMBER),
+            ],
+            commit: out.commit,
+            welcomes: [for (final r in recipients) WelcomeEnvelope(recipientDeviceId: r, welcome: out.welcome)],
+            groupInfo: out.groupInfo,
+          ),
+          idempotencyKey: hex(newUuidV7()),
+        );
       } catch (_) {
         await _core.dropGroup(groupId);
         rethrow;
@@ -226,32 +207,425 @@ class ChatEngine extends ChangeNotifier {
       await _core.renameGroup(groupId, convId);
       final cs = ConvState(convId: convId, title: destination.trim(), peerAccount: peer, lastSeq: resp.seq.toInt(), lastActivityMs: _nowMs);
       doc.convs[h] = cs;
-      doc.peerIdentities[hex(peer)] = peerIdentity!;
+      doc.peerIdentities[hex(peer)] = peerIdentity;
       await _persist();
       notifyListeners();
       return cs;
     });
   }
 
+  // ---------------------------------------------------------------- nhóm (6.2, 6.3, 6.4)
+
+  /// Lấy và kiểm KeyPackage của [accounts] (6.2 bước 2); bỏ gói của chính thiết bị này.
+  Future<_Keys> _fetchKeys(List<Uint8List> accounts) async {
+    final resp = await api.fetchKeyPackages(FetchKeyPackagesRequest(accountIds: accounts));
+    final k = _Keys();
+    for (final a in resp.accounts) {
+      final acct = Uint8List.fromList(a.accountId);
+      final h = hex(acct);
+      final identity = Uint8List.fromList(a.accountIdentityPublicKey);
+      final seen = doc.peerIdentities[h];
+      if (h != hex(session.accountId) && seen != null && !listEquals(seen, identity)) throw IdentityChangedException(h);
+      k.identities[h] = identity;
+      for (final d in a.devices) {
+        if (hex(d.deviceId) == hex(session.deviceId)) continue;
+        await _core.verifyKeyPackage(
+          keyPackage: Uint8List.fromList(d.keyPackage),
+          credential: Uint8List.fromList(d.credential),
+          identityPublicKey: identity,
+          expectedAccountId: acct,
+        );
+        k.adds.add(Uint8List.fromList(d.keyPackage));
+        k.recipients.add(Uint8List.fromList(d.deviceId));
+        k.devices[h] = (k.devices[h] ?? 0) + 1;
+      }
+    }
+    return k;
+  }
+
+  Future<Uint8List> _lookup(OtpChannel channel, String destination) async {
+    final found = await api.lookupAccount(LookupAccountRequest(channel: channel, destination: destination.trim()));
+    return Uint8List.fromList(found.profile.accountId);
+  }
+
+  /// Tên nhóm đưa vào chat_policy: bỏ khoảng trắng thừa, cắt ở 100 byte UTF-8 theo ranh giới ký tự.
+  static String _groupTitle(String t) {
+    var n = t.trim();
+    if (n.isEmpty) return 'Nhóm';
+    while (utf8.encode(n).length > 100) {
+      n = n.substring(0, n.length - 1);
+    }
+    return n;
+  }
+
+  /// Tạo nhóm với [contacts] (số điện thoại/email), mình là OWNER. Một Commit thêm tối đa 50 thiết bị.
+  Future<ConvState> createGroup(String title, List<(OtpChannel, String)> contacts) async {
+    final peers = <String, Uint8List>{};
+    final labels = <String, String>{};
+    for (final (ch, dest) in contacts) {
+      final p = await _lookup(ch, dest);
+      if (hex(p) != hex(session.accountId)) {
+        peers[hex(p)] = p;
+        labels[hex(p)] = dest.trim();
+      }
+    }
+    if (peers.isEmpty) throw ChatException('Nhóm cần ít nhất một thành viên khác');
+    final keys = await _fetchKeys([session.accountId, ...peers.values]);
+    for (final h in peers.keys) {
+      if ((keys.devices[h] ?? 0) == 0) throw ChatException('Tài khoản ${h.substring(0, 8)} chưa có thiết bị nào sẵn sàng');
+    }
+    if (keys.adds.length > 50) throw ChatException('Tối đa 50 thiết bị mỗi lần tạo nhóm; tạo nhóm nhỏ rồi thêm dần');
+    final groupId = Uint8List.fromList(List.generate(32, (_) => _rng.nextInt(256)));
+    return _mu.run(() async {
+      await _core.createGroup(groupId, name: _groupTitle(title));
+      CreateConversationResponse resp;
+      try {
+        final out = await _core.addMembers(groupId, keys.adds);
+        resp = await api.createConversation(
+          CreateConversationRequest(
+            kind: ConvKind.CONV_KIND_GROUP,
+            groupId: groupId,
+            members: [
+              Member(accountId: session.accountId, role: Role.ROLE_OWNER),
+              for (final p in peers.values) Member(accountId: p, role: Role.ROLE_MEMBER),
+            ],
+            commit: out.commit,
+            welcomes: [for (final r in keys.recipients) WelcomeEnvelope(recipientDeviceId: r, welcome: out.welcome)],
+            groupInfo: out.groupInfo,
+          ),
+          idempotencyKey: hex(newUuidV7()),
+        );
+      } catch (_) {
+        await _core.dropGroup(groupId);
+        rethrow;
+      }
+      final convId = Uint8List.fromList(resp.convId);
+      await _core.renameGroup(groupId, convId);
+      final cs = ConvState(
+        convId: convId,
+        title: _groupTitle(title),
+        lastSeq: resp.seq.toInt(),
+        lastActivityMs: _nowMs,
+        isGroup: true,
+        admin: true,
+        owner: true,
+      );
+      doc.convs[cs.hexId] = cs;
+      for (final p in peers.keys) {
+        doc.peerIdentities[p] = keys.identities[p]!;
+        doc.names[p] = labels[p]!;
+      }
+      await _persist();
+      notifyListeners();
+      return cs;
+    });
+  }
+
+  /// Tài khoản (hex) của các thành viên hiện tại trong nhóm, đọc từ trạng thái MLS.
+  Future<Set<String>> memberAccounts(String convHex) async {
+    final cs = doc.convs[convHex] ?? (throw ChatException('Hội thoại không tồn tại'));
+    return {for (final c in await _core.groupMembers(cs.convId)) hex(c.sublist(0, 16))};
+  }
+
+  /// Thêm một tài khoản vào nhóm (6.3). Cần ADMIN/OWNER.
+  Future<void> addMember(String convHex, OtpChannel channel, String destination) async {
+    final cs = _adminGroup(convHex);
+    final peer = await _lookup(channel, destination);
+    if ((await memberAccounts(convHex)).contains(hex(peer))) throw ChatException('Đã là thành viên');
+    final keys = await _fetchKeys([peer]);
+    if ((keys.devices[hex(peer)] ?? 0) == 0) throw ChatException('Người này chưa có thiết bị nào sẵn sàng');
+    if (keys.adds.length > 50) throw ChatException('Tối đa 50 thiết bị mỗi Commit');
+    await _groupCommit(
+      cs,
+      () => _core.stageAdd(cs.convId, keys.adds),
+      (out, epoch) => SubmitCommitRequest(
+        convId: cs.convId,
+        expectedEpoch: Int64(epoch),
+        commit: out.commit,
+        groupInfo: out.groupInfo,
+        welcomes: [for (final r in keys.recipients) WelcomeEnvelope(recipientDeviceId: r, welcome: out.welcome)],
+        added: [Member(accountId: peer, role: Role.ROLE_MEMBER)],
+      ),
+    );
+    doc.peerIdentities[hex(peer)] = keys.identities[hex(peer)]!;
+    doc.names[hex(peer)] = destination.trim();
+    await _mu.run(_persist);
+  }
+
+  /// Gỡ một tài khoản khỏi nhóm (6.4). Cần ADMIN/OWNER; không gỡ chính mình (rời nhóm làm sau).
+  Future<void> removeMember(String convHex, Uint8List account) async {
+    final cs = _adminGroup(convHex);
+    if (hex(account) == hex(session.accountId)) throw ChatException('Không tự gỡ mình; dùng rời nhóm');
+    await _groupCommit(
+      cs,
+      () => _core.stageRemove(cs.convId, [account]),
+      (out, epoch) => SubmitCommitRequest(
+        convId: cs.convId,
+        expectedEpoch: Int64(epoch),
+        commit: out.commit,
+        groupInfo: out.groupInfo,
+        removedAccountIds: [account],
+      ),
+    );
+  }
+
+  /// Đổi vai trò thành viên (ADMIN/MEMBER) bằng Commit chỉ có path update + `role_changes` (spec 6.3). Chỉ OWNER trao OWNER.
+  Future<void> changeRole(String convHex, Uint8List account, Role role) async {
+    final cs = _adminGroup(convHex);
+    if (hex(account) == hex(session.accountId)) throw ChatException('Không tự đổi vai trò của mình');
+    if (role == Role.ROLE_OWNER && !cs.owner) throw ChatException('Chỉ chủ nhóm mới trao quyền chủ nhóm');
+    await _roleCommit(cs, [Member(accountId: account, role: role)]);
+  }
+
+  /// Chuyển quyền chủ nhóm: [account] thành OWNER, mình xuống ADMIN, trong cùng một Commit. Sau đó mới rời nhóm được.
+  Future<void> transferOwnership(String convHex, Uint8List account) async {
+    final cs = _adminGroup(convHex);
+    if (!cs.owner) throw ChatException('Chỉ chủ nhóm mới chuyển quyền');
+    if (hex(account) == hex(session.accountId)) throw ChatException('Chọn một thành viên khác');
+    await _roleCommit(cs, [Member(accountId: account, role: Role.ROLE_OWNER), Member(accountId: session.accountId, role: Role.ROLE_ADMIN)]);
+  }
+
+  Future<void> _roleCommit(ConvState cs, List<Member> changes) async {
+    await _groupCommit(
+      cs,
+      () => _core.stageUpdate(cs.convId),
+      (out, epoch) => SubmitCommitRequest(
+        convId: cs.convId,
+        expectedEpoch: Int64(epoch),
+        commit: out.commit,
+        groupInfo: out.groupInfo,
+        roleChanges: changes,
+      ),
+    );
+    // Server áp dụng vai trò bất đồng bộ (fanout) nên không đọc lại ngay; người nhận đọc lại khi nhận Commit.
+    for (final c in changes) {
+      if (hex(c.accountId) == hex(session.accountId)) {
+        cs.owner = c.role == Role.ROLE_OWNER;
+        cs.admin = c.role != Role.ROLE_MEMBER;
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Đọc lại vai trò của mình trong mọi nhóm từ server (vai trò không nằm trong MLS nên Commit không báo cho người khác).
+  Future<void> refreshRoles() async {
+    try {
+      final l = await api.listConversations();
+      for (final s in l.conversations) {
+        final cs = doc.convs[hex(s.convId)];
+        if (cs == null || !cs.isGroup) continue;
+        cs.admin = s.role == Role.ROLE_ADMIN || s.role == Role.ROLE_OWNER;
+        cs.owner = s.role == Role.ROLE_OWNER;
+      }
+      notifyListeners();
+    } catch (_) {
+      // offline: giữ vai trò cũ, thử lại ở Commit sau
+    }
+  }
+
+  ConvState _adminGroup(String convHex) {
+    final cs = doc.convs[convHex] ?? (throw ChatException('Hội thoại không tồn tại'));
+    if (!cs.isGroup) throw ChatException('Không phải nhóm');
+    if (cs.removed) throw ChatException('Bạn đã bị gỡ khỏi nhóm');
+    if (!cs.admin) throw ChatException('Cần vai trò ADMIN hoặc OWNER');
+    return cs;
+  }
+
+  /// Dựng Commit chưa áp dụng, gửi `SubmitCommit`, rồi mới áp dụng. Gặp EPOCH_MISMATCH thì hủy Commit,
+  /// đồng bộ log tới head và dựng lại (tối đa 5 lần, 6.3).
+  /// Giới hạn: lỗi mạng không rõ kết quả giữ nguyên Commit chờ (lần dựng sau sẽ hủy nó); nếu server đã nhận
+  /// thì thiết bị này lệch epoch cho tới khi vào lại nhóm (6.7, chưa làm).
+  Future<void> _groupCommit(
+    ConvState cs,
+    Future<CommitOut> Function() stage,
+    SubmitCommitRequest Function(CommitOut out, int epoch) request,
+  ) => _mu.run(() async {
+    for (var attempt = 0; ; attempt++) {
+      final epoch = await _core.epoch(cs.convId);
+      final out = await stage();
+      try {
+        final r = await api.submitCommit(request(out, epoch), idempotencyKey: hex(newUuidV7()));
+        await _core.mergeCommit(cs.convId);
+        cs.skip.add(r.seq.toInt());
+        _advanceSkips(cs);
+        cs.lastActivityMs = _nowMs;
+        await _persist();
+        notifyListeners();
+        return;
+      } on ConnectException catch (e) {
+        if (e.errorCode == ErrorCode.ERROR_CODE_EPOCH_MISMATCH && attempt < 5) {
+          await _core.clearCommit(cs.convId);
+          await _fetchUntil(cs, 1 << 62);
+          await _persist();
+          continue;
+        }
+        rethrow;
+      }
+    }
+  });
+
+  // ---------------------------------------------------------------- liên kết thiết bị (6.5)
+
+  /// Thiết bị CŨ: duyệt thiết bị mới theo mã QR (bước 2). Người dùng đã so khớp `offer.shortCode` ở hai máy.
+  Future<void> approveLink(LinkOffer offer) async {
+    final (cred, sealed) = await _core.linkApprove(
+      linkId: offer.linkId,
+      newDeviceId: offer.deviceId,
+      newDevicePublicKey: offer.devicePublicKey,
+      ephemeralPublicKey: offer.ephemeralPublicKey,
+      createdMs: _nowMs,
+    );
+    await api.approveLink(ApproveLinkRequest(linkId: offer.linkId, credential: cred, sealedBundle: sealed));
+  }
+
+  /// Thiết bị MỚI sau khi đăng ký (bước 5): tự vào mọi hội thoại của tài khoản bằng External Commit, tối đa 4 hội
+  /// thoại song song theo thứ tự hoạt động gần nhất (server trả theo thứ tự đó). Trả số hội thoại đã vào; hội thoại
+  /// lỗi được bỏ qua (chạy lại hàm này sẽ thử lại, hội thoại đã vào thì bỏ qua).
+  /// Sau reset_identity (6.14): gỡ lá cũ của chính tài khoản mình (credential không khớp khóa danh tính mới) khỏi từng
+  /// nhóm bằng Commit `removed_device_ids`. Server cho phép vì đó là thiết bị của chính tài khoản gửi. Trả số hội thoại đã gỡ.
+  Future<int> removeStaleLeaves() async {
+    var n = 0;
+    for (final cs in conversations.where((c) => !c.removed)) {
+      try {
+        final stale = await _core.staleDevices(cs.convId);
+        if (stale.isEmpty) continue;
+        await _groupCommit(
+          cs,
+          () => _core.stageRemoveDevices(cs.convId, stale),
+          (out, epoch) => SubmitCommitRequest(
+            convId: cs.convId,
+            expectedEpoch: Int64(epoch),
+            commit: out.commit,
+            groupInfo: out.groupInfo,
+            removedDeviceIds: stale,
+          ),
+        );
+        n++;
+      } on ChatCoreException {
+        // không giữ khóa danh tính hoặc nhóm không có lá cũ: bỏ qua
+      }
+    }
+    return n;
+  }
+
+  Future<int> joinAllConversations() async {
+    final list = (await api.listConversations()).conversations.where((c) => !doc.convs.containsKey(hex(c.convId))).toList();
+    var joined = 0;
+    for (var i = 0; i < list.length; i += 4) {
+      final batch = list.skip(i).take(4);
+      final r = await Future.wait(batch.map((c) => _externalJoin(c).then((ok) => ok, onError: (_) => false)));
+      joined += r.where((ok) => ok).length;
+    }
+    return joined;
+  }
+
+  /// Bước 5-6: GetGroupInfo -> External Commit -> SubmitCommit(external). EPOCH_MISMATCH thì bỏ nhóm vừa dựng,
+  /// lấy lại GroupInfo và thử lại (tối đa 5 lần).
+  Future<bool> _externalJoin(ConversationSummary sum) async {
+    final convId = Uint8List.fromList(sum.convId);
+    for (var attempt = 0; attempt < 5; attempt++) {
+      final gi = await api.getGroupInfo(GetGroupInfoRequest(convId: convId));
+      final ok = await _mu.run(() async {
+        if (doc.convs.containsKey(hex(convId))) return true;
+        final commit = await _core.externalJoin(convId, Uint8List.fromList(gi.groupInfo));
+        try {
+          final out = await _core.groupInfo(convId); // GroupInfo của epoch mới
+          final r = await api.submitCommit(
+            SubmitCommitRequest(convId: convId, expectedEpoch: gi.epoch, commit: commit, groupInfo: out, external: true),
+            idempotencyKey: hex(newUuidV7()),
+          );
+          Uint8List? peer;
+          if (sum.kind == ConvKind.CONV_KIND_DIRECT) {
+            for (final c in await _core.groupMembers(convId)) {
+              if (hex(c.sublist(0, 16)) != hex(session.accountId)) peer = Uint8List.fromList(c.sublist(0, 16));
+            }
+          }
+          final group = sum.kind == ConvKind.CONV_KIND_GROUP;
+          final groupName = group ? await _core.groupName(convId) : '';
+          // Chỉ đọc từ thời điểm vào: các mục tới seq này là của epoch trước, thiết bị này không có khóa.
+          doc.convs[hex(convId)] = ConvState(
+            convId: convId,
+            title: group
+                ? (groupName.isEmpty ? 'Nhóm' : groupName)
+                : (peer == null ? 'Hội thoại' : 'Tài khoản ${hex(peer).substring(0, 8)}'),
+            peerAccount: peer,
+            lastSeq: r.seq.toInt(),
+            lastActivityMs: _nowMs,
+            isGroup: group,
+            admin: sum.role == Role.ROLE_ADMIN || sum.role == Role.ROLE_OWNER,
+            owner: sum.role == Role.ROLE_OWNER,
+          );
+          await _persist();
+          notifyListeners();
+          return true;
+        } on ConnectException catch (e) {
+          await _core.dropGroup(convId);
+          if (e.errorCode == ErrorCode.ERROR_CODE_EPOCH_MISMATCH) return false;
+          rethrow;
+        }
+      });
+      if (ok) return true;
+    }
+    return false;
+  }
+
+  // ---------------------------------------------------------------- thu hồi thiết bị (6.6)
+
+  Future<List<DeviceInfo>> listDevices() async => (await api.listDevices()).devices;
+
+  /// Thu hồi một thiết bị của tài khoản (6.6): ký statement bằng khóa danh tính, `RevokeDevice`, rồi gỡ lá của thiết bị
+  /// đó khỏi từng nhóm bằng Commit với `removed_device_ids`. Trả số hội thoại đã gỡ được; hội thoại lỗi mạng ném ra và
+  /// cần chạy lại [removeDeviceFromGroups] (thu hồi đã có hiệu lực ở server).
+  Future<int> revokeDevice(Uint8List deviceId) async {
+    if (hex(deviceId) == hex(session.deviceId)) throw ChatException('Không tự thu hồi thiết bị đang dùng; hãy đăng xuất');
+    final stmt = await _core.revocationSign(deviceId, _nowMs);
+    await api.revokeDevice(RevokeDeviceRequest(deviceId: deviceId, revocationStatement: stmt));
+    return removeDeviceFromGroups(deviceId);
+  }
+
+  Future<int> removeDeviceFromGroups(Uint8List deviceId) async {
+    var removed = 0;
+    for (final cs in conversations) {
+      if (cs.removed) continue;
+      try {
+        await _groupCommit(
+          cs,
+          () => _core.stageRemoveDevices(cs.convId, [deviceId]),
+          (out, epoch) => SubmitCommitRequest(
+            convId: cs.convId,
+            expectedEpoch: Int64(epoch),
+            commit: out.commit,
+            groupInfo: out.groupInfo,
+            removedDeviceIds: [deviceId],
+          ),
+        );
+        removed++;
+      } on ChatCoreException {
+        // thiết bị không có trong nhóm này (đã gỡ hoặc chưa từng vào)
+      }
+    }
+    return removed;
+  }
+
   // ---------------------------------------------------------------- nhận
 
   Future<void> _onDeliver(Deliver d) => _mu.run(() async {
-        final h = hex(d.convId);
-        if (d.inboxId.isNotEmpty) doc.cursor = Uint8List.fromList(d.inboxId);
-        switch (d.kind) {
-          case EntryKind.ENTRY_KIND_WELCOME:
-            if (!doc.convs.containsKey(h)) await _joinFromWelcome(d);
-          case EntryKind.ENTRY_KIND_COMMIT || EntryKind.ENTRY_KIND_APPLICATION || EntryKind.ENTRY_KIND_PROPOSAL:
-            final cs = doc.convs[h];
-            if (cs != null) {
-              await _applyEntry(cs, _Entry(d.kind, d.senderDeviceId, d.seq.toInt(), d.ciphertext, d.serverTsMs.toInt()));
-            }
-          default:
-            break;
+    final h = hex(d.convId);
+    if (d.inboxId.isNotEmpty) doc.cursor = Uint8List.fromList(d.inboxId);
+    switch (d.kind) {
+      case EntryKind.ENTRY_KIND_WELCOME:
+        if (!doc.convs.containsKey(h)) await _joinFromWelcome(d);
+      case EntryKind.ENTRY_KIND_COMMIT || EntryKind.ENTRY_KIND_APPLICATION || EntryKind.ENTRY_KIND_PROPOSAL:
+        final cs = doc.convs[h];
+        if (cs != null) {
+          await _applyEntry(cs, _Entry(d.kind, d.senderDeviceId, d.seq.toInt(), d.ciphertext, d.serverTsMs.toInt()));
         }
-        await _persist(); // Ack chỉ được gửi sau dòng này (GatewayClient)
-        notifyListeners();
-      });
+      default:
+        break;
+    }
+    await _persist(); // Ack chỉ được gửi sau dòng này (GatewayClient)
+    notifyListeners();
+  });
 
   Future<void> _joinFromWelcome(Deliver d) async {
     final convId = Uint8List.fromList(d.convId);
@@ -265,10 +639,25 @@ class ChatEngine extends ChangeNotifier {
       final acct = cred.sublist(0, 16);
       if (hex(acct) != hex(session.accountId)) peer = Uint8List.fromList(acct);
     }
+    var group = false, admin = false, owner = false;
+    try {
+      final l = await api.listConversations();
+      final sum = l.conversations.where((c) => hex(c.convId) == hex(convId)).firstOrNull;
+      group = sum?.kind == ConvKind.CONV_KIND_GROUP;
+      admin = sum?.role == Role.ROLE_ADMIN || sum?.role == Role.ROLE_OWNER;
+      owner = sum?.role == Role.ROLE_OWNER;
+    } catch (_) {
+      // Offline: đoán theo số tài khoản, không sửa lại sau (chấp nhận, hiếm).
+      group = (await _core.groupMembers(convId)).map((c) => hex(c.sublist(0, 16))).toSet().length > 2;
+    }
+    final groupName = group ? await _core.groupName(convId) : '';
     doc.convs[hex(convId)] = ConvState(
       convId: convId,
-      title: peer == null ? 'Hội thoại' : 'Tài khoản ${hex(peer).substring(0, 8)}',
-      peerAccount: peer,
+      title: group ? (groupName.isEmpty ? 'Nhóm' : groupName) : (peer == null ? 'Hội thoại' : 'Tài khoản ${hex(peer).substring(0, 8)}'),
+      peerAccount: group ? null : peer,
+      isGroup: group,
+      admin: admin,
+      owner: owner,
       lastSeq: d.seq.toInt(),
       lastActivityMs: d.serverTsMs.toInt(),
     );
@@ -299,16 +688,126 @@ class ChatEngine extends ChangeNotifier {
     if (!mine) {
       switch (e.kind) {
         case EntryKind.ENTRY_KIND_COMMIT:
-          await _core.applyCommit(cs.convId, Uint8List.fromList(e.ct));
+          await _applyCommitChecked(cs, Uint8List.fromList(e.ct));
+          if (!await _core.isActive(cs.convId)) {
+            cs.removed = true;
+            cs.leaving = false;
+          } // Commit gỡ mình là tin cuối (6.4)
+          if (cs.isGroup && !cs.removed) unawaited(refreshRoles()); // Commit có thể đổi vai trò (server giữ bản sao)
         case EntryKind.ENTRY_KIND_APPLICATION:
           await _receiveApplication(cs, e);
+        case EntryKind.ENTRY_KIND_PROPOSAL:
+          await _receiveProposal(cs, e);
         default:
-          break; // PROPOSAL: chưa xử lý
+          break;
       }
     }
     cs.lastSeq = e.seq;
     cs.lastActivityMs = max(cs.lastActivityMs, e.tsMs);
     _advanceSkips(cs);
+  }
+
+  /// Áp dụng Commit; nếu lõi báo Commit gỡ một phần thiết bị của một tài khoản mà chưa có statement (6.6 bước 4) thì lấy
+  /// statement từ key directory (kiểm bằng khóa danh tính đã ghim của tài khoản đó) rồi áp dụng lại. Thiếu hoặc sai
+  /// statement: ném lỗi, không áp dụng, và hộp thư dừng ở Commit này (không chấp nhận gỡ thiết bị không có bằng chứng).
+  Future<void> _applyCommitChecked(ConvState cs, Uint8List commit) async {
+    const tag = 'NEED_REVOCATION:';
+    try {
+      await _core.applyCommit(cs.convId, commit);
+      return;
+    } on ChatCoreException catch (ex) {
+      final at = ex.message.indexOf(tag);
+      if (at < 0) rethrow;
+      final devices = ex.message.substring(at + tag.length).trim().split(',').map(unhex).toList();
+      final byAccount = <String, Uint8List>{};
+      for (final cred in await _core.groupMembers(cs.convId)) {
+        if (devices.any((d) => hex(d) == hex(cred.sublist(16, 32)))) byAccount[hex(cred.sublist(0, 16))] = cred.sublist(0, 16);
+      }
+      final resp = await api.fetchKeyPackages(FetchKeyPackagesRequest(accountIds: byAccount.values.toList()));
+      for (final a in resp.accounts) {
+        final identity = Uint8List.fromList(a.accountIdentityPublicKey);
+        final acct = hex(a.accountId);
+        final seen = doc.peerIdentities[acct];
+        if (seen != null && !listEquals(seen, identity)) {
+          // Khóa danh tính đổi (reset_identity, 6.14): người khác chấp nhận ngay, không cảnh báo. Rủi ro SIM swap đã
+          // chấp nhận trong spec.
+          doc.peerIdentities[acct] = identity;
+        }
+        // Lá của tài khoản này mà credential không khớp khóa hiện tại là lá cũ trước reset_identity: coi như đã thu hồi.
+        await _core.trustIdentity(Uint8List.fromList(a.accountId), identity);
+        // Thu hồi do reset_identity không có statement (khóa cũ đã mất): bỏ qua mục rỗng.
+        final stmts = a.revocationStatements.where((x) => x.length == 88).map(Uint8List.fromList).toList();
+        if (stmts.isNotEmpty) await _core.addRevocation(identity, stmts);
+      }
+    }
+    await _core.applyCommit(cs.convId, commit); // vẫn thiếu statement thì lõi ném NEED_REVOCATION lần nữa
+  }
+
+  /// Proposal của người khác (xin rời nhóm, 6.4): xếp hàng chờ; admin online tự commit gỡ người đó sau một khoảng
+  /// ngẫu nhiên (tránh nhiều admin cùng commit; kẻ thua nhận EPOCH_MISMATCH và bỏ qua).
+  Future<void> _receiveProposal(ConvState cs, _Entry e) async {
+    if (!cs.isGroup || cs.removed) return;
+    try {
+      await _core.applyProposal(cs.convId, Uint8List.fromList(e.ct));
+    } on ChatCoreException {
+      return;
+    }
+    final leaver = await _senderAccount(cs, e.sender);
+    if (leaver != null && leaver != hex(session.accountId)) {
+      // Admin làm trước; thành viên thường chỉ là đường dự phòng sau 60 giây (ADR 0015). Hẹn giờ nằm trong bộ nhớ.
+      final base = cs.admin ? autoCommitDelayMs : fallbackCommitDelayMs;
+      unawaited(Future<void>.delayed(Duration(milliseconds: base + _rng.nextInt(1500))).then((_) => _commitLeave(cs.hexId, unhex(leaver))));
+    }
+  }
+
+  /// Độ trễ tối thiểu (ms) trước khi admin tự commit gỡ người xin rời; test đặt nhỏ.
+  int autoCommitDelayMs = 300;
+
+  /// Như trên cho thành viên thường (đường rời khi không admin online, 6.4).
+  int fallbackCommitDelayMs = 60000;
+
+  Future<void> _commitLeave(String convHex, Uint8List leaver) async {
+    final cs = doc.convs[convHex];
+    if (!_started || cs == null || cs.removed) return;
+    try {
+      await _groupCommit(
+        cs,
+        () => _core.stageCommitPending(cs.convId),
+        (out, epoch) => SubmitCommitRequest(
+          convId: cs.convId,
+          expectedEpoch: Int64(epoch),
+          commit: out.commit,
+          groupInfo: out.groupInfo,
+          removedAccountIds: [leaver],
+        ),
+      );
+    } on ChatCoreException {
+      // không còn proposal chờ (admin khác đã commit) hoặc proposal đã cũ: bỏ qua
+    } on ConnectException {
+      // bị từ chối (mất quyền, mạng): người xin rời có thể gửi lại
+    }
+  }
+
+  /// Rời nhóm (6.4): gửi Remove proposal cho chính mình; admin online commit gỡ, hoặc thành viên bất kỳ sau 60 giây
+  /// (ADR 0015). Chủ nhóm phải chuyển quyền trước.
+  Future<void> leaveGroup(String convHex) async {
+    final cs = doc.convs[convHex] ?? (throw ChatException('Hội thoại không tồn tại'));
+    if (!cs.isGroup) throw ChatException('Không phải nhóm');
+    if (cs.removed) throw ChatException('Bạn đã không còn trong nhóm');
+    if (cs.owner) throw ChatException('Chủ nhóm cần chuyển quyền trước khi rời');
+    await _mu.run(() async {
+      final epoch = await _core.epoch(cs.convId);
+      final proposal = await _core.leaveProposal(cs.convId);
+      final r = await api.submitProposal(
+        SubmitProposalRequest(convId: cs.convId, proposal: proposal, mlsEpoch: Int64(epoch)),
+        idempotencyKey: hex(newUuidV7()),
+      );
+      cs.skip.add(r.seq.toInt());
+      _advanceSkips(cs);
+      cs.leaving = true;
+      await _persist();
+      notifyListeners();
+    });
   }
 
   /// Bỏ qua các seq do chính thiết bị này ghi, nối liền với seq đã áp dụng.
@@ -318,6 +817,19 @@ class ChatEngine extends ChangeNotifier {
     }
   }
 
+  /// Tài khoản (hex) của thiết bị gửi, tra từ credential của các lá trong nhóm (16 byte đầu = account, 16..32 = device).
+  Future<String?> _senderAccount(ConvState cs, List<int> senderDevice) async {
+    final d = hex(senderDevice);
+    for (final c in await _core.groupMembers(cs.convId)) {
+      if (hex(c.sublist(16, 32)) == d) return hex(c.sublist(0, 16));
+    }
+    return null;
+  }
+
+  /// Tên hiển thị của một tài khoản: số điện thoại/email đã nhập khi thêm họ, hoặc mã rút gọn.
+  String displayName(String accountHex) =>
+      accountHex == hex(session.accountId) ? 'Bạn' : (doc.names[accountHex] ?? 'Tài khoản ${accountHex.substring(0, 8)}');
+
   Future<void> _receiveApplication(ConvState cs, _Entry e) async {
     final list = doc.msgs.putIfAbsent(cs.hexId, () => []);
     try {
@@ -326,7 +838,17 @@ class ChatEngine extends ChangeNotifier {
       if (p.whichContent() != Payload_Content.text) return; // phản ứng, sửa, xóa... làm sau
       final id = hex(p.clientMsgId);
       if (list.any((m) => m.id == id)) return; // khử trùng theo client_msg_id
-      list.add(ChatMessage(id: id, mine: false, text: p.text.body, tsMs: e.tsMs, seq: e.seq, state: MsgState.received));
+      list.add(
+        ChatMessage(
+          id: id,
+          mine: false,
+          text: p.text.body,
+          tsMs: e.tsMs,
+          seq: e.seq,
+          state: MsgState.received,
+          sender: cs.isGroup ? await _senderAccount(cs, e.sender) : null,
+        ),
+      );
     } on ChatCoreException {
       // Spec 7.2: chỗ giữ chỗ "không giải mã được"; vào lại nhóm (6.7) làm ở giai đoạn sau.
       list.add(ChatMessage(id: 'x${cs.hexId}-${e.seq}', mine: false, text: '', tsMs: e.tsMs, seq: e.seq, state: MsgState.undecryptable));
@@ -339,6 +861,7 @@ class ChatEngine extends ChangeNotifier {
   Future<void> sendText(String convHex, String text) async {
     await _mu.run(() async {
       final cs = doc.convs[convHex] ?? (throw ChatException('Hội thoại không tồn tại'));
+      if (cs.removed) throw ChatException('Bạn đã bị gỡ khỏi nhóm');
       final m = ChatMessage(id: hex(newUuidV7()), mine: true, text: text, tsMs: _nowMs);
       doc.msgs.putIfAbsent(convHex, () => []).add(m);
       cs.lastActivityMs = m.tsMs;
@@ -360,7 +883,12 @@ class ChatEngine extends ChangeNotifier {
         // 1. Dựng ciphertext theo epoch hiện tại và ghi bền TRƯỚC khi gửi.
         await _mu.run(() async {
           if (m.ct != null) return; // đã dựng ở lần trước (sập giữa chừng): gửi lại đúng bản đó
-          final p = Payload(version: 1, clientMsgId: _unhex(m.id), sentAtMs: Int64(m.tsMs), text: TextContent(body: m.text));
+          final p = Payload(
+            version: 1,
+            clientMsgId: _unhex(m.id),
+            sentAtMs: Int64(m.tsMs),
+            text: TextContent(body: m.text),
+          );
           m.epoch = await _core.epoch(cs.convId);
           m.ct = await _core.encrypt(cs.convId, Uint8List.fromList(p.writeToBuffer()));
           await _persist();
@@ -388,7 +916,9 @@ class ChatEngine extends ChangeNotifier {
             });
             continue;
           }
-          if (e.code == ErrorCode.ERROR_CODE_INVALID_ARGUMENT || e.code == ErrorCode.ERROR_CODE_PERMISSION_DENIED || e.code == ErrorCode.ERROR_CODE_EPOCH_MISMATCH) {
+          if (e.code == ErrorCode.ERROR_CODE_INVALID_ARGUMENT ||
+              e.code == ErrorCode.ERROR_CODE_PERMISSION_DENIED ||
+              e.code == ErrorCode.ERROR_CODE_EPOCH_MISMATCH) {
             await _mu.run(() async {
               m.state = MsgState.failed;
               m.ct = null;
@@ -417,6 +947,13 @@ class ChatEngine extends ChangeNotifier {
   /// Dùng cho test: chuyển nội dung kho cục bộ thành chuỗi gọn.
   @visibleForTesting
   String debugDump() => utf8.decode(doc.toBytes());
+}
+
+class _Keys {
+  final adds = <Uint8List>[];
+  final recipients = <Uint8List>[];
+  final identities = <String, Uint8List>{};
+  final devices = <String, int>{};
 }
 
 class _Entry {

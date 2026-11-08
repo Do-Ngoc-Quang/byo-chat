@@ -13,7 +13,7 @@ Hệ thống chat mã hóa đầu cuối (E2EE, giao thức MLS) có gọi video
 |---|---|
 | Client | Flutter + lõi Rust `chatcore` (OpenMLS 0.8; WASM cho Web, FFI cho mobile/desktop) |
 | Server | Go; WebSocket + Protobuf (`chat.v1`) + Connect RPC |
-| Hạ tầng | NATS JetStream, Aurora PostgreSQL, DynamoDB, Valkey, Cloudflare R2 |
+| Hạ tầng | NATS JetStream, Aurora PostgreSQL, DynamoDB, Valkey, Amazon S3 |
 | Gọi video | LiveKit (SFrame) |
 | MLS | `MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519` |
 

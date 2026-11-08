@@ -14,8 +14,8 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 | 1 | Proto, CI, `chatcore` | 5 bất biến đúng trên Windows, WASM, Android (emulator là đủ); `buf breaking` chạy trong CI; test hiệu năng không tệ hơn mốc | Xong (PR #3 đã merge; mục cần thiết bị thật hoãn, xem bên dưới) |
 | 2 | Server tối thiểu | Gateway và Message Service chạy cục bộ; `SendMessage` từ chối `EPOCH_MISMATCH`; con trỏ hộp thư idempotent; qua kiểm thử chèn lỗi | Xong (PR #5; CI `server.yml` xanh; còn chờ merge) |
 | 3 | Lát cắt dọc | Đăng nhập và chat 1-1 E2EE giữa Android và Web, đầu cuối | Đang làm (khung app và cầu nối xong) |
-| 4 | Nhóm, đa thiết bị, backup | Nhóm, thêm thiết bị bằng External Commit, khôi phục có và không có backup; 5 bất biến đúng | Chưa bắt đầu |
-| 5 | Media | Gửi nhận ảnh/tệp mã hóa qua R2 | Chưa bắt đầu |
+| 4 | Nhóm, đa thiết bị, backup | Nhóm, thêm thiết bị bằng External Commit, khôi phục có và không có backup; 5 bất biến đúng | Xong (PR #8); việc hoãn ghi cuối giai đoạn |
+| 5 | Media | Gửi nhận ảnh/tệp mã hóa qua S3 | Chưa bắt đầu |
 | 6 | Gọi video | Cuộc gọi 4 người có E2EE trên mọi nền tảng, đổi khóa SFrame đúng quy tắc | Chưa bắt đầu |
 
 ## Giai đoạn 0 — PoC
@@ -68,15 +68,45 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 - [ ] CI `app.yml`: đã viết (`flutter analyze`, `flutter test`, build web), chưa chạy trên GitHub; chưa có job Android emulator
 
 ## Giai đoạn 4 — Nhóm, đa thiết bị, backup
-- [ ] Nhóm, thêm/gỡ thành viên
-- [ ] Thiết bị mới vào nhóm bằng External Commit; liên kết thiết bị
-- [ ] Backup và khôi phục tài khoản
-- [ ] Giới hạn 50 thiết bị mỗi Commit, 1.000 mỗi nhóm
-- [ ] Đo kích thước Welcome, Commit thêm 1 thiết bị
-- [ ] Desktop
+- [x] Nhóm, thêm/gỡ thành viên ở tầng lõi + engine (spec 6.2, 6.3, 6.4): `stage_add`/`stage_remove`/`merge_commit`/`clear_commit`/`is_active`; `ChatEngine.createGroup/addMember/removeMember`; e2e 3 người với server thật qua FFI Windows
+- [x] Nhóm: giao diện (tạo nhóm, thông tin nhóm, thêm/gỡ thành viên, banner khi bị gỡ): `GroupCreatePage`, `GroupInfoPage`; kiểm trên Chrome thật (màn Nhóm mới) và test đơn vị
+- [x] Rời nhóm (6.4): chatcore `leave_proposal`/`apply_proposal`/`stage_commit_pending`, server không đổi (`SubmitProposal` có sẵn), engine `leaveGroup` + admin online tự commit gỡ, giao diện (nút Rời nhóm, banner đang chờ); chủ nhóm bị chặn; e2e qua FFI Windows và Android emulator
+- [x] Hiện tên người gửi trong nhóm (`ChatMessage.sender`, `LocalDoc.names`, `ChatEngine.displayName`)
+- [x] Đổi vai trò và chuyển quyền chủ nhóm (6.3): chatcore `stage_update`, `ChatEngine.changeRole/transferOwnership/refreshRoles`, menu thành viên ở `GroupInfoPage`; e2e FFI `runRoleE2E` (MEMBER bị từ chối, ADMIN không trao OWNER, chủ cũ rời được)
+- [x] Tên nhóm trong group context extension `chat_policy` (ADR 0013, spec 1.3.0): chatcore `create_group` có tên + `group_name`, KeyPackage và lá External Commit khai báo hỗ trợ loại `0xF001`; người nhận Welcome/External Commit hiện đúng tên (e2e)
+- [x] Proposal chờ commit lưu bền trong snapshot (phiên bản 3, đọc được bản 2): tắt app trước khi commit gỡ người xin rời vẫn commit được; test `proposal_cho_commit_song_sot_qua_khoi_dong_lai`
+- [x] Tranh chấp epoch hai ADMIN cùng gỡ hai người khác nhau ở tầng engine (EPOCH_MISMATCH, đồng bộ rồi dựng lại): e2e FFI `runEpochRaceE2E`
+- [x] Nhóm: đường rời khi không admin online (ADR 0015, spec 1.3.2): server đặt `leaving` khi nhận Proposal và cho thành viên thường commit gỡ đúng người đang rời; lõi chỉ nhận Remove tự gỡ; client thường commit dự phòng sau 60 giây; test dịch vụ `TestLeaveFallbackByMember` (bộ nhớ, Postgres, DynamoDB thật), e2e FFI `runLeaveNoAdminE2E`
+- [ ] (hoãn) Kiểm vai trò người commit ở client (chặn thành viên thường nhét thêm Remove vào Commit tự rời, ADR 0015); hẹn lại commit dự phòng khi khởi động app
+- [x] Server liên kết thiết bị (6.5): `StartLink`/`ApproveLink`/`CompleteLink` (kho bộ nhớ + Postgres chung hợp đồng `storetest`, test dịch vụ)
+- [x] Client liên kết thiết bị (ADR 0010): chatcore `link_start/link_approve/link_finish` (HPKE), `LinkController`, `ChatEngine.approveLink/joinAllConversations` (External Commit vào từng hội thoại, tối đa 4 song song, thử lại EPOCH_MISMATCH); e2e Alice 2 thiết bị + Bob qua FFI Windows
+- [x] Client kiểm statement trước khi tin Commit gỡ MỘT PHẦN thiết bị của một tài khoản (6.6 bước 4): chatcore `apply_commit_checked` + `add_revocation`, lỗi `NEED_REVOCATION:<device_id>`; `ChatEngine._applyCommitChecked` lấy statement từ `FetchKeyPackages` rồi áp dụng lại; test `thu_hoi_thiet_bi_go_la_khoi_nhom_va_ky_statement` + e2e FFI
+- [x] Thu hồi thiết bị (6.6, ADR 0012): server `ListDevices`/`RevokeDevice` (giao dịch một lần: đánh dấu, xóa KeyPackage và refresh token, lưu statement 88 byte; hợp đồng `storetest` chạy trên Postgres), chatcore `revocation_sign`/`stage_remove_devices`, `ChatEngine.revokeDevice`; e2e qua FFI Windows (token A3 bị vô hiệu ngay, A3 bị gỡ khỏi 2 nhóm, không đọc được tin mới)
+- [x] Backup và khôi phục tài khoản (6.14, ADR 0012): chatcore `backup_key_new/backup_seal/backup_open` (HKDF + AES-256-GCM), server `BackupService` với `blob.Signer` (bản dev trong bộ nhớ), `BackupService`/`LoginController.existing` ở app; e2e: mất máy, OTP lại, khôi phục bằng recovery key, giữ lịch sử, vào lại 2 hội thoại bằng External Commit, thu hồi máy mất, nói chuyện tiếp
+- [x] Backup: giao diện `BackupPage` (sao lưu ngay, recovery key hiện một lần kèm cảnh báo, chép) và `RestorePage` (nhập recovery key sau OTP); kiểm trên Chrome thật: sao lưu tải lên URL ký qua CORS thành công
+- [x] Kho sao lưu trên Amazon S3 (ADR 0014): `blob.S3` (URL PUT/GET ký SigV4, PUT ký độ dài nội dung, `Exists`, `EnsureLifecycle`, `EnsureBucket`), cấu hình `CHAT_S3_*`, LocalStack S3 trong `dev/docker-compose.yml`; test hợp đồng `blob/s3_test.go` và e2e sao lưu/khôi phục qua FFI với bucket thật của LocalStack
+- [x] Khôi phục KHÔNG có bản sao lưu (6.14, spec 1.3.1): client `LoginController.resetIdentity` (khóa danh tính mới, `RegisterDevice(reset_identity)`), server thu hồi mọi thiết bị cũ, `ChatEngine.removeStaleLeaves` + lõi `stale_devices`/`trust_identity` (gỡ lá cũ không cần statement, người khác ghim khóa mới), nút "Không có bản sao lưu: bắt đầu lại" có xác nhận; test lõi `reset_identity_lien_ket_lai_vao_nhom...`, test dịch vụ, e2e FFI `runResetIdentityE2E` với Postgres thật
+- [ ] (hoãn) Backup: tải nhiều phần (cần bước Complete ở server), lifecycle/CORS/IAM/SSE-KMS bằng hạ tầng AWS thật, sao lưu định kỳ/gia tăng, tùy chọn passphrase Argon2id
+- [x] Liên kết thiết bị, thu hồi: giao diện (`LinkNewDevicePage` hiện QR + chuỗi mã + mã 6 số và chờ duyệt, `LinkApprovePage` dán mã/so khớp/duyệt, `DevicesPage` danh sách + thu hồi, nút "Đăng nhập bằng thiết bị khác" ở màn đăng nhập; `LoginController.adopt` + `joinAllConversations` tự chạy); kiểm trên Chrome thật: màn QR, danh sách thiết bị
+- [x] Thu hồi đóng kết nối đang mở bằng mã 4003 (`Server.CloseDevice`, hook `Service.OnRevoke`; e2e kiểm máy bị thu hồi nhận 4003), giới hạn `StartLink` 10 lần/phút/IP (`ipLimiter`, trong bộ nhớ)
+- [x] Chạy e2e trên Android emulator x86_64 (API 37, Keystore thật): đăng nhập, lưu bền, chat 1-1, nhóm, rời nhóm, liên kết, thu hồi, sao lưu/khôi phục qua; và `web_smoke` trên Chrome (kết thúc "MLS OK")
+- [x] Server kiểm lá mới của External Commit (6.5 bước 6): `internal/mlswire` đọc PublicMessage, `account.CheckExternalLeaf` (credential đúng tài khoản và thiết bị gửi, khóa ký khớp, chữ ký bằng khóa danh tính đã lưu); test đơn vị + e2e liên kết/thu hồi/khôi phục
+- [ ] (hoãn) Liên kết: quét QR bằng camera (cần plugin camera, thiết bị thật), hoàn tất liên kết hai thiết bị qua GIAO DIỆN trên Chrome (engine đã có e2e), đóng kết nối thiết bị bị thu hồi ở node khác (cần kênh thông báo), `StartLink` sau proxy/nhiều node (X-Forwarded-For, Valkey)
+- [x] Giới hạn 50 thiết bị mỗi Commit, 256 mỗi nhóm (ADR 0011, hạ từ 1.000): lõi (`limits_are_enforced`, `group_at_device_limit`) và server (`TestCommitWelcomeLimits`; `TestGroupDeviceLimit`: nhóm đầy đúng 256, thiết bị thứ 257 bị từ chối)
+- [x] Đo kích thước Welcome, Commit thêm 1 thiết bị (`chatcore/tests/sizes.rs`): Welcome 51 thiết bị: 10 KB; 201: 38 KB; 256: 48 KB (Commit 22 KB, GroupInfo 48 KB); ngoại suy 501: 94 KB, 1.000: 187 KB
+- [x] Quyết định (ADR 0011): hạ giới hạn xuống 256 thiết bị mỗi nhóm để vừa 128 KiB mỗi Welcome/GroupInfo và 3 MiB mỗi Commit; nhóm lớn hơn nằm ngoài bản 1
+- [x] Desktop (Windows): `flutter build windows --debug` thành công (Developer Mode đã bật), `chatcore_ffi.dll` nằm cạnh `byo_chat.exe`, chạy thử 8 giây không lỗi; CHƯA kiểm đăng nhập/chat trên giao diện Windows
+- [ ] (hoãn) Desktop macOS/Linux chưa làm
+
+### Đóng giai đoạn 4
+Cổng nghiệm thu đạt: nhóm; thêm thiết bị bằng External Commit; khôi phục có backup (recovery key) và không có backup (reset_identity); thu hồi thiết bị; 5 bất biến đúng (`cargo test --release`, e2e FFI Windows với Postgres/DynamoDB/NATS thật, Android emulator cho bản trước đó). Việc hoãn, không chặn đóng (theo CLAUDE.md: cần thiết bị thật hoặc hạ tầng thật thì hoãn):
+- Cần thiết bị/hạ tầng thật: quét QR bằng camera; AWS S3 thật (CORS, lifecycle, IAM, SSE-KMS); đo payload FCM; macOS/Linux.
+- Làm khi mở rộng nhiều node: đóng kết nối 4003 giữa các node, giới hạn `StartLink` sau proxy (X-Forwarded-For, Valkey).
+- Cần thiết kế trước: đổi tên nhóm sau khi tạo, tải nhiều phần (giai đoạn 5), chuyển lịch sử giữa thiết bị, tin tự hủy khi đổi `chat_policy`, ảnh nhóm, passphrase Argon2id, sao lưu định kỳ.
+- UI còn lệch thiết kế `docs/ui`: xem mục "Đưa giao diện về đúng thiết kế" (màn chưa có, Desktop nhiều cột, đối chiếu ảnh chụp).
 
 ## Giai đoạn 5 — Media
-- [ ] Media mã hóa lên Cloudflare R2 (spec mục 11 tài liệu chính)
+- [ ] Media mã hóa lên Amazon S3 (spec mục 11 tài liệu chính)
 
 ## Giai đoạn 6 — Gọi video
 - [ ] LiveKit, khóa SFrame = `Exporter("call", call_id, 32)`
@@ -91,3 +121,10 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 
 ## Rủi ro cần theo dõi
 Xem tài liệu chính mục 16: một người là điểm lỗi duy nhất; lỗi mật mã (audit độc lập); chi phí video; spam; pháp lý mật mã và dữ liệu (tư vấn trước beta mở); phạm vi phình ra.
+
+## Đưa giao diện về đúng thiết kế (docs/ui)
+Quy tắc: mỗi việc UI trong kế hoạch này (ở mọi giai đoạn) chỉ được tick khi đã làm đúng bản vẽ `docs/ui/` và có đối chiếu ảnh chụp với thiết kế (xem `CLAUDE.md`, mục "Giao diện").
+
+- [x] Theme chung (`app/lib/ui/theme.dart`: token màu, Inter đóng gói ở `assets/fonts`, nút pill 52px, ô nhập viền 14px, `Avatar`, `shortTime`); đăng nhập + OTP 6 ô, danh sách hội thoại (tiêu đề, ô tìm, chip Tất cả/Nhóm, hàng 72px), khung chat (thanh đầu avatar, nền xám nhạt, bong bóng bo 18 đuôi 4px, ô nhập tròn); kiểm trên Chrome: đăng nhập, OTP, danh sách rỗng
+- [x] Làm lại theo thiết kế: tạo nhóm, thông tin nhóm (avatar lớn, danh sách thành viên, Rời nhóm viền đỏ), thiết bị đã liên kết (thẻ, nhãn Thiết bị này, nút Gỡ), phê duyệt liên kết (6 ô mã, Phê duyệt/Từ chối), QR thiết bị mới, sao lưu/khôi phục, hộp thoại liên hệ; chung khung `ScreenScaffold`, `InfoCard`, `CodeBoxes`; kiểm trên Chrome: thiết bị, nhóm mới
+- [ ] Còn lại: màn thiết kế mà app chưa có (Contact, Settings, Profile, MsgMenu, States, Viewer, NewChat); bố cục Desktop nhiều cột; so sánh ảnh với thiết kế cho danh sách có dữ liệu và khung chat

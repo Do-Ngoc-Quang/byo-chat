@@ -14,4 +14,4 @@ wasm_bindgen_test_configure!(run_in_browser);
 #[wasm_bindgen_test] fn resync_same_key() { r::resync_with_same_signing_key_removes_old_leaf_by_itself(); }
 #[wasm_bindgen_test] fn exporter() { r::exporter_rules_for_sframe_key(); }
 #[wasm_bindgen_test] fn limits() { s::limits_are_enforced(); }
-#[wasm_bindgen_test] fn scale_1000() { s::group_of_1000_devices(); }
+#[wasm_bindgen_test] fn scale_at_limit() { s::group_at_device_limit(); }

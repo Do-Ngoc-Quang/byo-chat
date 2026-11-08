@@ -33,6 +33,14 @@ func TestCORS(t *testing.T) {
 	if w.Header().Get("Access-Control-Allow-Origin") != "" || w.Code != http.StatusTeapot {
 		t.Fatalf("origin lạ không được phép: %d %v", w.Code, w.Header())
 	}
+	// kho sao lưu dev: preflight đi tới handler của nó (không bị middleware chặn chỉ cho POST)
+	r = httptest.NewRequest(http.MethodOptions, "/v1/dev-blob/backups/x", nil)
+	r.Header.Set("Origin", "http://localhost:5000")
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusTeapot || w.Header().Get("Access-Control-Allow-Methods") != "" {
+		t.Fatalf("dev-blob phải đi qua middleware: %d %v", w.Code, w.Header())
+	}
 	// không cấu hình: nguyên handler
 	if api.CORS(nil, next) == nil {
 		t.Fatal("nil")

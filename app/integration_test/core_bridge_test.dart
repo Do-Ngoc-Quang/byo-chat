@@ -11,6 +11,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'chat_e2e.dart';
+import 'backup_e2e.dart';
+import 'revoke_e2e.dart';
 import 'login_e2e.dart';
 import 'persist_e2e.dart';
 import 'mls_scenario.dart';
@@ -40,6 +42,21 @@ void main() {
       () async => runPersistE2E(Uri.parse(apiUrl), SecureSecretStore(), await openBlobStore()),
       skip: apiUrl.isEmpty ? 'đặt --dart-define=CHAT_API để chạy' : false);
   test('chat 1-1 hai thiết bị với server thật qua WebSocket', () => runChatE2E(Uri.parse(apiUrl)),
+      timeout: const Timeout(Duration(minutes: 3)),
+      skip: apiUrl.isEmpty ? 'đặt --dart-define=CHAT_API để chạy' : false);
+  test('nhóm 3 người với server thật', () => runGroupE2E(Uri.parse(apiUrl)),
+      timeout: const Timeout(Duration(minutes: 3)),
+      skip: apiUrl.isEmpty ? 'đặt --dart-define=CHAT_API để chạy' : false);
+  test('liên kết thiết bị + External Commit vào nhóm với server thật', () => runLinkE2E(Uri.parse(apiUrl)),
+      timeout: const Timeout(Duration(minutes: 3)),
+      skip: apiUrl.isEmpty ? 'đặt --dart-define=CHAT_API để chạy' : false);
+  test('thu hồi thiết bị với server thật', () => runRevokeE2E(Uri.parse(apiUrl)),
+      timeout: const Timeout(Duration(minutes: 3)),
+      skip: apiUrl.isEmpty ? 'đặt --dart-define=CHAT_API để chạy' : false);
+  test('sao lưu + khôi phục tài khoản với server thật', () => runBackupE2E(Uri.parse(apiUrl)),
+      timeout: const Timeout(Duration(minutes: 3)),
+      skip: apiUrl.isEmpty ? 'đặt --dart-define=CHAT_API để chạy' : false);
+  test('rời nhóm với server thật', () => runLeaveE2E(Uri.parse(apiUrl)),
       timeout: const Timeout(Duration(minutes: 3)),
       skip: apiUrl.isEmpty ? 'đặt --dart-define=CHAT_API để chạy' : false);
 }

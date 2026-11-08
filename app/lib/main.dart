@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -12,6 +14,7 @@ import 'storage/session_store.dart';
 import 'ui/conversations_page.dart';
 import 'ui/home_page.dart';
 import 'ui/login_page.dart';
+import 'ui/theme.dart';
 
 /// Địa chỉ server: `--dart-define=CHAT_API=http://host:8080`. Mặc định: Web dùng localhost,
 /// emulator Android dùng 10.0.2.2 (máy chủ của emulator).
@@ -74,6 +77,14 @@ class _ByoChatAppState extends State<ByoChatApp> {
     n.onRevoked = _logout; // mã đóng 4003: thiết bị bị thu hồi, xóa dữ liệu
     _engine = n;
     n.start();
+    if (_login.needsJoin) {
+      _login.needsJoin = false;
+      // Thiết bị mới: tự vào từng hội thoại bằng External Commit (6.5); sau reset_identity thì gỡ lá cũ của chính mình (6.14).
+      unawaited(() async {
+        await n.joinAllConversations();
+        await n.removeStaleLeaves();
+      }());
+    }
     return n;
   }
 
@@ -88,12 +99,14 @@ class _ByoChatAppState extends State<ByoChatApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'BYO Chat',
-      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+      theme: Ui.theme(),
       home: FutureBuilder<bool>(
         future: _restored,
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator(key: Key('restoring'))));
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator(key: Key('restoring'))),
+            );
           }
           return ListenableBuilder(
             listenable: _login,
