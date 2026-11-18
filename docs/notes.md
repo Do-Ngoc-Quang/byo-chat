@@ -229,3 +229,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 ## Thiết lập hồ sơ (S-03) — đối chiếu Mobile-Profile
 - Thêm `ProfileSetupView` (`app/lib/ui/profile_setup_page.dart`): tiêu đề 28, avatar 112 chữ cái đầu của từ cuối, ô tên 56 viền 2 xanh, nút Hoàn tất pill 52 (tắt khi chưa có tên); chụp 390×844 khớp thiết kế, lệch vài px khoảng cách dọc và cỡ chữ trong ô.
 - Chưa nối vào luồng đăng nhập/đăng ký: cần `ProfileService` (server chưa có) để lưu tên và ảnh. Nút máy ảnh hiện mờ (chưa chọn ảnh). Chưa có Desktop-Profile (thẻ giữa trang).
+
+## Desktop: hộp thư ba cột (Desktop-Inbox)
+- Thêm `DesktopShell` (`app/lib/ui/desktop_shell.dart`): từ rộng ≥ 900 dùng thanh điều hướng 72 + danh sách 340 + khung chat bên phải; hàng đang chọn nền #EEF2FF; hẹp hơn vẫn dùng bố cục Mobile. Có test widget (engine giả) và bản chụp 1280×800 so với `Desktop-Inbox`: ba cột, độ rộng và màu khớp.
+- Còn lệch: danh sách còn hàng lọc Tất cả/Nhóm, dòng trạng thái kết nối và nút ⋯ (thiết kế không có); hàng chưa có dòng xem trước/giờ nhấn xanh ở bản chụp vì engine giả không có tin; đầu khung chat chưa có nút Gọi video, dòng "Đang nhập…", lề 24; vùng tin chưa lề 48 và nút "+" đính kèm; nút Cuộc gọi/Cài đặt dùng icon Material khác (Cuộc gọi hiện mờ, chưa có); Thông tin nhóm/Hồ sơ liên hệ/Cài đặt vẫn mở trang đầy màn hình thay vì bảng bên phải; chưa kiểm cửa sổ hẹp lại.
+- Các màn Desktop-* khác (Settings, NewChat, Contact, Group, Profile, Login, Otp, Devices, Link, Calls, Call, Incoming, Attach, MsgMenu, States, Viewer) chưa làm.

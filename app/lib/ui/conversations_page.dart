@@ -14,10 +14,14 @@ import 'theme.dart';
 
 /// Danh sách hội thoại theo docs/ui (Main.dc.html): tiêu đề "Tin nhắn", ô tìm, lọc Tất cả/Nhóm, hàng 72px.
 class ConversationsPage extends StatefulWidget {
-  const ConversationsPage({super.key, required this.engine, this.onLogout});
+  const ConversationsPage({super.key, required this.engine, this.onLogout, this.onOpen, this.selectedHexId});
 
   final ChatEngine engine;
   final VoidCallback? onLogout;
+
+  /// Bố cục Desktop (cột giữa): chọn hội thoại thì gọi hàm này thay vì mở trang mới; hàng đang chọn nền #EEF2FF.
+  final ValueChanged<ConvState>? onOpen;
+  final String? selectedHexId;
 
   @override
   State<ConversationsPage> createState() => _ConversationsPageState();
@@ -47,8 +51,8 @@ class _ConversationsPageState extends State<ConversationsPage> {
                   padding: const EdgeInsets.fromLTRB(20, 20, 12, 0),
                   child: Row(
                     children: [
-                      const Expanded(
-                        child: Text('Tin nhắn', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, letterSpacing: -0.3)),
+                      Expanded(
+                        child: Text('Tin nhắn', style: TextStyle(fontSize: widget.onOpen == null ? 28 : 22, fontWeight: FontWeight.w600, letterSpacing: -0.3)),
                       ),
                       _RoundButton(
                         key: const Key('new-chat'),
@@ -144,7 +148,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                           ),
                         )
                       : ListView(
-                          children: [for (final c in convs) _Row(engine: engine, conv: c)],
+                          children: [for (final c in convs) _Row(engine: engine, conv: c, onOpen: widget.onOpen, selected: c.hexId == widget.selectedHexId)],
                         ),
                 ),
               ],
@@ -226,10 +230,12 @@ class _Chip extends StatelessWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.engine, required this.conv});
+  const _Row({required this.engine, required this.conv, this.onOpen, this.selected = false});
 
   final ChatEngine engine;
   final ConvState conv;
+  final ValueChanged<ConvState>? onOpen;
+  final bool selected;
 
   static String lastLine(List<ChatMessage> m) {
     if (m.isEmpty) return '';
@@ -245,13 +251,16 @@ class _Row extends StatelessWidget {
     final msgs = engine.messages(conv.hexId);
     return InkWell(
       key: Key('conv-${conv.hexId}'),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => ChatPage(engine: engine, conv: conv),
-        ),
-      ),
-      child: SizedBox(
-        height: 72,
+      onTap: onOpen != null
+          ? () => onOpen!(conv)
+          : () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ChatPage(engine: engine, conv: conv),
+              ),
+            ),
+      child: Container(
+        height: onOpen == null ? 72 : 68,
+        color: selected ? Ui.accentBg : null,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
