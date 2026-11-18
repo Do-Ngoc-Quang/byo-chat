@@ -12,6 +12,7 @@ import 'storage/blob_store.dart';
 import 'storage/secret_store.dart';
 import 'storage/session_store.dart';
 import 'ui/conversations_page.dart';
+import 'ui/desktop_shell.dart';
 import 'ui/home_page.dart';
 import 'ui/login_page.dart';
 import 'ui/theme.dart';
@@ -114,7 +115,12 @@ class _ByoChatAppState extends State<ByoChatApp> {
               final s = _login.session;
               if (s == null) return LoginPage(controller: _login);
               if (!widget.enableChat || widget.store == null) return HomePage(session: s, onLogout: _login.logout);
-              return ConversationsPage(engine: _engineFor(s), onLogout: _logout);
+              final engine = _engineFor(s);
+              return LayoutBuilder(
+                builder: (context, c) => c.maxWidth >= desktopBreakpoint
+                    ? DesktopShell(engine: engine, onLogout: _logout)
+                    : ConversationsPage(engine: engine, onLogout: _logout),
+              );
             },
           );
         },
