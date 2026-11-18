@@ -261,3 +261,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - `ProfileSetupView` từ rộng ≥ 900 dùng thẻ trắng 440 bo 24, viền, đệm 48/40 giữa nền #F7F8FA (cùng kiểu thẻ đăng nhập); nội dung dùng chung với Mobile.
 - Lệch: thẻ cao hơn thiết kế ~8px (ô nhập Flutter cao hơn 56 vài px); nút máy ảnh vẫn mờ vì chưa có ProfileService/MediaService; màn chưa nối vào luồng đăng nhập (chưa có server). Ô nhập hiện tay nắm con trỏ trong ảnh chụp là do môi trường test.
 - Còn chưa làm: Devices, Link, Calls, Call, Incoming, Attach, MsgMenu, States, Viewer.
+
+## Desktop: thiết bị đã liên kết (Desktop-Devices)
+- Mục "Thiết bị đã liên kết" trong Cài đặt Desktop hiện ngay bên phải (`DevicesPage(embedded: true)`: mô tả, danh sách thẻ, nút Liên kết thiết bị mới rộng vừa chữ) thay vì mở trang riêng; Mobile giữ nguyên.
+- Lệch: dòng phụ của thiết bị là "Đăng ký <ngày>" (server chưa trả "Đang hoạt động/nơi đăng nhập"); biểu tượng Web là quả cầu, thiết kế dùng máy tính; thanh bên còn mục "Sao lưu" (thiết kế không có) và thứ tự mục khác; nhấn mạnh mục đang chọn khớp. Chữ ô vuông ở nút Gỡ/Liên kết trong ảnh chụp là do font môi trường test.
+- Còn chưa làm: Link, Calls, Call, Incoming, Attach, MsgMenu, States, Viewer.

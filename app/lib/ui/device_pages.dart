@@ -15,9 +15,12 @@ import 'theme.dart';
 
 /// Thiết bị đã liên kết (Mobile-Devices.dc.html): thẻ từng thiết bị, "Thiết bị này", nút Gỡ, nút Liên kết thiết bị mới.
 class DevicesPage extends StatefulWidget {
-  const DevicesPage({super.key, required this.engine});
+  const DevicesPage({super.key, required this.engine, this.embedded = false});
 
   final ChatEngine engine;
+
+  /// Nhúng trong Cài đặt Desktop: chỉ phần nội dung (mô tả, danh sách, nút), không có khung màn hình.
+  final bool embedded;
 
   @override
   State<DevicesPage> createState() => _DevicesPageState();
@@ -56,62 +59,72 @@ class _DevicesPageState extends State<DevicesPage> {
   @override
   Widget build(BuildContext context) {
     final me = hex(widget.engine.session.deviceId);
-    return ScreenScaffold(
-      key: const Key('devices-page'),
-      title: 'Thiết bị đã liên kết',
-      subtitle: 'Gỡ những thiết bị bạn không còn sử dụng.',
-      bottom: FilledButton(
-        key: const Key('add-device'),
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => LinkApprovePage(engine: widget.engine))),
-        child: const Text('Liên kết thiết bị mới'),
-      ),
-      children: [
-        FutureBuilder<List<DeviceInfo>>(
-          future: _devices,
-          builder: (context, snap) {
-            if (snap.hasError) return Text('Không tải được danh sách: ${snap.error}', style: const TextStyle(color: Ui.danger));
-            if (!snap.hasData) {
-              return const Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-            return Column(
-              children: [
-                for (final d in snap.data!)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: InfoCard(
-                      key: Key('device-${hex(d.deviceId)}'),
-                      icon: _icon(d.platform),
-                      title: d.deviceName.isEmpty ? 'Thiết bị' : d.deviceName,
-                      subtitle: d.revoked ? 'Đã thu hồi' : 'Đăng ký ${_date(d.createdMs.toInt())}',
-                      trailing: hex(d.deviceId) == me
-                          ? const _Pill('Thiết bị này')
-                          : d.revoked
-                          ? null
-                          : OutlinedButton(
-                              key: Key('revoke-${hex(d.deviceId)}'),
-                              onPressed: () => _revoke(d),
-                              style: OutlinedButton.styleFrom(
-                                minimumSize: const Size(56, 36),
-                                padding: const EdgeInsets.symmetric(horizontal: 14),
-                                foregroundColor: const Color(0xFFB91C1C),
-                                side: const BorderSide(color: Ui.fieldBorder),
-                                backgroundColor: Colors.white,
-                                shape: const StadiumBorder(),
-                                textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                              ),
-                              child: const Text('Gỡ'),
-                            ),
-                    ),
-                  ),
-              ],
-            );
-          },
-        ),
-      ],
+    final add = FilledButton(
+      key: const Key('add-device'),
+      style: widget.embedded ? FilledButton.styleFrom(minimumSize: const Size(0, Ui.buttonHeight), padding: const EdgeInsets.symmetric(horizontal: 24)) : null,
+      onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => LinkApprovePage(engine: widget.engine))),
+      child: const Text('Liên kết thiết bị mới'),
     );
+    final list = FutureBuilder<List<DeviceInfo>>(
+      future: _devices,
+      builder: (context, snap) {
+        if (snap.hasError) return Text('Không tải được danh sách: ${snap.error}', style: const TextStyle(color: Ui.danger));
+        if (!snap.hasData) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return Column(
+          children: [
+            for (final d in snap.data!)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: InfoCard(
+                  key: Key('device-${hex(d.deviceId)}'),
+                  icon: _icon(d.platform),
+                  title: d.deviceName.isEmpty ? 'Thiết bị' : d.deviceName,
+                  subtitle: d.revoked ? 'Đã thu hồi' : 'Đăng ký ${_date(d.createdMs.toInt())}',
+                  trailing: hex(d.deviceId) == me
+                      ? const _Pill('Thiết bị này')
+                      : d.revoked
+                      ? null
+                      : OutlinedButton(
+                          key: Key('revoke-${hex(d.deviceId)}'),
+                          onPressed: () => _revoke(d),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(56, 36),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            foregroundColor: const Color(0xFFB91C1C),
+                            side: const BorderSide(color: Ui.fieldBorder),
+                            backgroundColor: Colors.white,
+                            shape: const StadiumBorder(),
+                            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                          child: const Text('Gỡ'),
+                        ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+    const subtitle = 'Gỡ những thiết bị bạn không còn sử dụng.';
+    if (widget.embedded) {
+      // Desktop-Devices: khoảng cách như thiết kế (flex gap 10 + margin); nút nằm cuối danh sách (rộng vừa chữ).
+      return Column(
+        key: const Key('devices-panel'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(subtitle, style: TextStyle(fontSize: 15, height: 1.5, color: Ui.muted)),
+          const SizedBox(height: 30),
+          list,
+          const SizedBox(height: 17),
+          Align(alignment: Alignment.centerLeft, child: add),
+        ],
+      );
+    }
+    return ScreenScaffold(key: const Key('devices-page'), title: 'Thiết bị đã liên kết', subtitle: subtitle, bottom: add, children: [list]);
   }
 
   static IconData _icon(Platform p) => switch (p) {
