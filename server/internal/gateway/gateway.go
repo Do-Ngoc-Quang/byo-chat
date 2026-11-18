@@ -12,6 +12,7 @@ import (
 
 	chatv1 "byo-chat/server/gen/chat/v1"
 	"byo-chat/server/internal/auth"
+	"byo-chat/server/internal/call"
 	"byo-chat/server/internal/ids"
 	"byo-chat/server/internal/message"
 	"byo-chat/server/internal/store"
@@ -261,6 +262,19 @@ func (c *conn) handshake(ctx context.Context) bool {
 		Window: uint32(s.Cfg.Window), MaxFrameBytes: MaxFrameBytes, ServerTimeMs: uint64(s.Now().UnixMilli()),
 	}}}); err != nil {
 		return false
+	}
+	// IncomingCall (giao-thuc.md 6.10): khung chủ động, không vào hộp thư, không cần Ack. Đăng ký sau Welcome để khung
+	// không đi trước Welcome; cuộc gọi đổ chuông trong lúc bắt tay có thể lỡ, chấp nhận được vì chuông chỉ tạm thời.
+	if unsubCall, err := s.Svc.Bus.Subscribe(call.Subject(devID.Hex()), func(b []byte) {
+		in := &chatv1.IncomingCall{}
+		if proto.Unmarshal(b, in) == nil {
+			_ = c.write(ctx, &chatv1.ServerFrame{Body: &chatv1.ServerFrame_IncomingCall{IncomingCall: in}})
+		}
+	}); err == nil {
+		go func() {
+			<-ctx.Done()
+			unsubCall()
+		}()
 	}
 	go c.sync(ctx, cursor, live)
 	return true
