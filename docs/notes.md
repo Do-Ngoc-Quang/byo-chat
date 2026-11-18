@@ -234,8 +234,12 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Thêm `DesktopShell` (`app/lib/ui/desktop_shell.dart`): từ rộng ≥ 900 dùng thanh điều hướng 72 + danh sách 340 + khung chat bên phải; hàng đang chọn nền #EEF2FF; hẹp hơn vẫn dùng bố cục Mobile. Có test widget (engine giả) và bản chụp 1280×800 so với `Desktop-Inbox`: ba cột, độ rộng và màu khớp.
 - Đã sửa ở bước sau: khung chat Desktop (`ChatPage(embedded: true)`) có đầu trang riêng (avatar, tên, Gọi video mờ, Thông tin), lề tin 48, bong bóng tối đa 460, ô nhập có nút "+" (mờ); danh sách Desktop bỏ hàng lọc Tất cả/Nhóm và dòng trạng thái khi online. Chụp lại 1280×800 khớp bố cục.
 - Còn lệch: giờ nằm trong bong bóng (thiết kế để ngoài, dưới tin cuối kèm dấu đã xem); không có dòng "Đang nhập…" (chưa có Typing); ô tìm cao hơn thiết kế, vẫn còn nút ⋯ cạnh Soạn tin; hàng danh sách chưa có giờ nhấn xanh cho hàng đang chọn; nút Cuộc gọi/Cài đặt dùng icon Material khác (Cuộc gọi mờ, chưa có); Thông tin nhóm/Hồ sơ liên hệ/Cài đặt vẫn mở trang đầy màn hình thay vì bảng bên phải.
-- Các màn Desktop-* khác (Settings, NewChat, Contact, Group, Profile, Otp, Devices, Link, Calls, Call, Incoming, Attach, MsgMenu, States, Viewer) chưa làm.
+- Các màn Desktop-* khác (NewChat, Contact, Group, Profile, Devices, Link, Calls, Call, Incoming, Attach, MsgMenu, States, Viewer) chưa làm.
 
 ## Desktop: đăng nhập (Desktop-Login, Desktop-Otp)
 - `LoginPage` từ rộng ≥ 900 vẽ thẻ trắng 440, viền, bo 24, đệm 48/40 giữa nền #F7F8FA (cả bước nhập mã). Test widget + chụp 1280×800 so với `Desktop-Login`: thẻ, logo, tiêu đề, kích thước khớp.
 - Lệch: ô "+84" tách riêng và nút "Đăng nhập bằng passkey" chưa có (server chưa hỗ trợ passkey); app dùng một ô nhập có gợi ý "+84 912 345 678", thêm "Dùng email" và các nút liên kết thiết bị. Chữ trên nút trong ảnh chụp test bị ô vuông vì font nút của bản chụp, không phải lỗi app.
+
+## Desktop: cài đặt (Desktop-Settings)
+- `SettingsPage` từ rộng ≥ 900 dùng `SettingsDesktopView`: thanh điều hướng (`DesktopRail`, nút Cài đặt sáng) + danh sách mục 333 + nội dung tối đa 872; chụp 1280×800 so với thiết kế: khớp mốc x của tiêu đề và công tắc.
+- Lệch: công tắc Thông báo hiện mờ (chưa có dịch vụ cài đặt thông báo); "Quyền riêng tư" mờ, không chạm được; "Sao lưu"/"Thiết bị đã liên kết" mở trang riêng thay vì nội dung trong cột phải; biểu tượng thứ hai của thanh trái là camera (thiết kế: điện thoại).
