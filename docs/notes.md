@@ -284,3 +284,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - `StatusBanner` ≥ 900 cao 40, chữ 14; `StateCard` nút không còn bị đệm tap-target 48 (cao thẻ khớp bản vẽ trong ~2px). Lưới 3 cột 960 chỉ dựng trong test chụp (bản vẽ là trang minh họa, không phải màn của app).
 - Còn lệch: icon wifi/khóa dùng Material (dày hơn nét 1.8 của bản vẽ); vài trạng thái (đăng xuất, đang cập nhật) chưa nối luồng thật.
 - Desktop-Viewer: hoãn, cần media (giai đoạn 5).
+
+## MediaService (server)
+- Khóa đối tượng `media/<id>` (riêng) và `media-public/<id>` (ảnh đại diện); không thêm bảng DB. Giới hạn khởi điểm 100 MiB/tệp (`MaxMediaBytes`), chốt lại theo chi phí.
+- `GetDownloadUrl`: mọi thiết bị đã đăng nhập xin được URL theo `media_id` (ciphertext, khóa nằm trong tin MLS); chưa kiểm tư cách thành viên.
+- `CompleteUpload` chỉ kiểm đối tượng đã có; chưa xác minh hash (client kiểm khi tải xuống). Tải nhiều phần hoãn.

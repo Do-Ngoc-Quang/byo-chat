@@ -107,6 +107,9 @@ Cổng nghiệm thu đạt: nhóm; thêm thiết bị bằng External Commit; kh
 
 ## Giai đoạn 5 — Media
 - [ ] Media mã hóa lên Amazon S3 (spec mục 11 tài liệu chính)
+  - [x] Server `MediaService` (CreateUpload/CompleteUpload/GetDownloadUrl): kho Dev trong test, S3 qua cùng giao diện `blob.Signer`; test `TestMediaFlow`. Còn: tải nhiều phần, S3 thật (hoãn)
+  - [ ] `chatcore`: mã hóa khối AES-256-GCM (khóa/nonce/hash theo `MediaContent`)
+  - [ ] Client: gửi/nhận ảnh và tệp, Viewer, Desktop-Viewer
 
 ## Giai đoạn 6 — Gọi video
 - [ ] LiveKit, khóa SFrame = `Exporter("call", call_id, 32)`
