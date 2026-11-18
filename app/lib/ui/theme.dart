@@ -154,16 +154,7 @@ String shortTime(int ms, {DateTime? now}) {
 /// Khung màn phụ theo docs/ui (Group/Devices/Link...): nút quay lại 44px, tiêu đề 28/600, mô tả 15 xám, nội dung cuộn,
 /// và vùng nút cố định ở đáy (24px hai bên, 32px dưới). `key` đặt lên Scaffold để test tìm màn.
 class ScreenScaffold extends StatelessWidget {
-  const ScreenScaffold({
-    super.key,
-    this.title,
-    this.subtitle,
-    this.header,
-    required this.children,
-    this.bottom,
-    this.titleSize = 28,
-    this.padding = const EdgeInsets.fromLTRB(24, 8, 24, 16),
-  });
+  const ScreenScaffold({super.key, this.title, this.subtitle, this.header, required this.children, this.bottom, this.titleSize = 28, this.padding = const EdgeInsets.fromLTRB(24, 8, 24, 16)});
 
   final String? title, subtitle;
 
@@ -327,7 +318,10 @@ class SettingsRow extends StatelessWidget {
             Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(color: danger ? const Color(0xFFFEE2E2) : Ui.accentBg, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: danger ? const Color(0xFFFEE2E2) : Ui.accentBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Icon(icon, size: 20, color: danger ? const Color(0xFFB91C1C) : Ui.accentFg),
             ),
             const SizedBox(width: 14),

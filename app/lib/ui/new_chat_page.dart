@@ -16,11 +16,7 @@ class NewChatPage extends StatelessWidget {
   final ChatEngine engine;
 
   void _openChat(BuildContext context, ConvState c) {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => ChatPage(engine: engine, conv: c),
-      ),
-    );
+    Navigator.of(context).pushReplacement(MaterialPageRoute<void>(builder: (_) => ChatPage(engine: engine, conv: c)));
   }
 
   Future<void> _submit(BuildContext context, String raw) async {
@@ -89,9 +85,7 @@ class _NewChatViewState extends State<NewChatView> {
                   padding: const EdgeInsets.fromLTRB(24, 20, 12, 8),
                   child: Row(
                     children: [
-                      const Expanded(
-                        child: Text('Trò chuyện mới', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, letterSpacing: -0.3)),
-                      ),
+                      const Expanded(child: Text('Trò chuyện mới', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, letterSpacing: -0.3))),
                       IconButton(
                         key: const Key('new-chat-close'),
                         tooltip: 'Đóng',
@@ -121,10 +115,7 @@ class _NewChatViewState extends State<NewChatView> {
                       contentPadding: EdgeInsets.zero,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(22),
-                        borderSide: const BorderSide(color: Ui.primary, width: 1.5),
-                      ),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: Ui.primary, width: 1.5)),
                     ),
                   ),
                 ),
@@ -136,10 +127,7 @@ class _NewChatViewState extends State<NewChatView> {
                         _Line(
                           key: const Key('peer-ok'),
                           height: 60,
-                          avatar: const _Circle(
-                            bg: Ui.accentBg,
-                            child: Icon(Icons.send_outlined, size: 20, color: Ui.primary),
-                          ),
+                          avatar: const _Circle(bg: Ui.accentBg, child: Icon(Icons.send_outlined, size: 20, color: Ui.primary)),
                           title: 'Nhắn tới ${_ctl.text.trim()}',
                           titleColor: Ui.primary,
                           onTap: () => widget.onSubmit?.call(_ctl.text),
@@ -147,10 +135,7 @@ class _NewChatViewState extends State<NewChatView> {
                       _Line(
                         key: const Key('new-group'),
                         height: 60,
-                        avatar: const _Circle(
-                          bg: Ui.accentBg,
-                          child: Icon(Icons.group_add_outlined, size: 20, color: Ui.primary),
-                        ),
+                        avatar: const _Circle(bg: Ui.accentBg, child: Icon(Icons.group_add_outlined, size: 20, color: Ui.primary)),
                         title: 'Tạo nhóm mới',
                         titleColor: Ui.primary,
                         onTap: widget.onGroup,
@@ -158,10 +143,7 @@ class _NewChatViewState extends State<NewChatView> {
                       if (widget.recent.isNotEmpty) ...[
                         const Padding(
                           padding: EdgeInsets.only(top: 8),
-                          child: Text(
-                            'Gần đây',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Ui.muted),
-                          ),
+                          child: Text('Gần đây', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Ui.muted)),
                         ),
                         for (var i = 0; i < widget.recent.length; i++)
                           _Line(
@@ -217,12 +199,7 @@ class _Line extends StatelessWidget {
           avatar,
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: titleColor),
-            ),
+            child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: titleColor)),
           ),
         ],
       ),

@@ -76,11 +76,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 2, 20, 8),
                   child: engine.connection == GatewayState.online
-                      ? Text(
-                          _status(engine.connection),
-                          key: const Key('connection-status'),
-                          style: const TextStyle(fontSize: 12, color: Ui.muted),
-                        )
+                      ? Text(_status(engine.connection), key: const Key('connection-status'), style: const TextStyle(fontSize: 12, color: Ui.muted))
                       : StatusBanner(_status(engine.connection), key: const Key('connection-status')),
                 ),
                 Padding(
@@ -173,11 +169,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
       case 'group':
         nav.push(MaterialPageRoute<void>(builder: (_) => GroupCreatePage(engine: engine)));
       case 'settings':
-        nav.push(
-          MaterialPageRoute<void>(
-            builder: (_) => SettingsPage(engine: engine, onLogout: widget.onLogout),
-          ),
-        );
+        nav.push(MaterialPageRoute<void>(builder: (_) => SettingsPage(engine: engine, onLogout: widget.onLogout)));
       case 'devices':
         nav.push(MaterialPageRoute<void>(builder: (_) => DevicesPage(engine: engine)));
       case 'backup':

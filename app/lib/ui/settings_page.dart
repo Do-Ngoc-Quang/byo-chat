@@ -66,11 +66,7 @@ class SettingsView extends StatelessWidget {
       children: [
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Ui.surfaceAlt,
-            border: Border.all(color: Ui.border),
-            borderRadius: BorderRadius.circular(16),
-          ),
+          decoration: BoxDecoration(color: Ui.surfaceAlt, border: Border.all(color: Ui.border), borderRadius: BorderRadius.circular(16)),
           child: Row(
             children: [
               Avatar('Tôi', size: 56),
@@ -88,21 +84,9 @@ class SettingsView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        SettingsRow(
-          key: const Key('settings-backup'),
-          icon: Icons.cloud_outlined,
-          title: 'Sao lưu',
-          subtitle: 'Recovery key và bản sao lưu',
-          onTap: onBackup ?? () {},
-        ),
-        SettingsRow(
-          key: const Key('settings-devices'),
-          icon: Icons.desktop_windows_outlined,
-          title: 'Thiết bị đã liên kết',
-          onTap: onDevices ?? () {},
-        ),
-        if (onLogout != null)
-          SettingsRow(key: const Key('settings-logout'), icon: Icons.logout, title: 'Đăng xuất', danger: true, onTap: onLogout!),
+        SettingsRow(key: const Key('settings-backup'), icon: Icons.cloud_outlined, title: 'Sao lưu', subtitle: 'Recovery key và bản sao lưu', onTap: onBackup ?? () {}),
+        SettingsRow(key: const Key('settings-devices'), icon: Icons.desktop_windows_outlined, title: 'Thiết bị đã liên kết', onTap: onDevices ?? () {}),
+        if (onLogout != null) SettingsRow(key: const Key('settings-logout'), icon: Icons.logout, title: 'Đăng xuất', danger: true, onTap: onLogout!),
       ],
     );
   }

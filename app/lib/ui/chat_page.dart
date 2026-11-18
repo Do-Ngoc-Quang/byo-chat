@@ -71,7 +71,9 @@ class _ChatPageState extends State<ChatPage> {
               key: const Key('contact-info'),
               tooltip: 'Hồ sơ liên hệ',
               icon: const Icon(Icons.info_outline),
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ContactPage(conv: conv))),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => ContactPage(conv: conv)),
+              ),
             ),
           if (conv.isGroup)
             IconButton(
@@ -233,43 +235,43 @@ class _Bubble extends StatelessWidget {
       child: GestureDetector(
         onLongPress: onLongPress,
         child: Container(
-          key: Key('msg-${m.id}'),
-          margin: const EdgeInsets.symmetric(vertical: 3),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          constraints: const BoxConstraints(maxWidth: 320),
-          decoration: BoxDecoration(
-            color: m.mine ? Ui.primary : Colors.white,
-            border: m.mine ? null : Border.all(color: Ui.border),
-            borderRadius: radius,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (who != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: Text(
-                    who!,
-                    key: Key('from-${m.id}'),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Ui.avatarFg),
-                  ),
-                ),
-              Text(
-                text,
-                style: TextStyle(
-                  fontSize: 15,
-                  height: 1.35,
-                  color: m.mine ? Colors.white : Ui.text,
-                  fontStyle: broken ? FontStyle.italic : FontStyle.normal,
+        key: Key('msg-${m.id}'),
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        constraints: const BoxConstraints(maxWidth: 320),
+        decoration: BoxDecoration(
+          color: m.mine ? Ui.primary : Colors.white,
+          border: m.mine ? null : Border.all(color: Ui.border),
+          borderRadius: radius,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (who != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  who!,
+                  key: Key('from-${m.id}'),
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Ui.avatarFg),
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                status.isEmpty ? _clock(m.tsMs) : status,
-                style: TextStyle(fontSize: 11, color: m.mine ? const Color(0xCCFFFFFF) : Ui.muted),
+            Text(
+              text,
+              style: TextStyle(
+                fontSize: 15,
+                height: 1.35,
+                color: m.mine ? Colors.white : Ui.text,
+                fontStyle: broken ? FontStyle.italic : FontStyle.normal,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              status.isEmpty ? _clock(m.tsMs) : status,
+              style: TextStyle(fontSize: 11, color: m.mine ? const Color(0xCCFFFFFF) : Ui.muted),
+            ),
+          ],
+        ),
         ),
       ),
     );

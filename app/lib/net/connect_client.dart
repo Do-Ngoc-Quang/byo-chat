@@ -73,12 +73,8 @@ class ConnectClient {
           detail = pb.Error()..mergeFromBuffer(base64.decode(base64.normalize(v)));
         }
       }
-      return ConnectException(
-        j['code'] as String? ?? 'unknown',
-        j['message'] as String? ?? '',
-        detail: detail,
-        httpStatus: resp.statusCode,
-      );
+      return ConnectException(j['code'] as String? ?? 'unknown', j['message'] as String? ?? '',
+          detail: detail, httpStatus: resp.statusCode);
     } on Exception {
       return ConnectException('unknown', 'Phản hồi lỗi không đọc được (HTTP ${resp.statusCode})', httpStatus: resp.statusCode);
     }

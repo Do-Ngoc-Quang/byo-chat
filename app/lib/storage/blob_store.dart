@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
-export 'blob_store_stub.dart' if (dart.library.io) 'blob_store_io.dart' if (dart.library.js_interop) 'blob_store_web.dart';
+export 'blob_store_stub.dart'
+    if (dart.library.io) 'blob_store_io.dart'
+    if (dart.library.js_interop) 'blob_store_web.dart';
 
 /// Kho blob lớn (snapshot đã mã hóa). Nội dung đã được mã hóa bởi chatcore, nên kho không cần bí mật.
 /// Native: tệp trong thư mục dữ liệu app; Web: localStorage (đủ cho giai đoạn này, OPFS/IndexedDB sau).

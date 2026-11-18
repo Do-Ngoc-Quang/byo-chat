@@ -14,15 +14,19 @@ typedef _Open = Pointer<Void> Function(Pointer<Uint8>, int, Pointer<Pointer<Utf8
 typedef _OpenDeviceC = Pointer<Void> Function(Pointer<Uint8>, UintPtr, Pointer<Pointer<Utf8>>);
 typedef _CloseC = Void Function(Pointer<Void>);
 typedef _Close = void Function(Pointer<Void>);
-typedef _CallC = Pointer<Utf8> Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint8>, UintPtr, Pointer<Pointer<Uint8>>, Pointer<UintPtr>);
-typedef _Call = Pointer<Utf8> Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint8>, int, Pointer<Pointer<Uint8>>, Pointer<UintPtr>);
+typedef _CallC = Pointer<Utf8> Function(
+    Pointer<Void>, Pointer<Utf8>, Pointer<Uint8>, UintPtr, Pointer<Pointer<Uint8>>, Pointer<UintPtr>);
+typedef _Call = Pointer<Utf8> Function(
+    Pointer<Void>, Pointer<Utf8>, Pointer<Uint8>, int, Pointer<Pointer<Uint8>>, Pointer<UintPtr>);
 typedef _BufFreeC = Void Function(Pointer<Uint8>, UintPtr);
 typedef _BufFree = void Function(Pointer<Uint8>, int);
 
 /// Mở lõi qua FFI. `path` ghi đè đường dẫn thư viện (dùng khi test trên máy dev);
 /// nếu bỏ trống thì lấy biến môi trường `CHATCORE_LIB`, rồi tên mặc định theo nền tảng.
 Future<ChatCore> openChatCore({String? path}) async {
-  final lib = DynamicLibrary.open(path ?? Platform.environment['CHATCORE_LIB'] ?? _defaultName());
+  final lib = DynamicLibrary.open(
+    path ?? Platform.environment['CHATCORE_LIB'] ?? _defaultName(),
+  );
   return _FfiChatCore(lib);
 }
 
@@ -34,14 +38,14 @@ String _defaultName() {
 
 class _FfiChatCore implements ChatCore {
   _FfiChatCore(DynamicLibrary lib)
-    : _version = lib.lookupFunction<_VersionC, _VersionC>('chatcore_version'),
-      _strFree = lib.lookupFunction<_StrFreeC, _StrFree>('chatcore_string_free'),
-      _open = lib.lookupFunction<_OpenC, _Open>('chatcore_open'),
-      _openDevice = lib.lookupFunction<_OpenDeviceC, _Open>('chatcore_open_device'),
-      _openRestore = lib.lookupFunction<_OpenDeviceC, _Open>('chatcore_open_restore'),
-      _close = lib.lookupFunction<_CloseC, _Close>('chatcore_close'),
-      _call = lib.lookupFunction<_CallC, _Call>('chatcore_call'),
-      _bufFree = lib.lookupFunction<_BufFreeC, _BufFree>('chatcore_buf_free');
+      : _version = lib.lookupFunction<_VersionC, _VersionC>('chatcore_version'),
+        _strFree = lib.lookupFunction<_StrFreeC, _StrFree>('chatcore_string_free'),
+        _open = lib.lookupFunction<_OpenC, _Open>('chatcore_open'),
+        _openDevice = lib.lookupFunction<_OpenDeviceC, _Open>('chatcore_open_device'),
+        _openRestore = lib.lookupFunction<_OpenDeviceC, _Open>('chatcore_open_restore'),
+        _close = lib.lookupFunction<_CloseC, _Close>('chatcore_close'),
+        _call = lib.lookupFunction<_CallC, _Call>('chatcore_call'),
+        _bufFree = lib.lookupFunction<_BufFreeC, _BufFree>('chatcore_buf_free');
 
   final _VersionC _version;
   final _StrFree _strFree;

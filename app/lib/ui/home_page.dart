@@ -17,8 +17,7 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('BYO Chat'),
         actions: [
-          if (onLogout != null)
-            IconButton(key: const Key('logout'), tooltip: 'Đăng xuất', icon: const Icon(Icons.logout), onPressed: onLogout),
+          if (onLogout != null) IconButton(key: const Key('logout'), tooltip: 'Đăng xuất', icon: const Icon(Icons.logout), onPressed: onLogout),
         ],
       ),
       body: Center(
