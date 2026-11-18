@@ -50,7 +50,14 @@ class _Engine extends ChatEngine {
   List<ConvState> get conversations => _convs;
 
   @override
-  List<ChatMessage> messages(String convHex) => const [];
+  List<ChatMessage> messages(String convHex) => convHex == _convs[0].hexId
+      ? [
+          ChatMessage(id: 'a', mine: false, text: 'Chào bạn, tài liệu thiết kế xong chưa nhỉ?', tsMs: 1, state: MsgState.sent),
+          ChatMessage(id: 'b', mine: true, text: 'Xong rồi, mình vừa gửi bản 1.0.2.', tsMs: 2, state: MsgState.sent),
+          ChatMessage(id: 'c', mine: false, text: 'Tuyệt, mai mình gặp lúc 9 giờ nhé', tsMs: 3, state: MsgState.sent),
+          ChatMessage(id: 'd', mine: true, text: 'Ok, hẹn bạn ở quán quen.', tsMs: 4, state: MsgState.sent),
+        ]
+      : const [];
 
   @override
   GatewayState get connection => GatewayState.online;
