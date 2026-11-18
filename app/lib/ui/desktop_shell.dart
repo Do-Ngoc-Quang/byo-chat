@@ -30,12 +30,25 @@ class _DesktopShellState extends State<DesktopShell> {
       backgroundColor: Colors.white,
       body: Row(
         children: [
-          _Rail(onSettings: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => SettingsPage(engine: widget.engine, onLogout: widget.onLogout)))),
+          DesktopRail(
+            onSettings: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => SettingsPage(engine: widget.engine, onLogout: widget.onLogout),
+              ),
+            ),
+          ),
           SizedBox(
             width: 340,
             child: DecoratedBox(
-              decoration: const BoxDecoration(border: Border.symmetric(vertical: BorderSide(color: Ui.border, width: 0.5))),
-              child: ConversationsPage(engine: widget.engine, onLogout: widget.onLogout, selectedHexId: _selected, onOpen: (c) => setState(() => _selected = c.hexId)),
+              decoration: const BoxDecoration(
+                border: Border.symmetric(vertical: BorderSide(color: Ui.border, width: 0.5)),
+              ),
+              child: ConversationsPage(
+                engine: widget.engine,
+                onLogout: widget.onLogout,
+                selectedHexId: _selected,
+                onOpen: (c) => setState(() => _selected = c.hexId),
+              ),
             ),
           ),
           Expanded(
@@ -44,7 +57,13 @@ class _DesktopShellState extends State<DesktopShell> {
               builder: (context, _) {
                 final conv = widget.engine.conversations.where((c) => c.hexId == _selected).firstOrNull;
                 if (conv == null) {
-                  return const Center(child: Text('Chọn một cuộc trò chuyện để bắt đầu', key: Key('desktop-empty'), style: TextStyle(fontSize: 15, color: Ui.muted)));
+                  return const Center(
+                    child: Text(
+                      'Chọn một cuộc trò chuyện để bắt đầu',
+                      key: Key('desktop-empty'),
+                      style: TextStyle(fontSize: 15, color: Ui.muted),
+                    ),
+                  );
                 }
                 return ChatPage(key: ValueKey(conv.hexId), engine: widget.engine, conv: conv, embedded: true);
               },
@@ -56,8 +75,10 @@ class _DesktopShellState extends State<DesktopShell> {
   }
 }
 
-class _Rail extends StatelessWidget {
-  const _Rail({required this.onSettings});
+class DesktopRail extends StatelessWidget {
+  const DesktopRail({super.key, required this.onSettings, this.settingsActive = false, this.onChat});
+  final VoidCallback? onChat;
+  final bool settingsActive;
   final VoidCallback onSettings;
 
   @override
@@ -65,19 +86,40 @@ class _Rail extends StatelessWidget {
     return Container(
       width: 72,
       padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: const BoxDecoration(color: Ui.surfaceAlt, border: Border(right: BorderSide(color: Ui.border))),
+      decoration: const BoxDecoration(
+        color: Ui.surfaceAlt,
+        border: Border(right: BorderSide(color: Ui.border)),
+      ),
       child: Column(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(color: Ui.primary, borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Icons.chat_bubble_outline, size: 22, color: Colors.white),
+          InkWell(
+            key: const Key('rail-chat'),
+            borderRadius: BorderRadius.circular(12),
+            onTap: onChat,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(color: settingsActive ? null : Ui.primary, borderRadius: BorderRadius.circular(12)),
+              child: Icon(Icons.chat_bubble_outline, size: 22, color: settingsActive ? Ui.muted : Colors.white),
+            ),
           ),
           const SizedBox(height: 8),
-          const Opacity(opacity: 0.45, child: SizedBox(width: 44, height: 44, child: Icon(Icons.videocam_outlined, size: 22, color: Ui.muted))),
+          const Opacity(
+            opacity: 0.45,
+            child: SizedBox(width: 44, height: 44, child: Icon(Icons.videocam_outlined, size: 22, color: Ui.muted)),
+          ),
           const Spacer(),
-          IconButton(key: const Key('rail-settings'), tooltip: 'Cài đặt', onPressed: onSettings, icon: const Icon(Icons.settings_outlined, size: 22, color: Ui.muted)),
+          IconButton(
+            key: const Key('rail-settings'),
+            tooltip: 'Cài đặt',
+            onPressed: onSettings,
+            style: IconButton.styleFrom(
+              backgroundColor: settingsActive ? Ui.primary : null,
+              fixedSize: const Size.square(44),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            icon: Icon(Icons.settings_outlined, size: 22, color: settingsActive ? Colors.white : Ui.muted),
+          ),
         ],
       ),
     );
