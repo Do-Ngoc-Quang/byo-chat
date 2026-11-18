@@ -208,13 +208,68 @@ class _Item extends StatelessWidget {
               children: [
                 Icon(icon, size: 20, color: color),
                 const SizedBox(width: 12),
-                Text(
-                  label,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: color),
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: color),
+                  ),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bảng đính kèm Desktop (docs/ui/Desktop-Attach): 240 rộng, nổi ngay trên nút +, không nền mờ.
+/// Chưa có dịch vụ media nên cả ba mục mờ (xem docs/notes.md).
+Future<void> showAttachMenu(BuildContext context, Rect anchor) {
+  return showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Đóng',
+    barrierColor: Colors.transparent,
+    transitionDuration: const Duration(milliseconds: 120),
+    pageBuilder: (ctx, a1, a2) => AttachMenuView(anchor: anchor, onClose: () => Navigator.of(ctx).pop()),
+  );
+}
+
+class AttachMenuView extends StatelessWidget {
+  const AttachMenuView({super.key, required this.anchor, this.onClose});
+  final Rect anchor;
+  final VoidCallback? onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = MediaQuery.sizeOf(context).height;
+    return Material(
+      type: MaterialType.transparency,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onClose,
+        child: Stack(
+          children: [
+            Positioned(
+              key: const Key('attach-menu'),
+              left: anchor.left,
+              bottom: h - anchor.top + 28,
+              child: Container(
+                width: 240,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: _shadow),
+                child: const Column(
+                  children: [
+                    _Item(Icons.image_outlined, 'Ảnh và video'),
+                    _Item(Icons.insert_drive_file_outlined, 'Tệp'),
+                    _Item(Icons.photo_camera_outlined, 'Chụp ảnh'),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

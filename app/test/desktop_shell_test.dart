@@ -146,6 +146,21 @@ void main() {
     expect(find.text('Chỉnh sửa'), findsOneWidget);
   });
 
+  testWidgets('bấm + mở bảng đính kèm 240 rộng nổi trên composer', (t) async {
+    t.view.physicalSize = const Size(1280, 800);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    final e = _Engine();
+    await t.pumpWidget(MaterialApp(theme: Ui.theme(), home: DesktopShell(engine: e)));
+    await t.tap(find.byKey(Key('conv-${e.conversations[0].hexId}')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('attach-button')));
+    await t.pumpAndSettle();
+    expect(t.getSize(find.byKey(const Key('attach-menu'))).width, 240);
+    expect(find.text('Ảnh và video'), findsOneWidget);
+    expect(find.text('Chụp ảnh'), findsOneWidget);
+  });
+
   final dir = Platform.environment['SHOT_DIR'];
   testWidgets('chụp Desktop Inbox', (t) async {
     for (final f in [('Inter', 'assets/fonts/Inter.ttf'), ('MaterialIcons', Platform.environment['ICON_FONT'] ?? '')]) {
@@ -220,6 +235,28 @@ void main() {
       final b = key.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final img = await b.toImage(pixelRatio: 1);
       File('$dir/flutter-desktop-msgmenu.png').writeAsBytesSync((await img.toByteData(format: ui.ImageByteFormat.png))!.buffer.asUint8List());
+    });
+  }, skip: dir == null);
+
+  testWidgets('chụp Desktop Attach', (t) async {
+    for (final f in [('Inter', 'assets/fonts/Inter.ttf'), ('MaterialIcons', Platform.environment['ICON_FONT'] ?? '')]) {
+      final l = FontLoader(f.$1)..addFont(Future.value(ByteData.sublistView(File(f.$2).readAsBytesSync())));
+      await l.load();
+    }
+    t.view.physicalSize = const Size(1280, 800);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    final e = _Engine();
+    final key = GlobalKey();
+    await t.pumpWidget(RepaintBoundary(key: key, child: MaterialApp(theme: Ui.theme(), debugShowCheckedModeBanner: false, home: DesktopShell(engine: e))));
+    await t.tap(find.byKey(Key('conv-${e.conversations[0].hexId}')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('attach-button')));
+    await t.pumpAndSettle();
+    await t.runAsync(() async {
+      final b = key.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final img = await b.toImage(pixelRatio: 1);
+      File('$dir/flutter-desktop-attach.png').writeAsBytesSync((await img.toByteData(format: ui.ImageByteFormat.png))!.buffer.asUint8List());
     });
   }, skip: dir == null);
 }

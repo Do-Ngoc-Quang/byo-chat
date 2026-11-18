@@ -275,3 +275,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 ## Desktop: menu thao tác tin (Desktop-MsgMenu)
 - Popover (`MsgMenuPopover`) mở bằng bấm phải hoặc giữ lâu, đặt kề bong bóng (dưới, hoặc lật lên trên nếu hết chỗ), căn mép phải với tin của mình, không nền mờ; Mobile giữ nguyên.
 - Còn lệch: bản vẽ có vị trí cố định (không neo theo tin); Trả lời, phản ứng, Chỉnh sửa, Xóa vẫn mờ vì engine chưa có; khung chat hiển thị giờ trong bong bóng và có cột danh sách (đã ghi ở các mục trước).
+
+## Desktop: bảng đính kèm (Desktop-Attach)
+- Nút + ở composer Desktop mở bảng 240 (`AttachMenuView`) nổi trên nút, không nền mờ; vị trí khớp bản vẽ.
+- Còn lệch: cả ba mục (Ảnh và video, Tệp, Chụp ảnh) mờ và chưa bấm được vì chưa có dịch vụ media/camera (hoãn); nút + cũng mờ; chưa có Mobile-Attach tương ứng trong app.
