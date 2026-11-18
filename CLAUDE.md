@@ -47,7 +47,7 @@ Chưa kiểm chứng, làm ở cổng tương ứng (cần thiết bị thật t
 ## Quy trình làm việc
 - Tiến độ và checklist: `docs/ke-hoach.md` (nơi duy nhất). Đầu phiên đọc, cuối phiên tick; không theo dõi việc ở chỗ khác.
 - Git: Claude TỰ commit, push và tạo PR khi xong một việc (đã qua `flutter analyze`/test liên quan); không cần người dùng nói "cp" hay "pr". Làm từng bước nhỏ, mỗi việc một commit, báo ngắn sau khi xong. Không commit file bí mật (`.env`, khóa, token).
-- Git: không bao giờ push thẳng vào `main`, không force-push, không viết lại lịch sử nhánh đã push; làm trên nhánh, tạo PR vào `main` (quy ước ở `docs/quy-uoc-to-chuc.md`, mục "Quy trình git"). Tự theo dõi PR: CI đỏ thì sửa tận gốc. Việc MERGE PR vẫn chờ người dùng bảo.
+- Git: không bao giờ push thẳng vào `main`, không force-push, không viết lại lịch sử nhánh đã push; làm trên nhánh, tạo PR vào `main` (quy ước ở `docs/quy-uoc-to-chuc.md`, mục "Quy trình git"). Tự theo dõi PR: CI đỏ thì sửa tận gốc. Người dùng đã cho phép TỰ MERGE (squash) khi CI xanh, không có xung đột và không có review chặn: không chờ "merge PR đi" nữa; merge xong thì tách nhánh mới từ `origin/main` và làm việc tiếp, không hỏi lại. CI đỏ hoặc có xung đột/review chặn thì KHÔNG merge.
 - Git: ĐẦU PHIÊN, trước khi sửa gì, `git fetch --all --prune` rồi tách nhánh mới từ `origin/main` mới nhất (`git switch -c <nhánh> origin/main`); không làm tiếp trên nhánh cũ đã merge. Nhánh mặc định là `main`.
 - Mặc định mỗi phiên một mục tiêu nhỏ. Khi người dùng bảo "làm hết việc có thể" thì theo mục "Chế độ làm hết" bên dưới. Cuối phiên ghi quyết định và việc dở vào `docs/notes.md`; quyết định kiến trúc vào `docs/decisions/`.
 - Số phiên bản tài liệu: đổi phạm vi đổi số đầu; thêm thiết kế đổi số giữa; làm rõ đổi số cuối.
