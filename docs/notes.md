@@ -234,7 +234,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Thêm `DesktopShell` (`app/lib/ui/desktop_shell.dart`): từ rộng ≥ 900 dùng thanh điều hướng 72 + danh sách 340 + khung chat bên phải; hàng đang chọn nền #EEF2FF; hẹp hơn vẫn dùng bố cục Mobile. Có test widget (engine giả) và bản chụp 1280×800 so với `Desktop-Inbox`: ba cột, độ rộng và màu khớp.
 - Đã sửa ở bước sau: khung chat Desktop (`ChatPage(embedded: true)`) có đầu trang riêng (avatar, tên, Gọi video mờ, Thông tin), lề tin 48, bong bóng tối đa 460, ô nhập có nút "+" (mờ); danh sách Desktop bỏ hàng lọc Tất cả/Nhóm và dòng trạng thái khi online. Chụp lại 1280×800 khớp bố cục.
 - Còn lệch: giờ nằm trong bong bóng (thiết kế để ngoài, dưới tin cuối kèm dấu đã xem); không có dòng "Đang nhập…" (chưa có Typing); ô tìm cao hơn thiết kế, vẫn còn nút ⋯ cạnh Soạn tin; hàng danh sách chưa có giờ nhấn xanh cho hàng đang chọn; nút Cuộc gọi/Cài đặt dùng icon Material khác (Cuộc gọi mờ, chưa có); Thông tin nhóm/Hồ sơ liên hệ/Cài đặt vẫn mở trang đầy màn hình thay vì bảng bên phải.
-- Các màn Desktop-* khác (NewChat, Contact, Group, Profile, Devices, Link, Calls, Call, Incoming, Attach, MsgMenu, States, Viewer) chưa làm.
+- Các màn Desktop-* khác (Contact, Group, Profile, Devices, Link, Calls, Call, Incoming, Attach, MsgMenu, States, Viewer) chưa làm.
 
 ## Desktop: đăng nhập (Desktop-Login, Desktop-Otp)
 - `LoginPage` từ rộng ≥ 900 vẽ thẻ trắng 440, viền, bo 24, đệm 48/40 giữa nền #F7F8FA (cả bước nhập mã). Test widget + chụp 1280×800 so với `Desktop-Login`: thẻ, logo, tiêu đề, kích thước khớp.
@@ -243,3 +243,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 ## Desktop: cài đặt (Desktop-Settings)
 - `SettingsPage` từ rộng ≥ 900 dùng `SettingsDesktopView`: thanh điều hướng (`DesktopRail`, nút Cài đặt sáng) + danh sách mục 333 + nội dung tối đa 872; chụp 1280×800 so với thiết kế: khớp mốc x của tiêu đề và công tắc.
 - Lệch: công tắc Thông báo hiện mờ (chưa có dịch vụ cài đặt thông báo); "Quyền riêng tư" mờ, không chạm được; "Sao lưu"/"Thiết bị đã liên kết" mở trang riêng thay vì nội dung trong cột phải; biểu tượng thứ hai của thanh trái là camera (thiết kế: điện thoại).
+
+## Desktop: trò chuyện mới (Desktop-NewChat)
+- `NewChatView` từ rộng ≥ 900 là hộp thoại 480 bo 24 giữa màn, nền phủ #14171F 45%; chụp 1280×800 so với thiết kế: khung, ô tìm, "Tạo nhóm mới", hàng 64 khớp.
+- Lệch: nền phủ trên màu #F7F8FA chứ chưa phủ lên hộp thư thật (trang vẫn là route đầy màn hình); mục "Gần đây" thay "Danh bạ", không có dòng phụ (Đang hoạt động…) vì chưa có trạng thái hiện diện; avatar có một chữ cái (hàm chung của Avatar).
