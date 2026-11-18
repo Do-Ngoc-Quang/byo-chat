@@ -64,16 +64,24 @@ class FakeServer {
         if (q.code != '123456') {
           return _err(400, 'invalid_argument', ErrorCode.ERROR_CODE_INVALID_ARGUMENT, 'mã không đúng hoặc đã hết hạn');
         }
-        return _ok(VerifyOtpResponse(
-                accountId: List.filled(16, 1), isNewAccount: newAccount, sessionTicket: List.filled(32, 9))
-            .writeToBuffer());
+        return _ok(
+          VerifyOtpResponse(accountId: List.filled(16, 1), isNewAccount: newAccount, sessionTicket: List.filled(32, 9)).writeToBuffer(),
+        );
       case 'RegisterDevice':
         if (failRegister > 0) {
           failRegister--;
           return _err(503, 'unavailable', ErrorCode.ERROR_CODE_UNAVAILABLE, 'lỗi nội bộ');
         }
         registered = RegisterDeviceRequest()..mergeFromBuffer(r.bodyBytes);
-        return _ok(RegisterDeviceResponse(tokens: TokenPair(accessToken: 'tok', refreshToken: 'ref', accessExpiresMs: Int64(DateTime.now().millisecondsSinceEpoch + accessTtlMs))).writeToBuffer());
+        return _ok(
+          RegisterDeviceResponse(
+            tokens: TokenPair(
+              accessToken: 'tok',
+              refreshToken: 'ref',
+              accessExpiresMs: Int64(DateTime.now().millisecondsSinceEpoch + accessTtlMs),
+            ),
+          ).writeToBuffer(),
+        );
       case 'RefreshToken':
         refreshes++;
         if (refreshMode == 'down') return _err(503, 'unavailable', ErrorCode.ERROR_CODE_UNAVAILABLE, 'lỗi nội bộ');
@@ -81,7 +89,13 @@ class FakeServer {
         if (refreshMode == 'revoked' || q.refreshToken != 'ref') {
           return _err(401, 'unauthenticated', ErrorCode.ERROR_CODE_UNAUTHENTICATED, 'refresh token không hợp lệ');
         }
-        return _ok(TokenPair(accessToken: 'tok', refreshToken: 'ref2', accessExpiresMs: Int64(DateTime.now().millisecondsSinceEpoch + 900000)).writeToBuffer());
+        return _ok(
+          TokenPair(
+            accessToken: 'tok',
+            refreshToken: 'ref2',
+            accessExpiresMs: Int64(DateTime.now().millisecondsSinceEpoch + 900000),
+          ).writeToBuffer(),
+        );
       case 'CountKeyPackages':
         if (r.headers['authorization'] != 'Bearer tok') {
           return _err(401, 'unauthenticated', ErrorCode.ERROR_CODE_UNAUTHENTICATED, 'thiếu token');
