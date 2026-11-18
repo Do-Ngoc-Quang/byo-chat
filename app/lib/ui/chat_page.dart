@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../chat/chat_engine.dart';
 import '../chat/local_doc.dart';
+import 'call_label.dart';
 import 'contact_page.dart';
 import 'group_pages.dart';
 import 'media_bubble.dart';
@@ -137,6 +138,7 @@ class _ChatPageState extends State<ChatPage> {
                     itemBuilder: (context, i) {
                       final k = msgs.length - 1 - i;
                       final m = msgs[k];
+                      if (m.call != null) return CallLine(m.call!, mine: m.mine);
                       return _Bubble(
                         m,
                         engine: widget.engine,
