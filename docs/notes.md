@@ -322,3 +322,9 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Spec chưa có RPC từ chối: từ chối chỉ tắt chuông ở máy này và ghi "nhỡ" cục bộ; người gọi tự hết chuông. Thiết bị cùng tài khoản trả lời thì máy khác chưa tự tắt chuông (cần khung/RPC mới, đổi spec trước).
 - Hết phiên gọi: người gọi và người nghe đều ghi `CallEvent` kết thúc kèm thời lượng của riêng mình (hai mục `ended` cho một cuộc gọi); lịch sử S-14 cần gộp theo `call_id` khi làm.
 - Dòng cuộc gọi trong chat là dòng hệ thống nhỏ ở giữa (biểu tượng + chữ); `Mobile-Chat` chưa vẽ dòng này. Chưa chụp vì chưa có màn gọi.
+
+## Màn gọi (S-12, S-13)
+- Đã chụp đối chiếu 4 màn (Mobile 390×844, Desktop 1280×800): `Mobile-Call`, `Mobile-Incoming`, `Desktop-Call`, `Desktop-Incoming`. Bố cục, kích thước nút (60/56/72×56 khi gọi, 68/64 khi có cuộc gọi đến), ảnh tự xem 104×148 và 320×240, thẻ 420 bo 28 khớp. Lệch còn lại: chữ lệch 2–3 px theo chiều dọc (cách Flutter dàn dòng); ảnh đại diện dùng bảng màu pastel theo tên (thiết kế vẽ cố định màu xanh nhạt); biểu tượng dùng Material thay cho SVG của thiết kế.
+- Mic, Tắt camera, Đổi camera, Chia sẻ màn hình hiện mờ vì chưa có luồng media (cần LiveKit và thiết bị thật). Ô "Bạn" và hình người đối diện là chỗ giữ chỗ, chưa có video. Cuộc gọi dừng ở "Đang kết nối…" vì lớp media chưa gọi `markConnected`.
+- Chưa có trạng thái "mạng yếu", "đang kết nối lại", "không được cấp quyền micro/camera" (thuộc lớp media).
+- Lớp cuộc gọi là lớp phủ (`CallHost`) đặt trên toàn app, không dùng Navigator; cuộc gọi tới trong lúc đang gọi bị bỏ qua.
