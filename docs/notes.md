@@ -251,3 +251,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 ## Desktop: trò chuyện mới (Desktop-NewChat)
 - `NewChatView` từ rộng ≥ 900 là hộp thoại 480 bo 24 giữa màn, nền phủ #14171F 45%; chụp 1280×800 so với thiết kế: khung, ô tìm, "Tạo nhóm mới", hàng 64 khớp.
 - Lệch: nền phủ trên màu #F7F8FA chứ chưa phủ lên hộp thư thật (trang vẫn là route đầy màn hình); mục "Gần đây" thay "Danh bạ", không có dòng phụ (Đang hoạt động…) vì chưa có trạng thái hiện diện; avatar có một chữ cái (hàm chung của Avatar).
+
+## Desktop: thông tin nhóm (Desktop-Group)
+- `GroupInfoPage(embedded: true)` là bảng 340 bên phải khung chat Desktop, mở/đóng bằng nút ⓘ ở nhóm (`group-panel`); dùng chung `InfoTile` với Contact.
+- Lệch: thiết kế không có cột danh sách; 3 ô (Gọi video, Tắt tiếng, Tìm kiếm) làm mờ vì chưa có backend; thành viên hiện "Tài khoản xxxx" (chưa có ProfileService), không có nhãn "Quản trị" của thiết kế; nút "Thêm thành viên" chỉ hiện cho quản trị; nút Rời nhóm nằm đáy bảng (thiết kế không có). Chữ ở nút đỏ trong ảnh chụp bị lỗi font của môi trường test, không phải lỗi app.
+- Còn chưa làm: Profile, Devices, Link, Calls, Call, Incoming, Attach, MsgMenu, States, Viewer.

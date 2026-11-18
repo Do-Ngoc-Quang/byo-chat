@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../chat/chat_engine.dart';
 import 'chat_page.dart';
 import 'contact_page.dart';
+import 'group_pages.dart';
 import 'conversations_page.dart';
 import 'settings_page.dart';
 import 'theme.dart';
@@ -81,7 +82,8 @@ class _DesktopShellState extends State<DesktopShell> {
                         onInfo: () => setState(() => _info = !_info),
                       ),
                     ),
-                    if (_info && !conv.isGroup) ContactPanel(name: conv.title),
+                    if (_info)
+                      conv.isGroup ? GroupInfoPage(engine: widget.engine, conv: conv, embedded: true) : ContactPanel(name: conv.title),
                   ],
                 );
               },

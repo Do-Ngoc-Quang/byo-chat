@@ -51,8 +51,8 @@ class ContactView extends StatelessWidget {
   }
 }
 
-class _Tile extends StatelessWidget {
-  const _Tile(this.icon, this.label);
+class InfoTile extends StatelessWidget {
+  const InfoTile(this.icon, this.label, {super.key});
   final IconData icon;
   final String label;
 
@@ -93,11 +93,11 @@ List<Widget> _contactChildren(String name) => [
   const SizedBox(height: 22),
   const Row(
     children: [
-      _Tile(Icons.videocam_outlined, 'Gọi video'),
+      InfoTile(Icons.videocam_outlined, 'Gọi video'),
       SizedBox(width: 10),
-      _Tile(Icons.notifications_off_outlined, 'Tắt tiếng'),
+      InfoTile(Icons.notifications_off_outlined, 'Tắt tiếng'),
       SizedBox(width: 10),
-      _Tile(Icons.search, 'Tìm kiếm'),
+      InfoTile(Icons.search, 'Tìm kiếm'),
     ],
   ),
   const SizedBox(height: 26),
