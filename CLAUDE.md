@@ -49,6 +49,18 @@ Chưa kiểm chứng, làm ở cổng tương ứng (cần thiết bị thật t
 - Git: KHÔNG tự commit hay push; chỉ làm khi người dùng bảo (kể cả khi hook nhắc). "cp" = commit + push, người dùng nói "cp" thì làm cả hai. Làm từng bước nhỏ, sửa file xong thì báo.
 - Git: không push vào `main`; làm trên nhánh, tạo PR vào `main` (quy ước ở `docs/quy-uoc-to-chuc.md`, mục "Quy trình git").
 - Git: ĐẦU PHIÊN, trước khi sửa gì, `git fetch --all --prune` rồi tách nhánh mới từ `origin/main` mới nhất (`git switch -c <nhánh> origin/main`); không làm tiếp trên nhánh cũ đã merge. Nhánh mặc định là `main`.
-- Mỗi phiên một mục tiêu nhỏ. Cuối phiên ghi quyết định và việc dở vào `docs/notes.md`; quyết định kiến trúc vào `docs/decisions/`.
+- Mặc định mỗi phiên một mục tiêu nhỏ. Khi người dùng bảo "làm hết việc có thể" thì theo mục "Chế độ làm hết" bên dưới. Cuối phiên ghi quyết định và việc dở vào `docs/notes.md`; quyết định kiến trúc vào `docs/decisions/`.
 - Số phiên bản tài liệu: đổi phạm vi đổi số đầu; thêm thiết kế đổi số giữa; làm rõ đổi số cuối.
 - Số đo hiệu năng mốc (Windows native): 256 thiết bị, Commit cuối 22 KB, tạo 8 ms, nhận 2 ms (Welcome 48 KB). Mốc cũ ở 1.000 thiết bị: 92 KB, 33 ms, 11 ms. Android emulator chậm ~3 lần khi tạo; WASM ~5 lần. Test hiệu năng không được tệ hơn mốc đáng kể.
+
+## Chế độ làm hết (khi người dùng bảo "làm hết việc có thể")
+- Việc "có thể làm" = chạy và kiểm được trong môi trường mô phỏng (Linux container, Chrome/Node headless, CI). Mục cần máy thật, hạ tầng AWS thật, SMS/email thật, camera thì giữ "hoãn", không làm giả để tick.
+- Đầu phiên đọc `docs/ke-hoach.md`, lập danh sách việc có thể làm theo thứ tự giai đoạn (1→6), rồi làm lần lượt từng việc, không hỏi lại giữa chừng trừ khi cần quyết định thuộc về người dùng (đổi spec, đổi phạm vi, lệch thiết kế).
+- Mỗi việc: làm xong thì chạy lệnh kiểm tương ứng (mục "Lệnh"), sửa tới khi xanh, rồi tick trong `docs/ke-hoach.md`. Việc UI vẫn phải chụp đối chiếu `docs/ui/` mới được tick.
+- Git vẫn giữ nguyên: không tự commit/push; người dùng nói "cp" mới làm. Mỗi việc một commit riêng, nhánh tách từ `origin/main`, PR vào `main`, không gộp việc không liên quan.
+- Cuối phiên báo ngắn: đã xong gì, còn hoãn gì và vì sao, việc dở ghi vào `docs/notes.md`.
+
+## Môi trường dev (đã kiểm ở phiên Cài đặt)
+- Flutter ghim 3.47.9 (CI `app.yml`); 3.50 làm `flutter analyze` đỏ vì `material.dart` bị đánh dấu deprecated. Đổi phiên bản phải sửa cả CI và ghi vào `docs/notes.md`.
+- `app/lib/gen` (Dart từ proto) không nằm trong git: máy local sinh bằng `protoc` + `protoc_plugin`; CI dùng `buf generate --template buf.gen.app.yaml`.
+- Nhiều file trong repo dùng CRLF: dùng Edit hoặc kiểm kỹ khi thay chuỗi bằng script.
