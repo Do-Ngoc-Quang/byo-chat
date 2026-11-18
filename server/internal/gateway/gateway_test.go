@@ -13,6 +13,7 @@ import (
 	"byo-chat/server/gen/chat/v1/chatv1connect"
 	"byo-chat/server/internal/api"
 	"byo-chat/server/internal/auth"
+	"byo-chat/server/internal/call"
 	"byo-chat/server/internal/gateway"
 	"byo-chat/server/internal/ids"
 	"byo-chat/server/internal/message"
@@ -455,5 +456,33 @@ func TestWebSocketOrigin(t *testing.T) {
 	// không có Origin (app native) luôn được
 	if err := dial(""); err != nil {
 		t.Fatalf("không có Origin phải kết nối được: %v", err)
+	}
+}
+
+// IncomingCall (6.10): StartCall của A1 đổ chuông B1 đang kết nối; thiết bị của chính người gọi (A2) thì không.
+func TestIncomingCallFrame(t *testing.T) {
+	s := newStack(t, fastCfg())
+	a1, a2, b1, conv := s.twoParty()
+	cs := call.New(s.meta, s.svc.Bus, call.Config{URL: "wss://lk.test", APIKey: "k", APISecret: "s"})
+	cb, _ := s.connect(b1, nil)
+	ca, _ := s.connect(a2, nil)
+
+	tk, e := cs.StartCall(context.Background(), a1, &chatv1.StartCallRequest{ConvId: conv.Bytes(), Kind: chatv1.CallKind_CALL_KIND_VIDEO})
+	if e != nil {
+		t.Fatal(e)
+	}
+	f := cb.recv()
+	in := f.GetIncomingCall()
+	if in == nil || string(in.CallId) != string(tk.CallId) || string(in.ConvId) != string(conv.Bytes()) ||
+		in.Kind != chatv1.CallKind_CALL_KIND_VIDEO || string(in.CallerAccountId) != string(a1.AccountID.Bytes()) || in.StartedMs == 0 {
+		t.Fatalf("IncomingCall sai: %v", f)
+	}
+	if f.ReqId != 0 {
+		t.Fatalf("khung chủ động phải có req_id 0: %v", f.ReqId)
+	}
+	// A2 (cùng tài khoản người gọi) không bị đổ chuông: ping rồi chỉ nhận Pong.
+	ca.send(&chatv1.ClientFrame{ReqId: 9, Body: &chatv1.ClientFrame_Ping{Ping: &chatv1.Ping{Nonce: 1}}})
+	if p := ca.recv(); p.GetPong() == nil {
+		t.Fatalf("A2 không được nhận IncomingCall: %v", p)
 	}
 }

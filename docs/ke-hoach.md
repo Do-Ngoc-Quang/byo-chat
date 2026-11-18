@@ -57,7 +57,7 @@ Chỉ ghi thứ tự và cổng nghiệm thu, không ghi mốc thời gian. Chư
 - [x] `app/`: khung Flutter, tích hợp `chatcore` (FFI Android, WASM Web): cầu nối theo ADR 0006; đã chạy thật trên emulator Android x86_64 (API 37, trang 16 KB) và Chrome
 - [x] Cầu nối: API MLS byte-in/byte-out (`chatcore::api::Core`: key_package, create_group, add_members, join_welcome, apply_commit, external_join, encrypt/decrypt, epoch, sframe_key) qua FFI và WASM; kịch bản 1-1 + External Commit + SFrame qua trên Windows (FFI), Android emulator x86_64, Chrome. Chưa có: lưu bền trạng thái MLS, remove/update, mã hóa `Payload`/credential theo 6.1
 - [x] Server `AuthService` (OTP, RefreshToken), `DeviceService.RegisterDevice`, `KeyService` (ADR 0007, spec 1.1.1): chạy thật trên Postgres, qua Connect HTTP; credential 136 byte
-- [ ] Server: passkey (`Begin/FinishPasskey*`), gửi OTP thật (SMS/email), giới hạn tốc độ `FetchKeyPackages`, RPC thay last resort, kiểm sâu KeyPackage MLS ở Go
+- [ ] Server: passkey (`Begin/FinishPasskey*`), gửi OTP thật (SMS/email), giới hạn tốc độ `FetchKeyPackages` (ĐÃ làm: 60 lần/phút/thiết bị, trong bộ nhớ một node; nhiều node cần Valkey), RPC thay last resort, kiểm sâu KeyPackage MLS ở Go
 - [x] chatcore: khóa danh tính tài khoản, credential 136 byte, 100 KeyPackage một lần + last resort, kiểm KeyPackage nhận từ server (6.1, 6.2 bước 2); qua cầu nối, chạy thật trên FFI Windows, emulator Android x86_64, Chrome; vector credential Rust↔Go chung
 - [x] Client Connect (Dart, `package:http` + protobuf sinh từ proto) và đăng nhập OTP: màn hình, `LoginController` (RequestOtp → VerifyOtp → khóa + credential + 100 KeyPackage → RegisterDevice); e2e với server thật qua FFI Windows, emulator Android, Chrome (CORS)
 - [x] Lưu bền khóa thiết bị/khóa danh tính/trạng thái MLS và phiên (ADR 0008): snapshot AES-256-GCM trong chatcore, khóa ở Keystore (`flutter_secure_storage`), blob ở tệp/localStorage; khôi phục khi mở app, làm mới token, đăng xuất; chạy thật trên FFI Windows, emulator Android (Keystore thật), Chrome
@@ -111,7 +111,7 @@ Cổng nghiệm thu đạt: nhóm; thêm thiết bị bằng External Commit; kh
 ## Giai đoạn 6 — Gọi video
 - [ ] LiveKit, khóa SFrame = `Exporter("call", call_id, 32)`
   - [x] `chatcore::sframe`: nhãn `call`, chỉ số khóa = epoch, `KeyRing` (nhận khóa mới ngay, gửi sau 1 giây, giữ khóa cũ 10 giây); test đơn vị + `tests/sframe.rs` trên nhóm MLS thật (đổi khóa, người bị gỡ, vào giữa cuộc gọi)
-  - [ ] Server `CallService` (StartCall/JoinCall/EndCall, token LiveKit, `IncomingCall`)
+  - [x] Server `CallService` (StartCall/JoinCall/EndCall, token LiveKit HS256, khung `IncomingCall` qua gateway); test `internal/call`, `TestIncomingCallFrame`. Chưa có: push FCM/VoIP, dừng chuông khi thiết bị khác trả lời, kho cuộc gọi nhiều node, BlockService
   - [ ] Client: màn gọi, nối LiveKit + SFrame (cần LiveKit và thiết bị thật)
 - [ ] Đổi khóa khi có người vào/ra; giữ khóa cũ và mới theo chỉ số khóa
 - [ ] Kiểm Flutter Android và Safari (cần thiết bị thật; làm mô phỏng được đến đâu thì ghi rõ giới hạn)
