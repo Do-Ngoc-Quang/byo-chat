@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../auth/login_controller.dart';
 import '../gen/chat/v1/services.pbenum.dart';
 import 'backup_pages.dart';
+import 'desktop_shell.dart';
 import 'device_pages.dart';
 import 'theme.dart';
 
@@ -34,45 +35,66 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: c,
-      builder: (context, _) => Scaffold(
-        body: SafeArea(
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(24, c.step == LoginStep.code ? 8 : 96, 24, 24),
-                children: [
-                  if (c.step == LoginStep.code)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: IconButton(
-                        key: const Key('back-to-contact'),
-                        tooltip: 'Quay lại',
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: c.busy ? null : c.backToContact,
-                      ),
-                    ),
-                  const _LogoTile(),
-                  const SizedBox(height: 24),
-                  if (c.error != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: Text(
-                        c.error!,
-                        key: const Key('login-error'),
-                        style: const TextStyle(color: Ui.danger, fontSize: 14),
-                      ),
-                    ),
-                  if (c.step == LoginStep.contact) ..._contactForm(),
-                  if (c.step == LoginStep.code) ..._codeForm(),
-                  if (c.step == LoginStep.registering) ..._registering(),
-                ],
+      builder: (context, _) {
+        final children = <Widget>[
+          if (c.step == LoginStep.code)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                key: const Key('back-to-contact'),
+                tooltip: 'Quay lại',
+                icon: const Icon(Icons.arrow_back),
+                onPressed: c.busy ? null : c.backToContact,
+              ),
+            ),
+          const _LogoTile(),
+          const SizedBox(height: 24),
+          if (c.error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(
+                c.error!,
+                key: const Key('login-error'),
+                style: const TextStyle(color: Ui.danger, fontSize: 14),
+              ),
+            ),
+          if (c.step == LoginStep.contact) ..._contactForm(),
+          if (c.step == LoginStep.code) ..._codeForm(),
+          if (c.step == LoginStep.registering) ..._registering(),
+        ];
+        // Desktop (Desktop-Login/Otp): thẻ trắng 440 bo 24, viền, đệm 48/40, giữa nền xám nhạt.
+        if (MediaQuery.sizeOf(context).width >= desktopBreakpoint) {
+          return Scaffold(
+            backgroundColor: Ui.surfaceAlt,
+            body: Center(
+              child: SingleChildScrollView(
+                child: Container(
+                  key: const Key('login-card'),
+                  width: 440,
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Ui.border),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: children),
+                ),
+              ),
+            ),
+          );
+        }
+        return Scaffold(
+          body: SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: ListView(padding: EdgeInsets.fromLTRB(24, c.step == LoginStep.code ? 8 : 96, 24, 24), children: children),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
