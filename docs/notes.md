@@ -284,3 +284,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - `StatusBanner` ≥ 900 cao 40, chữ 14; `StateCard` nút không còn bị đệm tap-target 48 (cao thẻ khớp bản vẽ trong ~2px). Lưới 3 cột 960 chỉ dựng trong test chụp (bản vẽ là trang minh họa, không phải màn của app).
 - Còn lệch: icon wifi/khóa dùng Material (dày hơn nét 1.8 của bản vẽ); vài trạng thái (đăng xuất, đang cập nhật) chưa nối luồng thật.
 - Desktop-Viewer: hoãn, cần media (giai đoạn 5).
+
+## Giới hạn tốc độ FetchKeyPackages
+- Cửa sổ trượt 60 lần/phút theo `device_id`, dùng lại `ipLimiter`; vượt thì `RATE_LIMITED` kèm `retry_after_ms`.
+- Còn lệch: đếm trong bộ nhớ từng node (nhiều node cần Valkey, cùng giới hạn với StartLink). Chưa có test cấp handler, chỉ test bộ đếm.

@@ -24,3 +24,21 @@ func TestIPLimiter(t *testing.T) {
 		t.Fatal("hết cửa sổ thì được lại")
 	}
 }
+
+// Khóa theo thiết bị (UUID, không có cổng): mỗi thiết bị có hạn mức riêng cho FetchKeyPackages.
+func TestFetchKeyPackagesLimitPerDevice(t *testing.T) {
+	var l ipLimiter
+	now := time.Date(2026, 11, 7, 12, 0, 0, 0, time.UTC)
+	a, b := "0b1f6a52-0000-4000-8000-000000000001", "0b1f6a52-0000-4000-8000-000000000002"
+	for i := 0; i < FetchKeyPackagesPerMinute; i++ {
+		if ok, _ := l.allow(a, FetchKeyPackagesPerMinute, time.Minute, now); !ok {
+			t.Fatalf("lần %d phải được", i)
+		}
+	}
+	if ok, wait := l.allow(a, FetchKeyPackagesPerMinute, time.Minute, now.Add(time.Second)); ok || wait <= 0 {
+		t.Fatalf("vượt hạn mức phải bị chặn: ok=%v wait=%v", ok, wait)
+	}
+	if ok, _ := l.allow(b, FetchKeyPackagesPerMinute, time.Minute, now.Add(time.Second)); !ok {
+		t.Fatal("thiết bị khác không bị ảnh hưởng")
+	}
+}
