@@ -15,7 +15,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: chatcore }
       - uses: subosito/flutter-action@v2
-        with: { channel: stable, cache: true }
+        with: { flutter-version: "3.47.9", channel: stable, cache: true }
       # Mã Dart từ proto (plugin remote của BSR).
       - uses: bufbuild/buf-setup-action@v1
       - run: buf generate --template buf.gen.app.yaml
