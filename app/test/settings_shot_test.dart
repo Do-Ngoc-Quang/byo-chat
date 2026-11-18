@@ -6,6 +6,7 @@ import 'package:byo_chat/ui/settings_page.dart';
 import 'package:byo_chat/ui/contact_page.dart';
 import 'package:byo_chat/ui/msg_menu.dart';
 import 'package:byo_chat/ui/states.dart';
+import 'package:byo_chat/ui/profile_setup_page.dart';
 import 'package:byo_chat/ui/theme.dart';
 import 'package:byo_chat/ui/viewer_page.dart';
 import 'package:flutter/material.dart';
@@ -140,6 +141,11 @@ void main() {
   testWidgets(
     'chụp Trình xem',
     (t) => shot(t, 'flutter-viewer', ViewerView(sender: 'Minh Anh', when: 'Hôm nay, 09:41', index: 3, total: 12, onClose: _noop)),
+    skip: dir == null,
+  );
+  testWidgets(
+    'chụp Thiết lập hồ sơ',
+    (t) => shot(t, 'flutter-profile', ProfileSetupView(initialName: 'Nguyễn Bảo', onDone: (_) {})),
     skip: dir == null,
   );
 }
