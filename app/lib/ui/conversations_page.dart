@@ -8,6 +8,7 @@ import 'chat_page.dart';
 import 'device_pages.dart';
 import 'new_chat_page.dart';
 import 'group_pages.dart';
+import 'calls_page.dart';
 import 'settings_page.dart';
 import 'states.dart';
 import 'call_label.dart';
@@ -69,6 +70,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                         onSelected: (v) => _menu(context, v),
                         itemBuilder: (_) => [
                           const PopupMenuItem(key: Key('menu-group'), value: 'group', child: Text('Nhóm mới')),
+                          const PopupMenuItem(key: Key('menu-calls'), value: 'calls', child: Text('Cuộc gọi')),
                           const PopupMenuItem(key: Key('menu-settings'), value: 'settings', child: Text('Cài đặt')),
                           const PopupMenuItem(key: Key('menu-devices'), value: 'devices', child: Text('Thiết bị của tôi')),
                           const PopupMenuItem(key: Key('menu-backup'), value: 'backup', child: Text('Sao lưu')),
@@ -175,6 +177,19 @@ class _ConversationsPageState extends State<ConversationsPage> {
     switch (v) {
       case 'group':
         nav.push(MaterialPageRoute<void>(builder: (_) => GroupCreatePage(engine: engine)));
+      case 'calls':
+        nav.push(
+          MaterialPageRoute<void>(
+            builder: (ctx) => CallsPage(
+              engine: engine,
+              onBack: () => Navigator.of(ctx).pop(),
+              onOpen: (convHex) {
+                final conv = engine.conversations.where((c) => c.hexId == convHex).firstOrNull;
+                if (conv != null) Navigator.of(ctx).push(MaterialPageRoute<void>(builder: (_) => ChatPage(engine: engine, conv: conv)));
+              },
+            ),
+          ),
+        );
       case 'settings':
         nav.push(MaterialPageRoute<void>(builder: (_) => SettingsPage(engine: engine, onLogout: widget.onLogout)));
       case 'devices':

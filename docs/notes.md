@@ -328,3 +328,9 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Mic, Tắt camera, Đổi camera, Chia sẻ màn hình hiện mờ vì chưa có luồng media (cần LiveKit và thiết bị thật). Ô "Bạn" và hình người đối diện là chỗ giữ chỗ, chưa có video. Cuộc gọi dừng ở "Đang kết nối…" vì lớp media chưa gọi `markConnected`.
 - Chưa có trạng thái "mạng yếu", "đang kết nối lại", "không được cấp quyền micro/camera" (thuộc lớp media).
 - Lớp cuộc gọi là lớp phủ (`CallHost`) đặt trên toàn app, không dùng Navigator; cuộc gọi tới trong lúc đang gọi bị bỏ qua.
+
+## Lịch sử cuộc gọi (S-14)
+- Đã chụp đối chiếu `Mobile-Calls` (390×844) và cột 480 của `Desktop-Calls`. Khớp: tiêu đề 28/24, bộ lọc Tất cả/Nhỡ, hàng 68, avatar 48, tên 16/600 và dòng phụ 13, màu đỏ cho nhỡ, nút gọi lại 44 màu nhấn.
+- Lệch còn lại: Mobile chưa có thanh tab dưới (Tin nhắn / Cuộc gọi / Cài đặt) của thiết kế; app mở lịch sử từ menu ⋮ của danh sách chat. Biểu tượng hướng gọi dùng Material (`call_made/received/missed`) thay SVG của thiết kế; avatar dùng bảng màu theo tên.
+- Desktop: ô phải chỉ có chữ "Chọn một cuộc gọi để xem chi tiết" như thiết kế (chưa có trang chi tiết); chạm hàng chuyển về khung chat của hội thoại đó.
+- `CallEvent` không mang loại cuộc gọi (thoại/video) nên nút gọi lại luôn gọi video. Thời lượng làm tròn lên theo phút.
