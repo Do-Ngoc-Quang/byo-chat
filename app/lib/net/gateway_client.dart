@@ -150,15 +150,11 @@ class GatewayClient {
       await ch.ready;
       _set(GatewayState.authenticating);
       _lastFrame = DateTime.now();
-      ch.sink.add(ClientFrame(
-        hello: Hello(
-          protoVersion: 1,
-          deviceId: deviceId,
-          accessToken: accessToken(),
-          inboxCursor: inboxCursor(),
-          platform: platform,
-        ),
-      ).writeToBuffer());
+      ch.sink.add(
+        ClientFrame(
+          hello: Hello(protoVersion: 1, deviceId: deviceId, accessToken: accessToken(), inboxCursor: inboxCursor(), platform: platform),
+        ).writeToBuffer(),
+      );
 
       await for (final data in ch.stream) {
         _lastFrame = DateTime.now();
@@ -182,8 +178,11 @@ class GatewayClient {
             _pending.remove(f.reqId.toInt())?.complete(f.sendResult);
           case ServerFrame_Body.error:
             final e = f.error;
-            _pending.remove(f.reqId.toInt())?.completeError(GatewayException(e.message,
-                code: e.code, currentEpoch: e.currentEpoch.toInt(), retryAfterMs: e.retryAfterMs));
+            _pending
+                .remove(f.reqId.toInt())
+                ?.completeError(
+                  GatewayException(e.message, code: e.code, currentEpoch: e.currentEpoch.toInt(), retryAfterMs: e.retryAfterMs),
+                );
           default:
             break; // Pong, presence, receipt, incoming_call: chưa dùng
         }
@@ -220,9 +219,12 @@ class GatewayClient {
     final c = Completer<SendResult>();
     _pending[id] = c;
     ch.sink.add(ClientFrame(reqId: Int64(id), send: m).writeToBuffer());
-    return c.future.timeout(requestTimeout, onTimeout: () {
-      _pending.remove(id);
-      throw GatewayException('quá hạn phản hồi');
-    });
+    return c.future.timeout(
+      requestTimeout,
+      onTimeout: () {
+        _pending.remove(id);
+        throw GatewayException('quá hạn phản hồi');
+      },
+    );
   }
 }

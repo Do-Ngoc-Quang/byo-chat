@@ -133,4 +133,5 @@ Quy tắc: mỗi việc UI trong kế hoạch này (ở mọi giai đoạn) ch�
 - [ ] Menu tin nhắn (S-06): đã có `showMsgMenu`/`MsgMenuView`, giữ lâu bong bóng để mở, Sao chép chạy thật; ĐÃ chụp đối chiếu Mobile-MsgMenu, còn lệch ghi ở `docs/notes.md` (phản ứng, Trả lời, Sửa, Xóa chưa có engine; chưa có Desktop) nên chưa tick
 - [ ] Trạng thái trống/lỗi (S-18): đã có `StateCard`/`StatusBanner`, dùng ở danh sách chat; ĐÃ chụp đối chiếu Mobile-States, còn lệch ghi ở `docs/notes.md` (một số trạng thái chưa nối luồng, chưa Desktop) nên chưa tick
 - [ ] Trình xem ảnh/tệp (S-08): đã có `ViewerView`, ĐÃ chụp đối chiếu Mobile-Viewer; chưa nối vào chat vì chưa có media (giai đoạn 5), chưa Desktop nên chưa tick
-- [ ] Còn lại: màn thiết kế mà app chưa có (Profile); bố cục Desktop nhiều cột; so sánh ảnh với thiết kế cho danh sách có dữ liệu và khung chat
+- [ ] Thiết lập hồ sơ (S-03): đã có `ProfileSetupView`, ĐÃ chụp đối chiếu Mobile-Profile; chưa nối luồng đăng ký vì thiếu ProfileService, chưa chọn ảnh, chưa Desktop nên chưa tick
+- [ ] Còn lại: bố cục Desktop nhiều cột cho mọi màn; so sánh ảnh với thiết kế cho danh sách có dữ liệu và khung chat

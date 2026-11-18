@@ -225,3 +225,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 ## Trình xem ảnh và tệp (S-08) — đối chiếu Mobile-Viewer
 - Thêm `ViewerView` (`app/lib/ui/viewer_page.dart`): nền #0E1016, thanh đầu (đóng, người gửi, "thời gian · i / n"), vùng xem 420 bo 12, Lưu/Chia sẻ; chụp 390×844 khớp thiết kế.
 - Chưa nối vào chat: chưa có media (giai đoạn 5, `MediaService`), nên không có mục để chạm. Lưu/Chia sẻ hiện mờ; chưa có vuốt chuyển mục, trạng thái đang tải/lỗi/tệp không xem trước. Chưa có Desktop-Viewer. Lệch nhỏ: biểu tượng đóng/lưu/chia sẻ dùng bộ Material.
+
+## Thiết lập hồ sơ (S-03) — đối chiếu Mobile-Profile
+- Thêm `ProfileSetupView` (`app/lib/ui/profile_setup_page.dart`): tiêu đề 28, avatar 112 chữ cái đầu của từ cuối, ô tên 56 viền 2 xanh, nút Hoàn tất pill 52 (tắt khi chưa có tên); chụp 390×844 khớp thiết kế, lệch vài px khoảng cách dọc và cỡ chữ trong ô.
+- Chưa nối vào luồng đăng nhập/đăng ký: cần `ProfileService` (server chưa có) để lưu tên và ảnh. Nút máy ảnh hiện mờ (chưa chọn ảnh). Chưa có Desktop-Profile (thẻ giữa trang).

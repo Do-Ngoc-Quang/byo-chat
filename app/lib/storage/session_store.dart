@@ -18,8 +18,8 @@ import 'secret_store.dart';
 /// Mất khóa hoặc blob thì không khôi phục được (phải đăng nhập lại như thiết bị mới).
 class SessionStore {
   SessionStore({required this.secrets, required this.blobs, this.namespace = '', DateTime Function()? now, Random? random})
-      : _now = now ?? DateTime.now,
-        _random = random ?? Random.secure();
+    : _now = now ?? DateTime.now,
+      _random = random ?? Random.secure();
 
   final SecretStore secrets;
   final BlobStore blobs;
