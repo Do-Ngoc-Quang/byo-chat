@@ -279,3 +279,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 ## Desktop: bảng đính kèm (Desktop-Attach)
 - Nút + ở composer Desktop mở bảng 240 (`AttachMenuView`) nổi trên nút, không nền mờ; vị trí khớp bản vẽ.
 - Còn lệch: cả ba mục (Ảnh và video, Tệp, Chụp ảnh) mờ và chưa bấm được vì chưa có dịch vụ media/camera (hoãn); nút + cũng mờ; chưa có Mobile-Attach tương ứng trong app.
+
+## Desktop: trạng thái dùng chung (Desktop-States)
+- `StatusBanner` ≥ 900 cao 40, chữ 14; `StateCard` nút không còn bị đệm tap-target 48 (cao thẻ khớp bản vẽ trong ~2px). Lưới 3 cột 960 chỉ dựng trong test chụp (bản vẽ là trang minh họa, không phải màn của app).
+- Còn lệch: icon wifi/khóa dùng Material (dày hơn nét 1.8 của bản vẽ); vài trạng thái (đăng xuất, đang cập nhật) chưa nối luồng thật.
+- Desktop-Viewer: hoãn, cần media (giai đoạn 5).
