@@ -111,7 +111,8 @@ impl Core {
     /// [kp, credential, identity_pub, expected_account_id] -> [] (spec 6.2 bước 2); `snapshot` [key 32 byte] ->
     /// [sealed] (lưu bền, ADR 0008; khôi phục bằng `Core::open_restore`); `rename_group` [cũ, mới] -> []; `drop_group`
     /// [conv] -> [] (xóa cả khóa); `group_members` [conv] -> [credential của từng lá]; `app_state_set` [bytes] -> [];
-    /// `app_state_get` [] -> [bytes] (đi cùng snapshot).
+    /// `app_state_get` [] -> [bytes] (đi cùng snapshot). Media (không cần nhóm): `media_key_new` [] -> [key, nonce_prefix];
+    /// `media_encrypt` [key, nonce_prefix, plain] -> [ciphertext, sha256]; `media_decrypt` [key, nonce_prefix, sha256, ciphertext] -> [plain].
     pub fn call(&mut self, op: &str, args: &[u8]) -> Result<Vec<u8>> {
         let a = unpack(args)?;
         let need = |n: usize| -> Result<()> {
@@ -313,6 +314,21 @@ impl Core {
             "backup_open" => {
                 need(2)?;
                 Self::backup_open(&a[0], &a[1])?
+            }
+            "media_key_new" => {
+                need(0)?;
+                let k = crate::media::MediaKey::generate();
+                pack(&[&k.key, &k.nonce_prefix])
+            }
+            "media_encrypt" => {
+                need(3)?;
+                let (ct, h) = crate::media::encrypt(&a[2], &a[0], &a[1]).map_err(|e| format!("media_encrypt: {e:?}"))?;
+                pack(&[&ct, &h])
+            }
+            "media_decrypt" => {
+                need(4)?;
+                let p = crate::media::decrypt(&a[3], &a[0], &a[1], &a[2]).map_err(|e| format!("media_decrypt: {e:?}"))?;
+                pack(&[&p])
             }
             "link_start" => {
                 need(0)?;

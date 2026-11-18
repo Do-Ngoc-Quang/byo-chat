@@ -58,3 +58,25 @@ fn pack_unpack_round_trip() {
     let got = unpack(&pack(&items)).unwrap();
     assert_eq!(got, items.iter().map(|i| i.to_vec()).collect::<Vec<_>>());
 }
+
+/// Media qua bề mặt byte: sinh khóa, mã hóa, giải mã; sai hash và sai khóa bị từ chối.
+#[test]
+fn media_qua_api_byte() {
+    let mut c = Core::new(b"alice-1").unwrap();
+    let k = call(&mut c, "media_key_new", &[]);
+    let (key, prefix) = (&k[0], &k[1]);
+    assert_eq!((key.len(), prefix.len()), (32, 7));
+    let plain: Vec<u8> = (0..150_000u32).map(|i| (i % 251) as u8).collect();
+    let out = call(&mut c, "media_encrypt", &[key, prefix, &plain]);
+    let (ct, h) = (&out[0], &out[1]);
+    assert_eq!(h.len(), 32);
+    assert_eq!(call(&mut c, "media_decrypt", &[key, prefix, h, ct])[0], plain);
+
+    let try_call = |c: &mut Core, args: &[&[u8]]| c.call("media_decrypt", &pack(args));
+    let mut bad = h.clone();
+    bad[0] ^= 1;
+    assert!(try_call(&mut c, &[key, prefix, &bad, ct]).is_err());
+    let other = call(&mut c, "media_key_new", &[]);
+    assert!(try_call(&mut c, &[&other[0], prefix, h, ct]).is_err());
+    assert!(c.call("media_encrypt", &pack(&[key, prefix])).is_err(), "thiếu đối số");
+}
