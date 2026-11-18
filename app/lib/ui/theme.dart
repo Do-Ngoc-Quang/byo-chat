@@ -154,7 +154,7 @@ String shortTime(int ms, {DateTime? now}) {
 /// Khung màn phụ theo docs/ui (Group/Devices/Link...): nút quay lại 44px, tiêu đề 28/600, mô tả 15 xám, nội dung cuộn,
 /// và vùng nút cố định ở đáy (24px hai bên, 32px dưới). `key` đặt lên Scaffold để test tìm màn.
 class ScreenScaffold extends StatelessWidget {
-  const ScreenScaffold({super.key, this.title, this.subtitle, this.header, required this.children, this.bottom, this.titleSize = 28});
+  const ScreenScaffold({super.key, this.title, this.subtitle, this.header, required this.children, this.bottom, this.titleSize = 28, this.padding = const EdgeInsets.fromLTRB(24, 8, 24, 16)});
 
   final String? title, subtitle;
 
@@ -163,6 +163,9 @@ class ScreenScaffold extends StatelessWidget {
   final List<Widget> children;
   final Widget? bottom;
   final double titleSize;
+
+  /// Lề của vùng cuộn; mặc định 24, màn Cài đặt theo bản vẽ dùng 20.
+  final EdgeInsets padding;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -188,7 +191,7 @@ class ScreenScaffold extends StatelessWidget {
                 ),
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                  padding: padding,
                   children: [
                     ?header,
                     if (header == null && title != null) ...[

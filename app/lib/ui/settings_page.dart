@@ -41,9 +41,28 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     void open(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+    return SettingsView(
+      accountCode: _id,
+      onBackup: () => open(BackupPage(engine: engine)),
+      onDevices: () => open(DevicesPage(engine: engine)),
+      onLogout: onLogout == null ? null : () => _logout(context),
+    );
+  }
+}
+
+/// Phần giao diện thuần của Cài đặt (tách khỏi engine để chụp ảnh đối chiếu được).
+class SettingsView extends StatelessWidget {
+  const SettingsView({super.key, required this.accountCode, this.onBackup, this.onDevices, this.onLogout});
+
+  final String accountCode;
+  final VoidCallback? onBackup, onDevices, onLogout;
+
+  @override
+  Widget build(BuildContext context) {
     return ScreenScaffold(
       key: const Key('settings-page'),
       title: 'Cài đặt',
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       children: [
         Container(
           padding: const EdgeInsets.all(16),
@@ -57,7 +76,7 @@ class SettingsPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Tài khoản của tôi', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-                    Text('Mã $_id…', style: const TextStyle(fontSize: 13, color: Ui.muted)),
+                    Text('Mã $accountCode…', style: const TextStyle(fontSize: 13, color: Ui.muted)),
                   ],
                 ),
               ),
@@ -65,9 +84,9 @@ class SettingsPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        SettingsRow(key: const Key('settings-backup'), icon: Icons.cloud_outlined, title: 'Sao lưu', subtitle: 'Recovery key và bản sao lưu', onTap: () => open(BackupPage(engine: engine))),
-        SettingsRow(key: const Key('settings-devices'), icon: Icons.desktop_windows_outlined, title: 'Thiết bị đã liên kết', onTap: () => open(DevicesPage(engine: engine))),
-        if (onLogout != null) SettingsRow(key: const Key('settings-logout'), icon: Icons.logout, title: 'Đăng xuất', danger: true, onTap: () => _logout(context)),
+        SettingsRow(key: const Key('settings-backup'), icon: Icons.cloud_outlined, title: 'Sao lưu', subtitle: 'Recovery key và bản sao lưu', onTap: onBackup ?? () {}),
+        SettingsRow(key: const Key('settings-devices'), icon: Icons.desktop_windows_outlined, title: 'Thiết bị đã liên kết', onTap: onDevices ?? () {}),
+        if (onLogout != null) SettingsRow(key: const Key('settings-logout'), icon: Icons.logout, title: 'Đăng xuất', danger: true, onTap: onLogout!),
       ],
     );
   }
