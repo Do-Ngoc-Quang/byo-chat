@@ -5,6 +5,7 @@ pub mod credential;
 pub mod media;
 pub mod mls;
 pub mod scenarios;
+pub mod sframe;
 pub mod sim;
 pub mod pb {
     include!(concat!(env!("OUT_DIR"), "/chat.v1.rs"));

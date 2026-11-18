@@ -303,3 +303,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Token LiveKit: JWT HS256 tự ký (iss = API key, sub = device_id, phòng = call_id, hạn 15 phút); chưa thử với LiveKit thật (cần Docker/LiveKit).
 - `IncomingCall` đi qua subject NATS `call.<device_id>` và gateway chuyển thành khung chủ động; không vào hộp thư. Thiết bị không có kết nối chưa được báo (cần FCM/VoIP push thật).
 - Chưa làm: dừng chuông khi thiết bị khác cùng tài khoản trả lời (spec 6.10, chưa có khung), `StartCall` từ chối khi bị chặn (BlockService chưa có), cấu hình LiveKit qua biến môi trường của `cmd/`.
+## Khóa SFrame (chatcore::sframe)
+- Nhãn exporter: giao-thuc.md 6.9 ghi `chat.call.v1`, còn CLAUDE.md, thiet-ke-chinh.md mục 12 và PoC dùng `call`. Chọn `call` (đã kiểm chứng), sửa 6.9 cho khớp; nếu muốn đổi nhãn thì đổi đồng loạt cả spec và `sframe::LABEL`.
+- Chỉ số khóa SFrame = số epoch (u32), thay vì "chỉ số kế tiếp": thiết bị vào giữa cuộc gọi tự khớp, không cần phối hợp. Đây là chi tiết triển khai, spec giữ nguyên.
+- Đã kiểm: chỉ logic khóa trên MLS thật. Chưa kiểm: mã hóa khung SFrame thật với LiveKit, Safari, Flutter Android (cần thiết bị thật).
