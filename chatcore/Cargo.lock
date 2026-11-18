@@ -207,6 +207,7 @@ dependencies = [
 name = "chatcore"
 version = "0.1.0"
 dependencies = [
+ "aes-gcm",
  "getrandom 0.2.17",
  "js-sys",
  "openmls",
@@ -217,6 +218,7 @@ dependencies = [
  "prost",
  "prost-build",
  "protoc-bin-vendored",
+ "sha2",
  "tls_codec",
  "wasm-bindgen",
 ]

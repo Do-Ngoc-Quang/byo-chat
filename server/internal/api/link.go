@@ -152,3 +152,48 @@ func (c *Call) EndCall(ctx context.Context, r *connect.Request[chatv1.EndCallReq
 	}
 	return connect.NewResponse(resp), nil
 }
+
+// Media: MediaService. Mọi RPC cần access token của thiết bị còn hiệu lực.
+type Media struct {
+	chatv1connect.UnimplementedMediaServiceHandler
+	Svc      *account.Service
+	Verifier auth.Verifier
+}
+
+func (m *Media) Handler() (string, http.Handler) { return chatv1connect.NewMediaServiceHandler(m) }
+
+func (m *Media) CreateUpload(ctx context.Context, r *connect.Request[chatv1.CreateUploadRequest]) (*connect.Response[chatv1.CreateUploadResponse], error) {
+	dev, e := authDevice(ctx, r.Header(), m.Verifier, m.Svc.Meta, m.Svc.Now())
+	if e != nil {
+		return nil, toConnect(e)
+	}
+	resp, e := m.Svc.CreateUpload(ctx, dev, r.Msg)
+	if e != nil {
+		return nil, toConnect(e)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (m *Media) CompleteUpload(ctx context.Context, r *connect.Request[chatv1.CompleteUploadRequest]) (*connect.Response[chatv1.CompleteUploadResponse], error) {
+	dev, e := authDevice(ctx, r.Header(), m.Verifier, m.Svc.Meta, m.Svc.Now())
+	if e != nil {
+		return nil, toConnect(e)
+	}
+	resp, e := m.Svc.CompleteUpload(ctx, dev, r.Msg)
+	if e != nil {
+		return nil, toConnect(e)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (m *Media) GetDownloadUrl(ctx context.Context, r *connect.Request[chatv1.GetDownloadUrlRequest]) (*connect.Response[chatv1.GetDownloadUrlResponse], error) {
+	dev, e := authDevice(ctx, r.Header(), m.Verifier, m.Svc.Meta, m.Svc.Now())
+	if e != nil {
+		return nil, toConnect(e)
+	}
+	resp, e := m.Svc.GetDownloadUrl(ctx, dev, r.Msg)
+	if e != nil {
+		return nil, toConnect(e)
+	}
+	return connect.NewResponse(resp), nil
+}

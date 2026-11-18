@@ -160,6 +160,7 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 		(&api.Key{Svc: acc, Verifier: tok}).Handler,
 		(&api.Profile{Svc: acc, Verifier: tok}).Handler,
 		(&api.Backup{Svc: acc, Verifier: tok}).Handler,
+		(&api.Media{Svc: acc, Verifier: tok}).Handler,
 		(&api.Call{Svc: call.New(meta, svc.Bus, cfg.LiveKit), Meta: meta, Verifier: tok}).Handler,
 	} {
 		p, h := hf()

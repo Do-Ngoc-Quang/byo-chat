@@ -285,6 +285,15 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Còn lệch: icon wifi/khóa dùng Material (dày hơn nét 1.8 của bản vẽ); vài trạng thái (đăng xuất, đang cập nhật) chưa nối luồng thật.
 - Desktop-Viewer: hoãn, cần media (giai đoạn 5).
 
+## MediaService (server)
+- Khóa đối tượng `media/<id>` (riêng) và `media-public/<id>` (ảnh đại diện); không thêm bảng DB. Giới hạn khởi điểm 100 MiB/tệp (`MaxMediaBytes`), chốt lại theo chi phí.
+- `GetDownloadUrl`: mọi thiết bị đã đăng nhập xin được URL theo `media_id` (ciphertext, khóa nằm trong tin MLS); chưa kiểm tư cách thành viên.
+- `CompleteUpload` chỉ kiểm đối tượng đã có; chưa xác minh hash (client kiểm khi tải xuống). Tải nhiều phần hoãn.
+
+## Mã hóa media (chatcore::media)
+- `nonce_prefix` dài 7 byte; nonce 12 byte = prefix || chỉ số khối (u32 BE) || cờ khối cuối. Spec chưa nêu độ dài tiền tố, ghi ở đây; sửa spec mục 11 nếu muốn cố định.
+- Khối 64 KiB; tệp rỗng vẫn một khối cuối chỉ có tag. Dùng crate `aes-gcm` 0.10, `sha2` 0.10, `getrandom` 0.2.
+- Việc còn: nối vào FFI/WASM, mã hóa thumbnail riêng, truyền stream (hiện mã hóa trong bộ nhớ).
 ## Giới hạn tốc độ FetchKeyPackages
 - Cửa sổ trượt 60 lần/phút theo `device_id`, dùng lại `ipLimiter`; vượt thì `RATE_LIMITED` kèm `retry_after_ms`.
 - Còn lệch: đếm trong bộ nhớ từng node (nhiều node cần Valkey, cùng giới hạn với StartLink). Chưa có test cấp handler, chỉ test bộ đếm.
