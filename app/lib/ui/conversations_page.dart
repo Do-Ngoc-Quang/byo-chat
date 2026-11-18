@@ -5,9 +5,8 @@ import '../chat/local_doc.dart';
 import '../net/gateway_client.dart';
 import 'backup_pages.dart';
 import 'chat_page.dart';
-import 'contact_dialog.dart';
 import 'device_pages.dart';
-import 'errors.dart';
+import 'new_chat_page.dart';
 import 'group_pages.dart';
 import 'settings_page.dart';
 import 'theme.dart';
@@ -171,19 +170,8 @@ class _ConversationsPageState extends State<ConversationsPage> {
     }
   }
 
-  Future<void> _newChat(BuildContext context) async {
-    final nav = Navigator.of(context);
-    final dest = await askContact(context, title: 'Cuộc trò chuyện mới', ok: 'Bắt đầu');
-    if (dest == null || !context.mounted) return;
-    ConvState? c;
-    final ok = await guarded(context, () async => c = await engine.openDirect(dest.$1, dest.$2));
-    if (ok && c != null) {
-      nav.push(
-        MaterialPageRoute<void>(
-          builder: (_) => ChatPage(engine: engine, conv: c!),
-        ),
-      );
-    }
+  void _newChat(BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => NewChatPage(engine: engine)));
   }
 }
 

@@ -201,3 +201,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Khớp: lề 20, tiêu đề 28/600, thẻ tài khoản (nền #F7F8FA, viền, bo 16, avatar 56), hàng cao 56, ô icon 40 bo 12, dòng Đăng xuất đỏ không mũi tên.
 - Còn lệch: (1) thẻ lệch xuống ~18px so với bản vẽ (khoảng cách dưới tiêu đề ở `ScreenScaffold`); (2) thẻ chưa có tên/số điện thoại/mũi tên vì chưa có hồ sơ (Profile) ở server; avatar chữ "T" xanh lá thay "B" xanh dương; (3) thiếu các dòng công tắc Thông báo, Gửi đã xem, Gửi đang nhập, công tắc Sao lưu (chưa có dịch vụ; dòng Sao lưu hiện là mũi tên mở trang); (4) thiếu thanh tab dưới (Tin nhắn/Cuộc gọi/Cài đặt), app mở Cài đặt từ menu ba chấm; (5) độ đậm chữ trong ảnh chụp test nhạt hơn bản vẽ do test nạp Inter tĩnh. Chưa chụp Desktop-Settings.
 - Vì còn lệch (2)-(4) mục Cài đặt chưa tick.
+
+## Trò chuyện mới (S-09) so với `docs/ui/Mobile-NewChat` (18/11/2026)
+- Làm: `NewChatPage`/`NewChatView` (`app/lib/ui/new_chat_page.dart`), nút "+" ở danh sách mở trang này thay cho hộp thoại `askContact` (hộp thoại vẫn dùng cho Thêm thành viên). Một ô nhập, kênh tự nhận: có "@" là email, ngược lại là số điện thoại; hiện dòng "Nhắn tới ..." khi có chữ.
+- Khớp: tiêu đề 24/600 và nút đóng, ô tìm pill 44 nền #F0F2F5, dòng "Tạo nhóm mới" 60 màu nhấn, nhãn nhóm, hàng 64 với avatar 44.
+- Còn lệch: (1) chưa có danh bạ nên mục "Danh bạ" thành "Gần đây" (các chat 1-1 đã có), không có dòng trạng thái hoạt động và không có nhóm trong danh sách; (2) avatar một chữ (bản vẽ hai chữ, ví dụ BT); (3) biểu tượng tìm kiếm/đóng/tạo nhóm là icon Material, đậm và lớn hơn nét mảnh 18px của bản vẽ; (4) ô nhập tự lấy focus nên có viền xanh; (5) chưa chụp Desktop-NewChat (hộp thoại). Test: `app/test/new_chat_view_test.dart`; ảnh chụp: `settings_shot_test.dart`.
