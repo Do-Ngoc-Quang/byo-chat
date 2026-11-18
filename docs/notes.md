@@ -316,3 +316,9 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Nút + ở Mobile lấy menu nổi của Desktop thay vì sheet toàn màn của `Mobile-Attach` (lưới ảnh gần đây, ô ghi chú): lệch thiết kế, chưa làm. Mục "Chụp ảnh" vẫn mờ (cần camera thật).
 - Đã sửa trên đường: `_Bubble` gọi `displayName('')` cho tin 1-1 sẽ ném RangeError; dùng tên người đối diện.
 - Giới hạn: ảnh đã giải mã chỉ nằm trong bộ nhớ (spec S-08 muốn đệm bền để mở lại không cần mạng); chưa có thumbnail/blurhash nên chưa có ảnh mờ khi đang tải (hiện vòng quay); ảnh lớn được mã hóa và giải mã trong bộ nhớ, trên Web đi qua Worker; `file_selector` chưa kiểm trên máy thật; `sendMedia` chưa có test e2e với server thật (chỉ test `MediaTransfer` với server giả và giao diện với engine giả).
+
+## Lõi cuộc gọi ở client
+- `SframeKeyRing` (Dart) lặp lại `chatcore::sframe::KeyRing` (Rust) vì vòng khóa không đi qua cầu nối; hai bản phải đổi cùng nhau. Test Dart lặp các ca của Rust.
+- Spec chưa có RPC từ chối: từ chối chỉ tắt chuông ở máy này và ghi "nhỡ" cục bộ; người gọi tự hết chuông. Thiết bị cùng tài khoản trả lời thì máy khác chưa tự tắt chuông (cần khung/RPC mới, đổi spec trước).
+- Hết phiên gọi: người gọi và người nghe đều ghi `CallEvent` kết thúc kèm thời lượng của riêng mình (hai mục `ended` cho một cuộc gọi); lịch sử S-14 cần gộp theo `call_id` khi làm.
+- Dòng cuộc gọi trong chat là dòng hệ thống nhỏ ở giữa (biểu tượng + chữ); `Mobile-Chat` chưa vẽ dòng này. Chưa chụp vì chưa có màn gọi.

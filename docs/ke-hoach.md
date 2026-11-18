@@ -115,7 +115,7 @@ Cổng nghiệm thu đạt: nhóm; thêm thiết bị bằng External Commit; kh
 - [ ] LiveKit, khóa SFrame = `Exporter("call", call_id, 32)`
   - [x] `chatcore::sframe`: nhãn `call`, chỉ số khóa = epoch, `KeyRing` (nhận khóa mới ngay, gửi sau 1 giây, giữ khóa cũ 10 giây); test đơn vị + `tests/sframe.rs` trên nhóm MLS thật (đổi khóa, người bị gỡ, vào giữa cuộc gọi)
   - [x] Server `CallService` (StartCall/JoinCall/EndCall, token LiveKit HS256, khung `IncomingCall` qua gateway); test `internal/call`, `TestIncomingCallFrame`. Chưa có: push FCM/VoIP, dừng chuông khi thiết bị khác trả lời, kho cuộc gọi nhiều node, BlockService
-  - [ ] Client: màn gọi, nối LiveKit + SFrame (cần LiveKit và thiết bị thật)
+  - [ ] Client: lõi cuộc gọi ĐÃ có (`CallController`: StartCall/JoinCall/EndCall, vào khi epoch khớp phiếu, khóa SFrame từ MLS, `SframeKeyRing` Dart khớp bản Rust, đổi khóa khi epoch đổi, khung `IncomingCall`, `CallEvent` gửi/nhận, dòng cuộc gọi trong chat; 10 test). Còn: màn S-12/S-13/S-14 (Mobile và Desktop), nối LiveKit + SFrame (cần LiveKit và thiết bị thật)
 - [ ] Đổi khóa khi có người vào/ra; giữ khóa cũ và mới theo chỉ số khóa
 - [ ] Kiểm Flutter Android và Safari (cần thiết bị thật; làm mô phỏng được đến đâu thì ghi rõ giới hạn)
 

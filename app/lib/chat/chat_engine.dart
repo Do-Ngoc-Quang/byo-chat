@@ -19,6 +19,7 @@ import '../net/connect_client.dart' show ConnectException;
 import '../net/gateway_client.dart';
 import '../storage/session_store.dart';
 import 'local_doc.dart';
+import 'call_controller.dart';
 import 'media.dart';
 
 /// Khóa danh tính của người kia khác lần đã thấy (giao-thuc.md 6.2 bước 2): không tự tạo hội thoại.
@@ -94,6 +95,17 @@ class ChatEngine extends ChangeNotifier {
   final _mediaLoading = <String, Future<Uint8List>>{};
   late final MediaTransfer _media = MediaTransfer(core: session.core, api: api);
 
+  /// Cuộc gọi hiện tại của thiết bị này (S-12, S-13); UI lắng nghe trực tiếp.
+  late final CallController calls = CallController(
+    api: api,
+    core: session.core,
+    syncConv: (conv) async {
+      final cs = doc.convs[hex(conv)];
+      if (cs != null) await _mu.run(() => _fetchUntil(cs, 1 << 62));
+    },
+    nowMs: () => _nowMs,
+  );
+
   /// Báo cho app khi thiết bị bị thu hồi (mã đóng 4003): app xóa dữ liệu, về màn đăng nhập.
   void Function()? onRevoked;
 
@@ -117,6 +129,7 @@ class ChatEngine extends ChangeNotifier {
       accessToken: () => session.tokens.accessToken,
       inboxCursor: () => doc.cursor,
       onDeliver: _onDeliver,
+      onIncomingCall: calls.onIncoming,
       onTokenExpired: _refreshToken,
       onRevoked: () => onRevoked?.call(),
       backoffBase: backoffBase,
@@ -452,6 +465,7 @@ class ChatEngine extends ChangeNotifier {
       try {
         final r = await api.submitCommit(request(out, epoch), idempotencyKey: hex(newUuidV7()));
         await _core.mergeCommit(cs.convId);
+        unawaited(calls.onEpochChanged(cs.convId));
         cs.skip.add(r.seq.toInt());
         _advanceSkips(cs);
         cs.lastActivityMs = _nowMs;
@@ -695,6 +709,7 @@ class ChatEngine extends ChangeNotifier {
       switch (e.kind) {
         case EntryKind.ENTRY_KIND_COMMIT:
           await _applyCommitChecked(cs, Uint8List.fromList(e.ct));
+          unawaited(calls.onEpochChanged(cs.convId)); // đổi khóa SFrame nếu đang gọi trong hội thoại này
           if (!await _core.isActive(cs.convId)) {
             cs.removed = true;
             cs.leaving = false;
@@ -842,15 +857,19 @@ class ChatEngine extends ChangeNotifier {
       final pt = await _core.decrypt(cs.convId, Uint8List.fromList(e.ct));
       final p = Payload.fromBuffer(pt);
       final kind = p.whichContent();
-      if (kind != Payload_Content.text && kind != Payload_Content.media) return; // phản ứng, sửa, xóa... làm sau
+      if (kind != Payload_Content.text && kind != Payload_Content.media && kind != Payload_Content.callEvent) return; // phản ứng, sửa, xóa... làm sau
       final id = hex(p.clientMsgId);
       if (list.any((m) => m.id == id)) return; // khử trùng theo client_msg_id
+      final call = kind == Payload_Content.callEvent
+          ? CallInfo(callId: hex(p.callEvent.callId), kind: p.callEvent.kind.value, durationMs: p.callEvent.durationMs)
+          : null;
       final media = kind == Payload_Content.media ? MediaRef.fromProto(p.media) : null;
       list.add(
         ChatMessage(
           id: id,
           mine: false,
           media: media,
+          call: call,
           text: media?.caption ?? p.text.body,
           tsMs: e.tsMs,
           seq: e.seq,
@@ -872,6 +891,69 @@ class ChatEngine extends ChangeNotifier {
       final cs = doc.convs[convHex] ?? (throw ChatException('Hội thoại không tồn tại'));
       if (cs.removed) throw ChatException('Bạn đã bị gỡ khỏi nhóm');
       final m = ChatMessage(id: hex(newUuidV7()), mine: true, text: text, tsMs: _nowMs);
+      doc.msgs.putIfAbsent(convHex, () => []).add(m);
+      cs.lastActivityMs = m.tsMs;
+      await _persist();
+      notifyListeners();
+    });
+    await _flush(convHex);
+  }
+
+  // ---------------------------------------------------------------- cuộc gọi
+
+  /// Gọi (S-12) và ghi `CallEvent` bắt đầu vào hội thoại. Lỗi thì ném, `calls.error` có thông báo.
+  Future<void> startCall(String convHex, CallKind kind) async {
+    final cs = doc.convs[convHex] ?? (throw ChatException('Hội thoại không tồn tại'));
+    if (cs.removed) throw ChatException('Bạn đã bị gỡ khỏi nhóm');
+    await calls.start(cs.convId, kind);
+    await _sendCallEvent(convHex, CallInfo.started);
+  }
+
+  Future<void> answerCall() => calls.answer();
+
+  /// Kết thúc (hoặc từ chối) cuộc gọi hiện tại và để lại `CallEvent` (6.9 bước 5): kết thúc có thời lượng;
+  /// từ chối/không kịp nghe ghi nhỡ ở máy này (không gửi cho người gọi).
+  Future<void> endCall() async {
+    final conv = calls.convId, wasRinging = calls.phase == CallPhase.ringing, incoming = calls.incoming;
+    if (conv == null) return;
+    final convHex = hex(conv);
+    if (wasRinging) {
+      calls.decline();
+      await _recordMissed(convHex, hex(incoming!.callId));
+      return;
+    }
+    final id = calls.callId == null ? null : hex(calls.callId!);
+    final joined = calls.ticket != null;
+    final dur = await calls.end();
+    if (joined && id != null) await _sendCallEvent(convHex, CallInfo.ended, id: id, durationMs: dur);
+  }
+
+  /// Người gọi dừng trước khi ta trả lời: ghi cuộc gọi nhỡ.
+  Future<void> callStoppedRemotely() async {
+    final c = calls.incoming;
+    if (c == null || calls.phase != CallPhase.ringing) return;
+    calls.onRemoteStopped();
+    await _recordMissed(hex(c.convId), hex(c.callId));
+  }
+
+  Future<void> _recordMissed(String convHex, String callId) => _mu.run(() async {
+    final cs = doc.convs[convHex];
+    if (cs == null) return;
+    final id = 'c$callId-missed';
+    final list = doc.msgs.putIfAbsent(convHex, () => []);
+    if (list.any((m) => m.id == id)) return;
+    list.add(ChatMessage(id: id, mine: false, text: '', tsMs: _nowMs, state: MsgState.received, call: CallInfo(callId: callId, kind: CallInfo.missed)));
+    cs.lastActivityMs = _nowMs;
+    await _persist();
+    notifyListeners();
+  });
+
+  Future<void> _sendCallEvent(String convHex, int kind, {String? id, int durationMs = 0}) async {
+    await _mu.run(() async {
+      final cs = doc.convs[convHex];
+      if (cs == null) return;
+      final callId = id ?? hex(calls.callId!);
+      final m = ChatMessage(id: hex(newUuidV7()), mine: true, text: '', tsMs: _nowMs, call: CallInfo(callId: callId, kind: kind, durationMs: durationMs));
       doc.msgs.putIfAbsent(convHex, () => []).add(m);
       cs.lastActivityMs = m.tsMs;
       await _persist();
@@ -945,8 +1027,11 @@ class ChatEngine extends ChangeNotifier {
             version: 1,
             clientMsgId: _unhex(m.id),
             sentAtMs: Int64(m.tsMs),
-            text: m.media == null ? TextContent(body: m.text) : null,
+            text: m.media == null && m.call == null ? TextContent(body: m.text) : null,
             media: m.media?.toProto(),
+            callEvent: m.call == null
+                ? null
+                : CallEvent(callId: _unhex(m.call!.callId), kind: CallEvent_Kind.valueOf(m.call!.kind), durationMs: m.call!.durationMs),
           );
           m.epoch = await _core.epoch(cs.convId);
           m.ct = await _core.encrypt(cs.convId, Uint8List.fromList(p.writeToBuffer()));

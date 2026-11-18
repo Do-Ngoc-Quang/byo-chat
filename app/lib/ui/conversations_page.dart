@@ -10,6 +10,7 @@ import 'new_chat_page.dart';
 import 'group_pages.dart';
 import 'settings_page.dart';
 import 'states.dart';
+import 'call_label.dart';
 import 'theme.dart';
 
 /// Danh sách hội thoại theo docs/ui (Main.dc.html): tiêu đề "Tin nhắn", ô tìm, lọc Tất cả/Nhóm, hàng 72px.
@@ -244,6 +245,8 @@ class _Row extends StatelessWidget {
     final l = m.last;
     return switch (l.state) {
       MsgState.undecryptable => 'Không giải mã được tin này',
+      _ when l.call != null => callLabel(l.call!, mine: l.mine),
+      _ when l.media != null => l.mine ? 'Bạn: ${l.media!.isImage ? 'Ảnh' : 'Tệp'}' : (l.media!.isImage ? 'Ảnh' : 'Tệp'),
       _ => l.mine ? 'Bạn: ${l.text}' : l.text,
     };
   }

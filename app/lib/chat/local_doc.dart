@@ -11,6 +11,19 @@ Uint8List _b64(String s) => base64.decode(s);
 
 enum MsgState { pending, sent, failed, received, undecryptable }
 
+/// Nội dung một `CallEvent` đã nhận hoặc đã gửi. `kind`: 1 bắt đầu, 2 kết thúc, 3 nhỡ (như `CallEvent.Kind`).
+class CallInfo {
+  const CallInfo({required this.callId, required this.kind, this.durationMs = 0});
+  final String callId;
+  final int kind, durationMs;
+
+  static const started = 1, ended = 2, missed = 3;
+
+  Map<String, Object?> toJson() => {'id': callId, 'k': kind, if (durationMs > 0) 'd': durationMs};
+  factory CallInfo.fromJson(Map<String, dynamic> j) =>
+      CallInfo(callId: j['id'] as String, kind: j['k'] as int, durationMs: (j['d'] as int?) ?? 0);
+}
+
 /// Một tin trong hội thoại. `ct`/`epoch` chỉ có khi tin đang chờ gửi: ciphertext đã dựng và ghi bền
 /// TRƯỚC khi gửi để gửi lại đúng bản đó (không dùng lại khóa MLS cho nội dung khác).
 class ChatMessage {
@@ -25,10 +38,14 @@ class ChatMessage {
     this.epoch = 0,
     this.sender,
     this.media,
+    this.call,
   });
 
   /// Tệp đính kèm (ảnh/tệp); `text` là chú thích. Khóa giải mã nằm ở đây: chỉ lưu trong kho cục bộ đã mã hóa.
   final MediaRef? media;
+
+  /// Tin điều khiển cuộc gọi (bắt đầu, kết thúc, nhỡ) để dựng lịch sử cuộc gọi (S-14) và dòng trong chat.
+  final CallInfo? call;
 
   /// Tài khoản (hex) người gửi tin nhận được trong nhóm; null với tin của mình và hội thoại 1-1.
   final String? sender;
@@ -52,6 +69,7 @@ class ChatMessage {
     'epoch': epoch,
     if (sender != null) 'from': sender,
     if (media != null) 'media': media!.toJson(),
+    if (call != null) 'call': call!.toJson(),
   };
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
@@ -65,6 +83,7 @@ class ChatMessage {
     epoch: j['epoch'] as int,
     sender: j['from'] as String?,
     media: j['media'] == null ? null : MediaRef.fromJson(j['media'] as Map<String, dynamic>),
+    call: j['call'] == null ? null : CallInfo.fromJson(j['call'] as Map<String, dynamic>),
   );
 }
 

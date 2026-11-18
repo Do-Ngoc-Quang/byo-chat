@@ -34,6 +34,7 @@ class GatewayClient {
     required this.accessToken,
     required this.inboxCursor,
     required this.onDeliver,
+    this.onIncomingCall,
     this.onTokenExpired,
     this.onRevoked,
     this.backoffBase = const Duration(seconds: 1),
@@ -50,6 +51,9 @@ class GatewayClient {
 
   /// Xử lý một Deliver. Chỉ khi hàm này xong (đã ghi bền) client mới gửi Ack. Gọi tuần tự theo thứ tự nhận.
   final Future<void> Function(Deliver) onDeliver;
+
+  /// Cuộc gọi đến khi app đang mở (khung chủ động `IncomingCall`, giao-thuc.md 6.10).
+  final void Function(IncomingCall)? onIncomingCall;
 
   /// Gọi khi đóng với 4002 (token hết hạn): làm mới token rồi client tự kết nối lại.
   final Future<void> Function()? onTokenExpired;
@@ -184,8 +188,10 @@ class GatewayClient {
             final e = f.error;
             _pending.remove(f.reqId.toInt())?.completeError(GatewayException(e.message,
                 code: e.code, currentEpoch: e.currentEpoch.toInt(), retryAfterMs: e.retryAfterMs));
+          case ServerFrame_Body.incomingCall:
+            onIncomingCall?.call(f.incomingCall);
           default:
-            break; // Pong, presence, receipt, incoming_call: chưa dùng
+            break; // Pong, presence, receipt: chưa dùng
         }
       }
     } finally {
