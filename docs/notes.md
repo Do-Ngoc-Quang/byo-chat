@@ -288,3 +288,9 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 ## Giới hạn tốc độ FetchKeyPackages
 - Cửa sổ trượt 60 lần/phút theo `device_id`, dùng lại `ipLimiter`; vượt thì `RATE_LIMITED` kèm `retry_after_ms`.
 - Còn lệch: đếm trong bộ nhớ từng node (nhiều node cần Valkey, cùng giới hạn với StartLink). Chưa có test cấp handler, chỉ test bộ đếm.
+
+## CallService (server)
+- Cuộc gọi đang diễn ra giữ trong bộ nhớ một node (tối đa 4 giờ, mỗi hội thoại một cuộc); nhiều node cần Valkey.
+- Token LiveKit: JWT HS256 tự ký (iss = API key, sub = device_id, phòng = call_id, hạn 15 phút); chưa thử với LiveKit thật (cần Docker/LiveKit).
+- `IncomingCall` đi qua subject NATS `call.<device_id>` và gateway chuyển thành khung chủ động; không vào hộp thư. Thiết bị không có kết nối chưa được báo (cần FCM/VoIP push thật).
+- Chưa làm: dừng chuông khi thiết bị khác cùng tài khoản trả lời (spec 6.10, chưa có khung), `StartCall` từ chối khi bị chặn (BlockService chưa có), cấu hình LiveKit qua biến môi trường của `cmd/`.
