@@ -34,12 +34,12 @@ class _Store implements SessionStore {
 /// Engine giả: chỉ trả danh sách hội thoại cố định, không chạm mạng hay lõi MLS.
 class _Engine extends ChatEngine {
   _Engine()
-      : super(
-          session: Session(Uint8List(4), Uint8List(4), _Core(), TokenPair(), 0),
-          api: _Api(),
-          store: _Store(),
-          apiBase: Uri.parse('http://localhost'),
-        );
+    : super(
+        session: Session(Uint8List(4), Uint8List(4), _Core(), TokenPair(), 0),
+        api: _Api(),
+        store: _Store(),
+        apiBase: Uri.parse('http://localhost'),
+      );
 
   final _convs = [
     ConvState(convId: Uint8List.fromList([1, 2, 3, 4]), title: 'Minh Anh', lastActivityMs: 2),
@@ -69,7 +69,12 @@ void main() {
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.reset);
     final e = _Engine();
-    await t.pumpWidget(MaterialApp(theme: Ui.theme(), home: DesktopShell(engine: e)));
+    await t.pumpWidget(
+      MaterialApp(
+        theme: Ui.theme(),
+        home: DesktopShell(engine: e),
+      ),
+    );
     expect(find.byKey(const Key('desktop-empty')), findsOneWidget);
     expect(find.byKey(const Key('chat-page')), findsNothing);
     await t.tap(find.byKey(Key('conv-${e.conversations[1].hexId}')));
@@ -77,6 +82,28 @@ void main() {
     expect(find.byKey(const Key('chat-page')), findsOneWidget);
     expect(find.byKey(const Key('desktop-empty')), findsNothing);
     expect(find.text('Bảo Trân'), findsWidgets);
+  });
+
+  testWidgets('bấm ⓘ ở chat 1-1 mở/đóng bảng hồ sơ 340 bên phải', (t) async {
+    t.view.physicalSize = const Size(1280, 800);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    final e = _Engine();
+    await t.pumpWidget(
+      MaterialApp(
+        theme: Ui.theme(),
+        home: DesktopShell(engine: e),
+      ),
+    );
+    await t.tap(find.byKey(Key('conv-${e.conversations[0].hexId}')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('contact-panel')), findsNothing);
+    await t.tap(find.byTooltip('Hồ sơ liên hệ'));
+    await t.pumpAndSettle();
+    expect(t.getSize(find.byKey(const Key('contact-panel'))).width, 340);
+    await t.tap(find.byTooltip('Hồ sơ liên hệ'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('contact-panel')), findsNothing);
   });
 
   final dir = Platform.environment['SHOT_DIR'];
@@ -90,13 +117,25 @@ void main() {
     addTearDown(t.view.reset);
     final e = _Engine();
     final key = GlobalKey();
-    await t.pumpWidget(RepaintBoundary(key: key, child: MaterialApp(theme: Ui.theme(), debugShowCheckedModeBanner: false, home: DesktopShell(engine: e))));
+    await t.pumpWidget(
+      RepaintBoundary(
+        key: key,
+        child: MaterialApp(
+          theme: Ui.theme(),
+          debugShowCheckedModeBanner: false,
+          home: DesktopShell(engine: e),
+        ),
+      ),
+    );
     await t.tap(find.byKey(Key('conv-${e.conversations[0].hexId}')));
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('Hồ sơ liên hệ'));
     await t.pumpAndSettle();
     await t.runAsync(() async {
       final b = key.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final img = await b.toImage(pixelRatio: 1);
-      File('$dir/flutter-desktop-inbox.png').writeAsBytesSync((await img.toByteData(format: ui.ImageByteFormat.png))!.buffer.asUint8List());
+      File('$dir/flutter-desktop-contact.png')
+          .writeAsBytesSync((await img.toByteData(format: ui.ImageByteFormat.png))!.buffer.asUint8List());
     });
   }, skip: dir == null);
 }

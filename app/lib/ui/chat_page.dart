@@ -9,13 +9,16 @@ import 'theme.dart';
 
 /// Khung chat theo docs/ui (Mobile-Chat.dc.html): thanh đầu có avatar, nền xám nhạt, bong bóng bo 18, ô nhập tròn.
 class ChatPage extends StatefulWidget {
-  const ChatPage({super.key, required this.engine, required this.conv, this.embedded = false});
+  const ChatPage({super.key, required this.engine, required this.conv, this.embedded = false, this.onInfo});
 
   final ChatEngine engine;
   final ConvState conv;
 
   /// Cột phải của bố cục Desktop: tự vẽ đầu trang (không AppBar), lề rộng hơn, bong bóng tối đa 460.
   final bool embedded;
+
+  /// Desktop: bấm ⓘ ở chat 1-1 thì mở/đóng bảng hồ sơ bên phải thay vì chuyển trang.
+  final VoidCallback? onInfo;
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -42,58 +45,58 @@ class _ChatPageState extends State<ChatPage> {
     final conv = widget.conv;
     return Scaffold(
       key: const Key('chat-page'),
-      appBar: widget.embedded ? null : AppBar(
-        titleSpacing: 0,
-        title: Row(
-          children: [
-            Avatar(conv.title),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              titleSpacing: 0,
+              title: Row(
                 children: [
-                  Text(
-                    conv.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  if (conv.isGroup)
-                    const Text(
-                      'Nhóm',
-                      style: TextStyle(fontSize: 12, color: Ui.muted, fontWeight: FontWeight.w400),
+                  Avatar(conv.title),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          conv.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                        if (conv.isGroup)
+                          const Text(
+                            'Nhóm',
+                            style: TextStyle(fontSize: 12, color: Ui.muted, fontWeight: FontWeight.w400),
+                          ),
+                      ],
                     ),
+                  ),
                 ],
               ),
+              actions: [
+                if (!conv.isGroup)
+                  IconButton(
+                    key: const Key('contact-info'),
+                    tooltip: 'Hồ sơ liên hệ',
+                    icon: const Icon(Icons.info_outline),
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ContactPage(conv: conv))),
+                  ),
+                if (conv.isGroup)
+                  IconButton(
+                    key: const Key('group-info'),
+                    tooltip: 'Thông tin nhóm',
+                    icon: const Icon(Icons.info_outline),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => GroupInfoPage(engine: widget.engine, conv: conv),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          if (!conv.isGroup)
-            IconButton(
-              key: const Key('contact-info'),
-              tooltip: 'Hồ sơ liên hệ',
-              icon: const Icon(Icons.info_outline),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => ContactPage(conv: conv)),
-              ),
-            ),
-          if (conv.isGroup)
-            IconButton(
-              key: const Key('group-info'),
-              tooltip: 'Thông tin nhóm',
-              icon: const Icon(Icons.info_outline),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => GroupInfoPage(engine: widget.engine, conv: conv),
-                ),
-              ),
-            ),
-        ],
-      ),
       body: Column(
         children: [
-          if (widget.embedded) _DesktopHeader(engine: widget.engine, conv: conv),
+          if (widget.embedded) _DesktopHeader(engine: widget.engine, conv: conv, onInfo: widget.onInfo),
           Expanded(
             child: Container(
               color: Ui.surfaceAlt,
@@ -139,7 +142,14 @@ class _ChatPageState extends State<ChatPage> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       if (widget.embedded) ...const [
-                        Opacity(opacity: 0.45, child: SizedBox(width: Ui.tap, height: Ui.tap, child: Icon(Icons.add, size: 22, color: Ui.muted))),
+                        Opacity(
+                          opacity: 0.45,
+                          child: SizedBox(
+                            width: Ui.tap,
+                            height: Ui.tap,
+                            child: Icon(Icons.add, size: 22, color: Ui.muted),
+                          ),
+                        ),
                         SizedBox(width: 8),
                       ],
                       Expanded(
@@ -246,43 +256,43 @@ class _Bubble extends StatelessWidget {
       child: GestureDetector(
         onLongPress: onLongPress,
         child: Container(
-        key: Key('msg-${m.id}'),
-        margin: const EdgeInsets.symmetric(vertical: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        decoration: BoxDecoration(
-          color: m.mine ? Ui.primary : Colors.white,
-          border: m.mine ? null : Border.all(color: Ui.border),
-          borderRadius: radius,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (who != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text(
-                  who!,
-                  key: Key('from-${m.id}'),
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Ui.avatarFg),
+          key: Key('msg-${m.id}'),
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          decoration: BoxDecoration(
+            color: m.mine ? Ui.primary : Colors.white,
+            border: m.mine ? null : Border.all(color: Ui.border),
+            borderRadius: radius,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (who != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(
+                    who!,
+                    key: Key('from-${m.id}'),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Ui.avatarFg),
+                  ),
+                ),
+              Text(
+                text,
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 1.35,
+                  color: m.mine ? Colors.white : Ui.text,
+                  fontStyle: broken ? FontStyle.italic : FontStyle.normal,
                 ),
               ),
-            Text(
-              text,
-              style: TextStyle(
-                fontSize: 15,
-                height: 1.35,
-                color: m.mine ? Colors.white : Ui.text,
-                fontStyle: broken ? FontStyle.italic : FontStyle.normal,
+              const SizedBox(height: 2),
+              Text(
+                status.isEmpty ? _clock(m.tsMs) : status,
+                style: TextStyle(fontSize: 11, color: m.mine ? const Color(0xCCFFFFFF) : Ui.muted),
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              status.isEmpty ? _clock(m.tsMs) : status,
-              style: TextStyle(fontSize: 11, color: m.mine ? const Color(0xCCFFFFFF) : Ui.muted),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );
@@ -291,7 +301,8 @@ class _Bubble extends StatelessWidget {
 
 /// Đầu khung chat Desktop (docs/ui/Desktop-Inbox): avatar 40, tên, nút Gọi video (mờ, chưa có cuộc gọi) và Thông tin.
 class _DesktopHeader extends StatelessWidget {
-  const _DesktopHeader({required this.engine, required this.conv});
+  const _DesktopHeader({required this.engine, required this.conv, this.onInfo});
+  final VoidCallback? onInfo;
 
   final ChatEngine engine;
   final ConvState conv;
@@ -300,7 +311,10 @@ class _DesktopHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-      decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Ui.border))),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Ui.border)),
+      ),
       child: Row(
         children: [
           Avatar(conv.title),
@@ -309,24 +323,28 @@ class _DesktopHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(conv.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Ui.text)),
+                Text(
+                  conv.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Ui.text),
+                ),
                 if (conv.isGroup) const Text('Nhóm', style: TextStyle(fontSize: 12, color: Ui.muted)),
               ],
             ),
           ),
-          const Opacity(
-            opacity: 0.45,
-            child: _RoundIcon(Icons.videocam_outlined, color: Ui.primary),
-          ),
+          const Opacity(opacity: 0.45, child: _RoundIcon(Icons.videocam_outlined, color: Ui.primary)),
           const SizedBox(width: 8),
           _RoundIcon(
             Icons.info_outline,
             tooltip: conv.isGroup ? 'Thông tin nhóm' : 'Hồ sơ liên hệ',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => conv.isGroup ? GroupInfoPage(engine: engine, conv: conv) : ContactPage(conv: conv),
-              ),
-            ),
+            onTap: (!conv.isGroup && onInfo != null)
+                ? onInfo
+                : () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => conv.isGroup ? GroupInfoPage(engine: engine, conv: conv) : ContactPage(conv: conv),
+                    ),
+                  ),
           ),
         ],
       ),
@@ -343,9 +361,9 @@ class _RoundIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IconButton(
-        tooltip: tooltip,
-        onPressed: onTap,
-        style: IconButton.styleFrom(backgroundColor: Ui.surface, fixedSize: const Size.square(Ui.tap), disabledBackgroundColor: Ui.surface),
-        icon: Icon(icon, size: 22, color: color),
-      );
+    tooltip: tooltip,
+    onPressed: onTap,
+    style: IconButton.styleFrom(backgroundColor: Ui.surface, fixedSize: const Size.square(Ui.tap), disabledBackgroundColor: Ui.surface),
+    icon: Icon(icon, size: 22, color: color),
+  );
 }
