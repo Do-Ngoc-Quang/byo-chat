@@ -310,3 +310,9 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 
 ## Media qua api::Core
 - Ba thao tác không cần nhóm (`media_*`), mã hóa cả tệp trong bộ nhớ; tệp lớn cần luồng theo khối qua cầu nối (việc còn).
+
+## Media ở client (gửi/nhận ảnh, tệp)
+- Đã chụp `flutter-mobile-chat-media.png` (390×844). Thiết kế `Mobile-Chat` chưa vẽ bong bóng ảnh/tệp nên bong bóng media dùng góc bo, màu, chữ của bong bóng thường: ảnh rộng tối đa bề rộng bong bóng trừ lề, tỉ lệ theo `width`/`height` (kẹp 0,5–1,5), tệp là biểu tượng + tên + dung lượng. Cần bổ sung bản vẽ vào `docs/ui/` trước khi tick.
+- Nút + ở Mobile lấy menu nổi của Desktop thay vì sheet toàn màn của `Mobile-Attach` (lưới ảnh gần đây, ô ghi chú): lệch thiết kế, chưa làm. Mục "Chụp ảnh" vẫn mờ (cần camera thật).
+- Đã sửa trên đường: `_Bubble` gọi `displayName('')` cho tin 1-1 sẽ ném RangeError; dùng tên người đối diện.
+- Giới hạn: ảnh đã giải mã chỉ nằm trong bộ nhớ (spec S-08 muốn đệm bền để mở lại không cần mạng); chưa có thumbnail/blurhash nên chưa có ảnh mờ khi đang tải (hiện vòng quay); ảnh lớn được mã hóa và giải mã trong bộ nhớ, trên Web đi qua Worker; `file_selector` chưa kiểm trên máy thật; `sendMedia` chưa có test e2e với server thật (chỉ test `MediaTransfer` với server giả và giao diện với engine giả).

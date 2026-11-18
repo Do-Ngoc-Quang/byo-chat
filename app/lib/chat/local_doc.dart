@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'media.dart';
+
 String hex(List<int> b) => b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
 
 Uint8List unhex(String h) => Uint8List.fromList([for (var i = 0; i < h.length; i += 2) int.parse(h.substring(i, i + 2), radix: 16)]);
@@ -22,7 +24,11 @@ class ChatMessage {
     this.ct,
     this.epoch = 0,
     this.sender,
+    this.media,
   });
+
+  /// Tệp đính kèm (ảnh/tệp); `text` là chú thích. Khóa giải mã nằm ở đây: chỉ lưu trong kho cục bộ đã mã hóa.
+  final MediaRef? media;
 
   /// Tài khoản (hex) người gửi tin nhận được trong nhóm; null với tin của mình và hội thoại 1-1.
   final String? sender;
@@ -45,6 +51,7 @@ class ChatMessage {
     if (ct != null) 'ct': base64.encode(ct!),
     'epoch': epoch,
     if (sender != null) 'from': sender,
+    if (media != null) 'media': media!.toJson(),
   };
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
@@ -57,6 +64,7 @@ class ChatMessage {
     ct: j['ct'] == null ? null : _b64(j['ct'] as String),
     epoch: j['epoch'] as int,
     sender: j['from'] as String?,
+    media: j['media'] == null ? null : MediaRef.fromJson(j['media'] as Map<String, dynamic>),
   );
 }
 

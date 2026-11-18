@@ -109,7 +109,7 @@ Cổng nghiệm thu đạt: nhóm; thêm thiết bị bằng External Commit; kh
 - [ ] Media mã hóa lên Amazon S3 (spec mục 11 tài liệu chính)
   - [x] Server `MediaService` (CreateUpload/CompleteUpload/GetDownloadUrl): kho Dev trong test, S3 qua cùng giao diện `blob.Signer`; test `TestMediaFlow`. Còn: tải nhiều phần, S3 thật (hoãn)
   - [x] `chatcore::media`: AES-256-GCM theo khối 64 KiB, nonce kiểu STREAM (tiền tố 7 byte, chỉ số khối, cờ khối cuối), SHA-256 ciphertext; 6 test (kích thước biên, sai khóa/hash, sửa/cắt/đổi chỗ khối, giải mã từng khối). Đã nối vào bề mặt byte `api::Core` (`media_key_new`, `media_encrypt`, `media_decrypt`, test `media_qua_api_byte`); FFI/WASM dùng chung nên Dart gọi được, chưa có UI
-  - [ ] Client: gửi/nhận ảnh và tệp, Viewer, Desktop-Viewer
+  - [ ] Client: gửi/nhận ảnh và tệp: ĐÃ có `MediaTransfer` (mã hóa, tải lên/xuống, kiểm hash; test với lõi thật), `ChatEngine.sendMedia`/`mediaBytes`, bong bóng ảnh/tệp, nút + (mobile và Desktop) chọn ảnh/tệp bằng `file_selector`, chạm ảnh mở `ViewerView`; ĐÃ chụp. Còn: e2e với server thật, bộ nhớ đệm bền, Desktop-Viewer, thumbnail/blurhash, tải nhiều phần, chụp ảnh bằng camera, kéo thả
 
 ## Giai đoạn 6 — Gọi video
 - [ ] LiveKit, khóa SFrame = `Exporter("call", call_id, 32)`
