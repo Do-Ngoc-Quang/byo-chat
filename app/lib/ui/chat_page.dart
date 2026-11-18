@@ -113,7 +113,7 @@ class _ChatPageState extends State<ChatPage> {
                       final m = msgs[k];
                       return _Bubble(
                         m,
-                        onLongPress: m.state == MsgState.undecryptable ? null : () => showMsgMenu(context, text: m.text, mine: m.mine),
+                        onMenu: m.state == MsgState.undecryptable ? null : (r) => showMsgMenu(context, text: m.text, mine: m.mine, anchor: r),
                         who: m.sender == null ? null : widget.engine.displayName(m.sender!),
                         maxWidth: widget.embedded ? 460 : 320,
                         lastOfRun: k == msgs.length - 1 || msgs[k + 1].mine != m.mine,
@@ -216,11 +216,12 @@ class _Banner extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble(this.m, {this.who, this.lastOfRun = true, this.onLongPress, this.maxWidth = 320});
+  const _Bubble(this.m, {this.who, this.lastOfRun = true, this.onMenu, this.maxWidth = 320});
 
   final double maxWidth;
 
-  final VoidCallback? onLongPress;
+  /// Mở menu thao tác (giữ lâu hoặc bấm phải) kèm khung bong bóng trên màn hình.
+  final void Function(Rect)? onMenu;
 
   final ChatMessage m;
 
@@ -229,6 +230,11 @@ class _Bubble extends StatelessWidget {
 
   /// Tin cuối của một chuỗi cùng người gửi: góc đuôi nhọn (4px) theo thiết kế.
   final bool lastOfRun;
+
+  static Rect _rect(BuildContext c) {
+    final b = c.findRenderObject() as RenderBox;
+    return b.localToGlobal(Offset.zero) & b.size;
+  }
 
   static String _clock(int ms) {
     final t = DateTime.fromMillisecondsSinceEpoch(ms);
@@ -253,8 +259,10 @@ class _Bubble extends StatelessWidget {
     );
     return Align(
       alignment: m.mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: GestureDetector(
-        onLongPress: onLongPress,
+      child: Builder(
+        builder: (bctx) => GestureDetector(
+        onLongPress: onMenu == null ? null : () => onMenu!(_rect(bctx)),
+        onSecondaryTap: onMenu == null ? null : () => onMenu!(_rect(bctx)),
         child: Container(
           key: Key('msg-${m.id}'),
           margin: const EdgeInsets.symmetric(vertical: 3),
@@ -293,6 +301,7 @@ class _Bubble extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );
