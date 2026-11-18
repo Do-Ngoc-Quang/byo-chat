@@ -206,3 +206,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Làm: `NewChatPage`/`NewChatView` (`app/lib/ui/new_chat_page.dart`), nút "+" ở danh sách mở trang này thay cho hộp thoại `askContact` (hộp thoại vẫn dùng cho Thêm thành viên). Một ô nhập, kênh tự nhận: có "@" là email, ngược lại là số điện thoại; hiện dòng "Nhắn tới ..." khi có chữ.
 - Khớp: tiêu đề 24/600 và nút đóng, ô tìm pill 44 nền #F0F2F5, dòng "Tạo nhóm mới" 60 màu nhấn, nhãn nhóm, hàng 64 với avatar 44.
 - Còn lệch: (1) chưa có danh bạ nên mục "Danh bạ" thành "Gần đây" (các chat 1-1 đã có), không có dòng trạng thái hoạt động và không có nhóm trong danh sách; (2) avatar một chữ (bản vẽ hai chữ, ví dụ BT); (3) biểu tượng tìm kiếm/đóng/tạo nhóm là icon Material, đậm và lớn hơn nét mảnh 18px của bản vẽ; (4) ô nhập tự lấy focus nên có viền xanh; (5) chưa chụp Desktop-NewChat (hộp thoại). Test: `app/test/new_chat_view_test.dart`; ảnh chụp: `settings_shot_test.dart`.
+
+## Hồ sơ liên hệ (S-11) — đối chiếu Mobile-Contact
+- Đã chụp 390×844 so với `docs/ui/Mobile-Contact.dc.html`: bố cục, avatar 88, tên 22/600, ba ô 68, nút Chặn pill 48 khớp.
+- Còn lệch (thiếu dịch vụ): chưa có số điện thoại dưới tên (cần ProfileService), ba ô Gọi video/Tắt tiếng/Tìm kiếm và nút Chặn hiện mờ vì chưa có tính năng/BlockService, lưới ảnh thay bằng ô trống "Chưa có ảnh hay tệp chung" và chưa có "Xem tất cả" (chưa có media, giai đoạn 5), màu avatar theo bảng pastel băm tên thay vì xanh cố định, nút quay lại dùng mũi tên Material.
+- Mở từ biểu tượng ⓘ trên thanh đầu của chat 1-1. Chưa làm bố cục Desktop.
