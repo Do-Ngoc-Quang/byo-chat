@@ -108,7 +108,7 @@ Cổng nghiệm thu đạt: nhóm; thêm thiết bị bằng External Commit; kh
 ## Giai đoạn 5 — Media
 - [ ] Media mã hóa lên Amazon S3 (spec mục 11 tài liệu chính)
   - [x] Server `MediaService` (CreateUpload/CompleteUpload/GetDownloadUrl): kho Dev trong test, S3 qua cùng giao diện `blob.Signer`; test `TestMediaFlow`. Còn: tải nhiều phần, S3 thật (hoãn)
-  - [ ] `chatcore`: mã hóa khối AES-256-GCM (khóa/nonce/hash theo `MediaContent`)
+  - [x] `chatcore::media`: AES-256-GCM theo khối 64 KiB, nonce kiểu STREAM (tiền tố 7 byte, chỉ số khối, cờ khối cuối), SHA-256 ciphertext; 6 test (kích thước biên, sai khóa/hash, sửa/cắt/đổi chỗ khối, giải mã từng khối). Chưa nối FFI/WASM
   - [ ] Client: gửi/nhận ảnh và tệp, Viewer, Desktop-Viewer
 
 ## Giai đoạn 6 — Gọi video

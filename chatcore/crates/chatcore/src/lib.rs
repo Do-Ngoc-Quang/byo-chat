@@ -2,6 +2,7 @@
 //! Bọc OpenMLS 0.8; không tự viết primitive mật mã.
 pub mod api;
 pub mod credential;
+pub mod media;
 pub mod mls;
 pub mod scenarios;
 pub mod sim;

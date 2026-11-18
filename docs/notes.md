@@ -289,3 +289,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Khóa đối tượng `media/<id>` (riêng) và `media-public/<id>` (ảnh đại diện); không thêm bảng DB. Giới hạn khởi điểm 100 MiB/tệp (`MaxMediaBytes`), chốt lại theo chi phí.
 - `GetDownloadUrl`: mọi thiết bị đã đăng nhập xin được URL theo `media_id` (ciphertext, khóa nằm trong tin MLS); chưa kiểm tư cách thành viên.
 - `CompleteUpload` chỉ kiểm đối tượng đã có; chưa xác minh hash (client kiểm khi tải xuống). Tải nhiều phần hoãn.
+
+## Mã hóa media (chatcore::media)
+- `nonce_prefix` dài 7 byte; nonce 12 byte = prefix || chỉ số khối (u32 BE) || cờ khối cuối. Spec chưa nêu độ dài tiền tố, ghi ở đây; sửa spec mục 11 nếu muốn cố định.
+- Khối 64 KiB; tệp rỗng vẫn một khối cuối chỉ có tag. Dùng crate `aes-gcm` 0.10, `sha2` 0.10, `getrandom` 0.2.
+- Việc còn: nối vào FFI/WASM, mã hóa thumbnail riêng, truyền stream (hiện mã hóa trong bộ nhớ).
