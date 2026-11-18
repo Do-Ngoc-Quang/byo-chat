@@ -307,3 +307,6 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Nhãn exporter: giao-thuc.md 6.9 ghi `chat.call.v1`, còn CLAUDE.md, thiet-ke-chinh.md mục 12 và PoC dùng `call`. Chọn `call` (đã kiểm chứng), sửa 6.9 cho khớp; nếu muốn đổi nhãn thì đổi đồng loạt cả spec và `sframe::LABEL`.
 - Chỉ số khóa SFrame = số epoch (u32), thay vì "chỉ số kế tiếp": thiết bị vào giữa cuộc gọi tự khớp, không cần phối hợp. Đây là chi tiết triển khai, spec giữ nguyên.
 - Đã kiểm: chỉ logic khóa trên MLS thật. Chưa kiểm: mã hóa khung SFrame thật với LiveKit, Safari, Flutter Android (cần thiết bị thật).
+
+## Media qua api::Core
+- Ba thao tác không cần nhóm (`media_*`), mã hóa cả tệp trong bộ nhớ; tệp lớn cần luồng theo khối qua cầu nối (việc còn).
