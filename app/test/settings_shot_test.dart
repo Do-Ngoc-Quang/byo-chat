@@ -17,13 +17,13 @@ import 'package:flutter_test/flutter_test.dart';
 // Chụp Cài đặt và Trò chuyện mới 390x844 ra PNG để đối chiếu docs/ui (chỉ chạy khi có SHOT_DIR).
 void main() {
   final dir = Platform.environment['SHOT_DIR'];
-  Future<void> shot(WidgetTester t, String name, Widget page) async {
+  Future<void> shotSized(WidgetTester t, String name, Widget page, Size size) async {
     final l = FontLoader('Inter')..addFont(Future.value(ByteData.sublistView(File('assets/fonts/Inter.ttf').readAsBytesSync())));
     await l.load();
     final mi = FontLoader('MaterialIcons')
       ..addFont(Future.value(ByteData.sublistView(File(Platform.environment['ICON_FONT'] ?? '').readAsBytesSync())));
     await mi.load();
-    t.view.physicalSize = const Size(390, 844);
+    t.view.physicalSize = size;
     t.view.devicePixelRatio = 1;
     final key = GlobalKey();
     await t.pumpWidget(
@@ -41,11 +41,24 @@ void main() {
     });
   }
 
+  Future<void> shot(WidgetTester t, String name, Widget page) => shotSized(t, name, page, const Size(390, 844));
+
   testWidgets(
     'chụp Cài đặt',
     (t) => shot(t, 'flutter-settings', SettingsView(accountCode: 'a1b2c3d4', onLogout: () {})),
     skip: dir == null,
   );
+  testWidgets('chụp Desktop NewChat', (t) async {
+    t.view.physicalSize = const Size(1280, 800);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await shotSized(
+      t,
+      'flutter-desktop-newchat',
+      const NewChatView(recent: ['Bảo Trân', 'Gia đình', 'Hoàng Nam', 'Lan Phương', 'Minh Anh']),
+      const Size(1280, 800),
+    );
+  }, skip: dir == null);
   testWidgets(
     'chụp Trò chuyện mới',
     (t) => shot(t, 'flutter-newchat', const NewChatView(recent: ['Bảo Trân', 'Hoàng Nam', 'Lan Phương'])),

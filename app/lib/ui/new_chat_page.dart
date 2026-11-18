@@ -5,6 +5,7 @@ import '../chat/local_doc.dart';
 import '../gen/chat/v1/services.pbenum.dart';
 import 'chat_page.dart';
 import 'errors.dart';
+import 'desktop_shell.dart';
 import 'group_pages.dart';
 import 'theme.dart';
 
@@ -16,7 +17,11 @@ class NewChatPage extends StatelessWidget {
   final ChatEngine engine;
 
   void _openChat(BuildContext context, ConvState c) {
-    Navigator.of(context).pushReplacement(MaterialPageRoute<void>(builder: (_) => ChatPage(engine: engine, conv: c)));
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => ChatPage(engine: engine, conv: c),
+      ),
+    );
   }
 
   Future<void> _submit(BuildContext context, String raw) async {
@@ -70,8 +75,130 @@ class _NewChatViewState extends State<NewChatView> {
     return (w.first.characters.first + w.last.characters.first).toUpperCase();
   }
 
+  Widget _title(double size, EdgeInsets pad) => Padding(
+    padding: pad,
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Trò chuyện mới',
+            style: TextStyle(fontSize: size, fontWeight: FontWeight.w600, letterSpacing: -0.3),
+          ),
+        ),
+        IconButton(
+          key: const Key('new-chat-close'),
+          tooltip: 'Đóng',
+          onPressed: widget.onClose,
+          style: IconButton.styleFrom(fixedSize: const Size.square(Ui.tap), backgroundColor: pad.left == 0 ? Ui.surface : null),
+          icon: const Icon(Icons.close),
+        ),
+      ],
+    ),
+  );
+
+  Widget _field(EdgeInsets pad) => Padding(
+    padding: pad,
+    child: TextField(
+      key: const Key('peer-field'),
+      controller: _ctl,
+      autofocus: true,
+      keyboardType: TextInputType.emailAddress,
+      textInputAction: TextInputAction.go,
+      onChanged: (_) => setState(() {}),
+      onSubmitted: widget.onSubmit,
+      style: const TextStyle(fontSize: 15),
+      decoration: InputDecoration(
+        hintText: 'Nhập số điện thoại hoặc email',
+        prefixIcon: const Icon(Icons.search, color: Ui.muted),
+        filled: true,
+        fillColor: Ui.surface,
+        contentPadding: EdgeInsets.zero,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(22),
+          borderSide: const BorderSide(color: Ui.primary, width: 1.5),
+        ),
+      ),
+    ),
+  );
+
+  List<Widget> _rows() => [
+    if (_ctl.text.trim().isNotEmpty)
+      _Line(
+        key: const Key('peer-ok'),
+        height: 60,
+        avatar: const _Circle(
+          bg: Ui.accentBg,
+          child: Icon(Icons.send_outlined, size: 20, color: Ui.primary),
+        ),
+        title: 'Nhắn tới ${_ctl.text.trim()}',
+        titleColor: Ui.primary,
+        onTap: () => widget.onSubmit?.call(_ctl.text),
+      ),
+    _Line(
+      key: const Key('new-group'),
+      height: 60,
+      avatar: const _Circle(
+        bg: Ui.accentBg,
+        child: Icon(Icons.group_add_outlined, size: 20, color: Ui.primary),
+      ),
+      title: 'Tạo nhóm mới',
+      titleColor: Ui.primary,
+      onTap: widget.onGroup,
+    ),
+    if (widget.recent.isNotEmpty) ...[
+      const Padding(
+        padding: EdgeInsets.only(top: 8),
+        child: Text(
+          'Gần đây',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Ui.muted),
+        ),
+      ),
+      for (var i = 0; i < widget.recent.length; i++)
+        _Line(
+          key: Key('recent-$i'),
+          height: 64,
+          avatar: Avatar(_initials(widget.recent[i]), size: 44),
+          title: widget.recent[i],
+          onTap: () => widget.onPickRecent?.call(i),
+        ),
+    ],
+  ];
+
   @override
   Widget build(BuildContext context) {
+    // Desktop (Desktop-NewChat): hộp thoại 480 bo 24 giữa màn, nền phủ mờ.
+    if (MediaQuery.sizeOf(context).width >= desktopBreakpoint) {
+      return Scaffold(
+        key: const Key('new-chat-page'),
+        backgroundColor: Ui.surfaceAlt,
+        body: Stack(
+          children: [
+            const Positioned.fill(child: ColoredBox(color: Color(0x7314171F))),
+            Center(
+              child: Container(
+                key: const Key('new-chat-dialog'),
+                width: 480,
+                constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height - 48),
+                padding: const EdgeInsets.fromLTRB(28, 28, 28, 20),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _title(22, const EdgeInsets.only(bottom: 16)),
+                    _field(EdgeInsets.zero),
+                    const SizedBox(height: 12),
+                    Flexible(child: ListView(shrinkWrap: true, children: _rows())),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Scaffold(
       key: const Key('new-chat-page'),
       body: SafeArea(
@@ -81,81 +208,10 @@ class _NewChatViewState extends State<NewChatView> {
             constraints: const BoxConstraints(maxWidth: 560),
             child: Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 12, 8),
-                  child: Row(
-                    children: [
-                      const Expanded(child: Text('Trò chuyện mới', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, letterSpacing: -0.3))),
-                      IconButton(
-                        key: const Key('new-chat-close'),
-                        tooltip: 'Đóng',
-                        onPressed: widget.onClose,
-                        style: IconButton.styleFrom(fixedSize: const Size.square(Ui.tap)),
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
-                  child: TextField(
-                    key: const Key('peer-field'),
-                    controller: _ctl,
-                    autofocus: true,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.go,
-                    onChanged: (_) => setState(() {}),
-                    onSubmitted: widget.onSubmit,
-                    style: const TextStyle(fontSize: 15),
-                    decoration: InputDecoration(
-                      hintText: 'Nhập số điện thoại hoặc email',
-                      prefixIcon: const Icon(Icons.search, color: Ui.muted),
-                      filled: true,
-                      fillColor: Ui.surface,
-                      contentPadding: EdgeInsets.zero,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: Ui.primary, width: 1.5)),
-                    ),
-                  ),
-                ),
+                _title(24, const EdgeInsets.fromLTRB(24, 20, 12, 8)),
+                _field(const EdgeInsets.fromLTRB(24, 8, 24, 12)),
                 Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    children: [
-                      if (_ctl.text.trim().isNotEmpty)
-                        _Line(
-                          key: const Key('peer-ok'),
-                          height: 60,
-                          avatar: const _Circle(bg: Ui.accentBg, child: Icon(Icons.send_outlined, size: 20, color: Ui.primary)),
-                          title: 'Nhắn tới ${_ctl.text.trim()}',
-                          titleColor: Ui.primary,
-                          onTap: () => widget.onSubmit?.call(_ctl.text),
-                        ),
-                      _Line(
-                        key: const Key('new-group'),
-                        height: 60,
-                        avatar: const _Circle(bg: Ui.accentBg, child: Icon(Icons.group_add_outlined, size: 20, color: Ui.primary)),
-                        title: 'Tạo nhóm mới',
-                        titleColor: Ui.primary,
-                        onTap: widget.onGroup,
-                      ),
-                      if (widget.recent.isNotEmpty) ...[
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8),
-                          child: Text('Gần đây', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Ui.muted)),
-                        ),
-                        for (var i = 0; i < widget.recent.length; i++)
-                          _Line(
-                            key: Key('recent-$i'),
-                            height: 64,
-                            avatar: Avatar(_initials(widget.recent[i]), size: 44),
-                            title: widget.recent[i],
-                            onTap: () => widget.onPickRecent?.call(i),
-                          ),
-                      ],
-                    ],
-                  ),
+                  child: ListView(padding: const EdgeInsets.symmetric(horizontal: 24), children: _rows()),
                 ),
               ],
             ),
@@ -199,7 +255,12 @@ class _Line extends StatelessWidget {
           avatar,
           const SizedBox(width: 12),
           Expanded(
-            child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: titleColor)),
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: titleColor),
+            ),
           ),
         ],
       ),
