@@ -211,3 +211,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Đã chụp 390×844 so với `docs/ui/Mobile-Contact.dc.html`: bố cục, avatar 88, tên 22/600, ba ô 68, nút Chặn pill 48 khớp.
 - Còn lệch (thiếu dịch vụ): chưa có số điện thoại dưới tên (cần ProfileService), ba ô Gọi video/Tắt tiếng/Tìm kiếm và nút Chặn hiện mờ vì chưa có tính năng/BlockService, lưới ảnh thay bằng ô trống "Chưa có ảnh hay tệp chung" và chưa có "Xem tất cả" (chưa có media, giai đoạn 5), màu avatar theo bảng pastel băm tên thay vì xanh cố định, nút quay lại dùng mũi tên Material.
 - Mở từ biểu tượng ⓘ trên thanh đầu của chat 1-1. Chưa làm bố cục Desktop.
+
+## Menu tin nhắn (S-06) — đối chiếu Mobile-MsgMenu
+- Giữ lâu bong bóng mở `showMsgMenu` (nền mờ 50%, bong bóng, hàng phản ứng, thẻ 220 bo 16): vị trí, kích thước, màu khớp bản chụp 390×844.
+- Chỉ "Sao chép" chạy thật. Phản ứng, Trả lời, Chỉnh sửa, Xóa hiện mờ vì engine chưa có (giai đoạn Chat 1-1: phản ứng/sửa/xóa).
+- Lệch: menu cố định cách đỉnh 300 chứ chưa neo theo vị trí tin; nền mờ không phủ lên khung chat thật trong bản chụp (chụp riêng view); tin của người khác chỉ có Trả lời/Sao chép; chưa làm bố cục Desktop (menu chuột phải).

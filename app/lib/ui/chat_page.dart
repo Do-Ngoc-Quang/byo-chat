@@ -4,6 +4,7 @@ import '../chat/chat_engine.dart';
 import '../chat/local_doc.dart';
 import 'contact_page.dart';
 import 'group_pages.dart';
+import 'msg_menu.dart';
 import 'theme.dart';
 
 /// Khung chat theo docs/ui (Mobile-Chat.dc.html): thanh đầu có avatar, nền xám nhạt, bong bóng bo 18, ô nhập tròn.
@@ -105,6 +106,7 @@ class _ChatPageState extends State<ChatPage> {
                       final m = msgs[k];
                       return _Bubble(
                         m,
+                        onLongPress: m.state == MsgState.undecryptable ? null : () => showMsgMenu(context, text: m.text, mine: m.mine),
                         who: m.sender == null ? null : widget.engine.displayName(m.sender!),
                         lastOfRun: k == msgs.length - 1 || msgs[k + 1].mine != m.mine,
                       );
@@ -195,7 +197,9 @@ class _Banner extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble(this.m, {this.who, this.lastOfRun = true});
+  const _Bubble(this.m, {this.who, this.lastOfRun = true, this.onLongPress});
+
+  final VoidCallback? onLongPress;
 
   final ChatMessage m;
 
@@ -228,7 +232,9 @@ class _Bubble extends StatelessWidget {
     );
     return Align(
       alignment: m.mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
+      child: GestureDetector(
+        onLongPress: onLongPress,
+        child: Container(
         key: Key('msg-${m.id}'),
         margin: const EdgeInsets.symmetric(vertical: 3),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -265,6 +271,7 @@ class _Bubble extends StatelessWidget {
               style: TextStyle(fontSize: 11, color: m.mine ? const Color(0xCCFFFFFF) : Ui.muted),
             ),
           ],
+        ),
         ),
       ),
     );

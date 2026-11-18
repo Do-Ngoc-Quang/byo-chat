@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:byo_chat/ui/new_chat_page.dart';
 import 'package:byo_chat/ui/settings_page.dart';
 import 'package:byo_chat/ui/contact_page.dart';
+import 'package:byo_chat/ui/msg_menu.dart';
 import 'package:byo_chat/ui/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -34,4 +35,7 @@ void main() {
   testWidgets('chụp Cài đặt', (t) => shot(t, 'flutter-settings', SettingsView(accountCode: 'a1b2c3d4', onLogout: () {})), skip: dir == null);
   testWidgets('chụp Trò chuyện mới', (t) => shot(t, 'flutter-newchat', const NewChatView(recent: ['Bảo Trân', 'Hoàng Nam', 'Lan Phương'])), skip: dir == null);
   testWidgets('chụp Hồ sơ liên hệ', (t) => shot(t, 'flutter-contact', const ContactView(name: 'Bảo Trân')), skip: dir == null);
+  testWidgets('chụp Menu tin nhắn', (t) => shot(t, 'flutter-msgmenu', Container(color: const Color(0x8014171F), child: const MsgMenuView(text: 'Xong rồi, mình vừa gửi bản 1.0.2.', mine: true, onCopy: _noop))), skip: dir == null);
 }
+
+void _noop() {}
