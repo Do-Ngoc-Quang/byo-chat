@@ -284,3 +284,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - `StatusBanner` ≥ 900 cao 40, chữ 14; `StateCard` nút không còn bị đệm tap-target 48 (cao thẻ khớp bản vẽ trong ~2px). Lưới 3 cột 960 chỉ dựng trong test chụp (bản vẽ là trang minh họa, không phải màn của app).
 - Còn lệch: icon wifi/khóa dùng Material (dày hơn nét 1.8 của bản vẽ); vài trạng thái (đăng xuất, đang cập nhật) chưa nối luồng thật.
 - Desktop-Viewer: hoãn, cần media (giai đoạn 5).
+
+## Khóa SFrame (chatcore::sframe)
+- Nhãn exporter: giao-thuc.md 6.9 ghi `chat.call.v1`, còn CLAUDE.md, thiet-ke-chinh.md mục 12 và PoC dùng `call`. Chọn `call` (đã kiểm chứng), sửa 6.9 cho khớp; nếu muốn đổi nhãn thì đổi đồng loạt cả spec và `sframe::LABEL`.
+- Chỉ số khóa SFrame = số epoch (u32), thay vì "chỉ số kế tiếp": thiết bị vào giữa cuộc gọi tự khớp, không cần phối hợp. Đây là chi tiết triển khai, spec giữ nguyên.
+- Đã kiểm: chỉ logic khóa trên MLS thật. Chưa kiểm: mã hóa khung SFrame thật với LiveKit, Safari, Flutter Android (cần thiết bị thật).

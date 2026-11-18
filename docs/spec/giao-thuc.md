@@ -602,7 +602,7 @@ Các tham số này cần đo trong PoC MLS: mục tiêu là tránh biến nhóm
 
 1. A1 gọi `StartCall(conv_id, kind)`. Server kiểm tra A1 là thành viên, tạo `call_id` và phòng LiveKit, cấp token ngắn hạn, và đặt `mls_epoch` hiện tại của hội thoại vào `CallTicket`. Server gửi VoIP push (iOS) hoặc FCM ưu tiên cao (Android) tới thiết bị của các thành viên khác. Payload chỉ có `call_id` và `conv_id`; thiết bị tra tên người gọi ở DB cục bộ.
 2. Mỗi thiết bị muốn tham gia gọi `JoinCall(call_id)` và nhận token LiveKit.
-3. Khóa SFrame của epoch `e` là `K_e = MLS-Exporter(label = "chat.call.v1", context = call_id, length = 32)`. Thiết bị chỉ vào cuộc gọi khi epoch cục bộ bằng `mls_epoch` trong ticket; nếu lệch thì đồng bộ trước.
+3. Khóa SFrame của epoch `e` là `K_e = MLS-Exporter(label = "call", context = call_id, length = 32)`. Thiết bị chỉ vào cuộc gọi khi epoch cục bộ bằng `mls_epoch` trong ticket; nếu lệch thì đồng bộ trước.
 4. Khi epoch đổi giữa cuộc gọi (có người vào hoặc ra nhóm), mỗi thiết bị tính khóa mới, đặt chỉ số khóa kế tiếp và giữ khóa cũ khoảng 10 giây để giải mã khung còn đang bay.
 5. Kết thúc cuộc gọi: `EndCall`, rồi một thiết bị gửi tin điều khiển `CallEvent` (kết thúc, thời lượng) vào hội thoại.
 

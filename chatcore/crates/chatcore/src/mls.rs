@@ -256,9 +256,9 @@ impl Device {
         }
     }
 
-    /// Khóa SFrame (CLAUDE.md): Exporter("call", call_id, 32).
+    /// Khóa SFrame của epoch hiện tại: Exporter(LABEL, call_id, 32) (giao-thuc.md 6.9).
     pub fn sframe_key(&self, g: &MlsGroup, call_id: &[u8]) -> Result<Vec<u8>> {
-        Ok(g.export_secret(self.provider.crypto(), "call", call_id, 32)?)
+        Ok(g.export_secret(self.provider.crypto(), crate::sframe::LABEL, call_id, 32)?)
     }
 
     /// Gỡ các lá theo chỉ số; Commit áp dụng ngay cho chính mình.
