@@ -134,5 +134,5 @@ Quy tắc: mỗi việc UI trong kế hoạch này (ở mọi giai đoạn) ch�
 - [ ] Trạng thái trống/lỗi (S-18): đã có `StateCard`/`StatusBanner`, dùng ở danh sách chat; ĐÃ chụp đối chiếu Mobile-States, còn lệch ghi ở `docs/notes.md` (một số trạng thái chưa nối luồng, chưa Desktop) nên chưa tick
 - [ ] Trình xem ảnh/tệp (S-08): đã có `ViewerView`, ĐÃ chụp đối chiếu Mobile-Viewer; chưa nối vào chat vì chưa có media (giai đoạn 5), chưa Desktop nên chưa tick
 - [ ] Thiết lập hồ sơ (S-03): đã có `ProfileSetupView`, ĐÃ chụp đối chiếu Mobile-Profile; chưa nối luồng đăng ký vì thiếu ProfileService, chưa chọn ảnh, chưa Desktop nên chưa tick
-- [ ] Desktop hộp thư ba cột: đã có `DesktopShell` (rail 72, danh sách 340, khung chat), ĐÃ chụp đối chiếu Desktop-Inbox, còn lệch ghi ở `docs/notes.md` (đầu khung chat, lề, bảng bên phải) nên chưa tick
+- [ ] Desktop hộp thư ba cột: đã có `DesktopShell` (rail 72, danh sách 340, khung chat), ĐÃ chụp đối chiếu Desktop-Inbox, đã bổ sung đầu khung chat, lề, ô nhập; còn lệch ghi ở `docs/notes.md` (giờ trong bong bóng, Đang nhập, bảng bên phải) nên chưa tick
 - [ ] Còn lại: bố cục Desktop của các màn khác; so sánh ảnh với thiết kế cho danh sách có dữ liệu và khung chat

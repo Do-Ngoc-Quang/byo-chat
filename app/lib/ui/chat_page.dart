@@ -9,10 +9,13 @@ import 'theme.dart';
 
 /// Khung chat theo docs/ui (Mobile-Chat.dc.html): thanh đầu có avatar, nền xám nhạt, bong bóng bo 18, ô nhập tròn.
 class ChatPage extends StatefulWidget {
-  const ChatPage({super.key, required this.engine, required this.conv});
+  const ChatPage({super.key, required this.engine, required this.conv, this.embedded = false});
 
   final ChatEngine engine;
   final ConvState conv;
+
+  /// Cột phải của bố cục Desktop: tự vẽ đầu trang (không AppBar), lề rộng hơn, bong bóng tối đa 460.
+  final bool embedded;
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -39,7 +42,7 @@ class _ChatPageState extends State<ChatPage> {
     final conv = widget.conv;
     return Scaffold(
       key: const Key('chat-page'),
-      appBar: AppBar(
+      appBar: widget.embedded ? null : AppBar(
         titleSpacing: 0,
         title: Row(
           children: [
@@ -90,6 +93,7 @@ class _ChatPageState extends State<ChatPage> {
       ),
       body: Column(
         children: [
+          if (widget.embedded) _DesktopHeader(engine: widget.engine, conv: conv),
           Expanded(
             child: Container(
               color: Ui.surfaceAlt,
@@ -99,7 +103,7 @@ class _ChatPageState extends State<ChatPage> {
                   final msgs = widget.engine.messages(conv.hexId);
                   return ListView.builder(
                     reverse: true,
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    padding: widget.embedded ? const EdgeInsets.fromLTRB(48, 24, 48, 8) : const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     itemCount: msgs.length,
                     itemBuilder: (context, i) {
                       final k = msgs.length - 1 - i;
@@ -108,6 +112,7 @@ class _ChatPageState extends State<ChatPage> {
                         m,
                         onLongPress: m.state == MsgState.undecryptable ? null : () => showMsgMenu(context, text: m.text, mine: m.mine),
                         who: m.sender == null ? null : widget.engine.displayName(m.sender!),
+                        maxWidth: widget.embedded ? 460 : 320,
                         lastOfRun: k == msgs.length - 1 || msgs[k + 1].mine != m.mine,
                       );
                     },
@@ -129,10 +134,14 @@ class _ChatPageState extends State<ChatPage> {
               child: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                  padding: widget.embedded ? const EdgeInsets.fromLTRB(24, 12, 24, 20) : const EdgeInsets.fromLTRB(12, 8, 12, 8),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
+                      if (widget.embedded) ...const [
+                        Opacity(opacity: 0.45, child: SizedBox(width: Ui.tap, height: Ui.tap, child: Icon(Icons.add, size: 22, color: Ui.muted))),
+                        SizedBox(width: 8),
+                      ],
                       Expanded(
                         child: TextField(
                           key: const Key('message-field'),
@@ -197,7 +206,9 @@ class _Banner extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble(this.m, {this.who, this.lastOfRun = true, this.onLongPress});
+  const _Bubble(this.m, {this.who, this.lastOfRun = true, this.onLongPress, this.maxWidth = 320});
+
+  final double maxWidth;
 
   final VoidCallback? onLongPress;
 
@@ -238,7 +249,7 @@ class _Bubble extends StatelessWidget {
         key: Key('msg-${m.id}'),
         margin: const EdgeInsets.symmetric(vertical: 3),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: const BoxConstraints(maxWidth: 320),
+        constraints: BoxConstraints(maxWidth: maxWidth),
         decoration: BoxDecoration(
           color: m.mine ? Ui.primary : Colors.white,
           border: m.mine ? null : Border.all(color: Ui.border),
@@ -276,4 +287,65 @@ class _Bubble extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Đầu khung chat Desktop (docs/ui/Desktop-Inbox): avatar 40, tên, nút Gọi video (mờ, chưa có cuộc gọi) và Thông tin.
+class _DesktopHeader extends StatelessWidget {
+  const _DesktopHeader({required this.engine, required this.conv});
+
+  final ChatEngine engine;
+  final ConvState conv;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Ui.border))),
+      child: Row(
+        children: [
+          Avatar(conv.title),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(conv.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Ui.text)),
+                if (conv.isGroup) const Text('Nhóm', style: TextStyle(fontSize: 12, color: Ui.muted)),
+              ],
+            ),
+          ),
+          const Opacity(
+            opacity: 0.45,
+            child: _RoundIcon(Icons.videocam_outlined, color: Ui.primary),
+          ),
+          const SizedBox(width: 8),
+          _RoundIcon(
+            Icons.info_outline,
+            tooltip: conv.isGroup ? 'Thông tin nhóm' : 'Hồ sơ liên hệ',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => conv.isGroup ? GroupInfoPage(engine: engine, conv: conv) : ContactPage(conv: conv),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoundIcon extends StatelessWidget {
+  const _RoundIcon(this.icon, {this.color = Ui.text, this.onTap, this.tooltip});
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+        tooltip: tooltip,
+        onPressed: onTap,
+        style: IconButton.styleFrom(backgroundColor: Ui.surface, fixedSize: const Size.square(Ui.tap), disabledBackgroundColor: Ui.surface),
+        icon: Icon(icon, size: 22, color: color),
+      );
 }

@@ -46,7 +46,7 @@ class _DesktopShellState extends State<DesktopShell> {
                 if (conv == null) {
                   return const Center(child: Text('Chọn một cuộc trò chuyện để bắt đầu', key: Key('desktop-empty'), style: TextStyle(fontSize: 15, color: Ui.muted)));
                 }
-                return ChatPage(key: ValueKey(conv.hexId), engine: widget.engine, conv: conv);
+                return ChatPage(key: ValueKey(conv.hexId), engine: widget.engine, conv: conv, embedded: true);
               },
             ),
           ),

@@ -77,6 +77,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                     ],
                   ),
                 ),
+                if (widget.onOpen == null || engine.connection != GatewayState.online)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 2, 20, 8),
                   child: engine.connection == GatewayState.online
@@ -104,6 +105,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                     ),
                   ),
                 ),
+                if (widget.onOpen == null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                   child: Row(
