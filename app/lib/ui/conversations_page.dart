@@ -9,6 +9,7 @@ import 'contact_dialog.dart';
 import 'device_pages.dart';
 import 'errors.dart';
 import 'group_pages.dart';
+import 'settings_page.dart';
 import 'theme.dart';
 
 /// Danh sách hội thoại theo docs/ui (Main.dc.html): tiêu đề "Tin nhắn", ô tìm, lọc Tất cả/Nhóm, hàng 72px.
@@ -63,6 +64,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                         onSelected: (v) => _menu(context, v),
                         itemBuilder: (_) => [
                           const PopupMenuItem(key: Key('menu-group'), value: 'group', child: Text('Nhóm mới')),
+                          const PopupMenuItem(key: Key('menu-settings'), value: 'settings', child: Text('Cài đặt')),
                           const PopupMenuItem(key: Key('menu-devices'), value: 'devices', child: Text('Thiết bị của tôi')),
                           const PopupMenuItem(key: Key('menu-backup'), value: 'backup', child: Text('Sao lưu')),
                           if (widget.onLogout != null) const PopupMenuItem(key: Key('logout'), value: 'logout', child: Text('Đăng xuất')),
@@ -158,6 +160,8 @@ class _ConversationsPageState extends State<ConversationsPage> {
     switch (v) {
       case 'group':
         nav.push(MaterialPageRoute<void>(builder: (_) => GroupCreatePage(engine: engine)));
+      case 'settings':
+        nav.push(MaterialPageRoute<void>(builder: (_) => SettingsPage(engine: engine, onLogout: widget.onLogout)));
       case 'devices':
         nav.push(MaterialPageRoute<void>(builder: (_) => DevicesPage(engine: engine)));
       case 'backup':
