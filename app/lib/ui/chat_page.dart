@@ -141,16 +141,25 @@ class _ChatPageState extends State<ChatPage> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      if (widget.embedded) ...const [
-                        Opacity(
-                          opacity: 0.45,
-                          child: SizedBox(
-                            width: Ui.tap,
-                            height: Ui.tap,
-                            child: Icon(Icons.add, size: 22, color: Ui.muted),
+                      if (widget.embedded) ...[
+                        Builder(
+                          builder: (bctx) => Opacity(
+                            opacity: 0.45,
+                            child: InkResponse(
+                              key: const Key('attach-button'),
+                              onTap: () {
+                                final b = bctx.findRenderObject() as RenderBox;
+                                showAttachMenu(bctx, b.localToGlobal(Offset.zero) & b.size);
+                              },
+                              child: const SizedBox(
+                                width: Ui.tap,
+                                height: Ui.tap,
+                                child: Icon(Icons.add, size: 22, color: Ui.muted),
+                              ),
+                            ),
                           ),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                       ],
                       Expanded(
                         child: TextField(
