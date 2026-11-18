@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../chat/chat_engine.dart';
 import 'chat_page.dart';
+import 'contact_page.dart';
 import 'conversations_page.dart';
 import 'settings_page.dart';
 import 'theme.dart';
@@ -22,6 +23,7 @@ class DesktopShell extends StatefulWidget {
 
 class _DesktopShellState extends State<DesktopShell> {
   String? _selected;
+  bool _info = false;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +49,10 @@ class _DesktopShellState extends State<DesktopShell> {
                 engine: widget.engine,
                 onLogout: widget.onLogout,
                 selectedHexId: _selected,
-                onOpen: (c) => setState(() => _selected = c.hexId),
+                onOpen: (c) => setState(() {
+                  _selected = c.hexId;
+                  _info = false;
+                }),
               ),
             ),
           ),
@@ -65,7 +70,20 @@ class _DesktopShellState extends State<DesktopShell> {
                     ),
                   );
                 }
-                return ChatPage(key: ValueKey(conv.hexId), engine: widget.engine, conv: conv, embedded: true);
+                return Row(
+                  children: [
+                    Expanded(
+                      child: ChatPage(
+                        key: ValueKey(conv.hexId),
+                        engine: widget.engine,
+                        conv: conv,
+                        embedded: true,
+                        onInfo: () => setState(() => _info = !_info),
+                      ),
+                    ),
+                    if (_info && !conv.isGroup) ContactPanel(name: conv.title),
+                  ],
+                );
               },
             ),
           ),

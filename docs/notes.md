@@ -243,3 +243,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 ## Desktop: cài đặt (Desktop-Settings)
 - `SettingsPage` từ rộng ≥ 900 dùng `SettingsDesktopView`: thanh điều hướng (`DesktopRail`, nút Cài đặt sáng) + danh sách mục 333 + nội dung tối đa 872; chụp 1280×800 so với thiết kế: khớp mốc x của tiêu đề và công tắc.
 - Lệch: công tắc Thông báo hiện mờ (chưa có dịch vụ cài đặt thông báo); "Quyền riêng tư" mờ, không chạm được; "Sao lưu"/"Thiết bị đã liên kết" mở trang riêng thay vì nội dung trong cột phải; biểu tượng thứ hai của thanh trái là camera (thiết kế: điện thoại).
+
+## Desktop: hồ sơ liên hệ (Desktop-Contact)
+- `ContactPanel` (340, viền trái, đệm 24) hiện bên phải khung chat khi bấm ⓘ ở chat 1-1 trong `DesktopShell` (bấm lại thì đóng; đổi cuộc trò chuyện thì đóng). Mobile vẫn mở trang riêng; dùng chung `_contactChildren`. Chụp 1280×800 so với thiết kế: bảng bên phải khớp (avatar 88, ba ô, nút Chặn).
+- Lệch: thiết kế không có cột danh sách (ảnh mẫu chỉ có chat + bảng); chưa có số điện thoại dưới tên (không lưu), "Xem tất cả" và lưới ảnh (chưa có media; hiện ô trống), ba ô và nút Chặn mờ (chưa có dịch vụ). Chat nhóm vẫn mở `GroupInfoPage` ở trang riêng.
