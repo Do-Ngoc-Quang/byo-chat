@@ -256,3 +256,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - `GroupInfoPage(embedded: true)` là bảng 340 bên phải khung chat Desktop, mở/đóng bằng nút ⓘ ở nhóm (`group-panel`); dùng chung `InfoTile` với Contact.
 - Lệch: thiết kế không có cột danh sách; 3 ô (Gọi video, Tắt tiếng, Tìm kiếm) làm mờ vì chưa có backend; thành viên hiện "Tài khoản xxxx" (chưa có ProfileService), không có nhãn "Quản trị" của thiết kế; nút "Thêm thành viên" chỉ hiện cho quản trị; nút Rời nhóm nằm đáy bảng (thiết kế không có). Chữ ở nút đỏ trong ảnh chụp bị lỗi font của môi trường test, không phải lỗi app.
 - Còn chưa làm: Profile, Devices, Link, Calls, Call, Incoming, Attach, MsgMenu, States, Viewer.
+
+## Desktop: thiết lập hồ sơ (Desktop-Profile)
+- `ProfileSetupView` từ rộng ≥ 900 dùng thẻ trắng 440 bo 24, viền, đệm 48/40 giữa nền #F7F8FA (cùng kiểu thẻ đăng nhập); nội dung dùng chung với Mobile.
+- Lệch: thẻ cao hơn thiết kế ~8px (ô nhập Flutter cao hơn 56 vài px); nút máy ảnh vẫn mờ vì chưa có ProfileService/MediaService; màn chưa nối vào luồng đăng nhập (chưa có server). Ô nhập hiện tay nắm con trỏ trong ảnh chụp là do môi trường test.
+- Còn chưa làm: Devices, Link, Calls, Call, Incoming, Attach, MsgMenu, States, Viewer.
