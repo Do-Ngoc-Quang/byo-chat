@@ -10,6 +10,7 @@ import '../chat/chat_engine.dart';
 import '../chat/local_doc.dart';
 import '../gen/chat/v1/common.pbenum.dart';
 import '../gen/chat/v1/services.pb.dart';
+import 'desktop_shell.dart' show desktopBreakpoint;
 import 'errors.dart';
 import 'theme.dart';
 
@@ -61,7 +62,9 @@ class _DevicesPageState extends State<DevicesPage> {
     final me = hex(widget.engine.session.deviceId);
     final add = FilledButton(
       key: const Key('add-device'),
-      style: widget.embedded ? FilledButton.styleFrom(minimumSize: const Size(0, Ui.buttonHeight), padding: const EdgeInsets.symmetric(horizontal: 24)) : null,
+      style: widget.embedded
+          ? FilledButton.styleFrom(minimumSize: const Size(0, Ui.buttonHeight), padding: const EdgeInsets.symmetric(horizontal: 24))
+          : null,
       onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => LinkApprovePage(engine: widget.engine))),
       child: const Text('Liên kết thiết bị mới'),
     );
@@ -315,9 +318,173 @@ class _LinkNewDevicePageState extends State<LinkNewDevicePage> {
     }
   }
 
+  /// Desktop (docs/ui/Desktop-Link): thẻ 880 hai cột; trái là hướng dẫn 3 bước, phải (360 + đệm 40, nền xám) là QR + mã xác nhận.
+  Widget _desktop(LinkOffer? o) {
+    Widget step(int n, String text) => Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: Ui.accentBg, borderRadius: BorderRadius.circular(14)),
+          child: Text(
+            '$n',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Ui.accentFg),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(text, style: const TextStyle(fontSize: 15, height: 1.5, color: Ui.text)),
+        ),
+      ],
+    );
+    final code = o?.shortCode ?? '';
+    final spaced = code.length == 6 ? '${code.substring(0, 3)} ${code.substring(3)}' : code;
+    final panel = <Widget>[
+      if (o == null && _error == null) const Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()),
+      if (o != null) ...[
+        Container(
+          key: const Key('link-qr'),
+          width: 220,
+          height: 220,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Ui.border),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: QrImageView(data: o.encode(), padding: EdgeInsets.zero, backgroundColor: Colors.white),
+        ),
+        Column(
+          children: [
+            const Text('Mã xác nhận', style: TextStyle(fontSize: 13, color: Ui.muted)),
+            const SizedBox(height: 4),
+            Text(
+              spaced,
+              key: const Key('new-short-code'),
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 4,
+                color: Ui.text,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
+        if (_error == null)
+          const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 8,
+                height: 8,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(color: Ui.primary, shape: BoxShape.circle),
+                ),
+              ),
+              SizedBox(width: 8),
+              Text('Đang chờ phê duyệt…', style: TextStyle(fontSize: 13, color: Ui.muted)),
+            ],
+          ),
+      ],
+      if (_error != null)
+        Text(
+          _error!,
+          key: const Key('link-error'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Ui.danger),
+        ),
+      if (o != null || _error != null)
+        OutlinedButton(
+          key: const Key('link-retry'),
+          onPressed: _begin,
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 44),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            foregroundColor: Ui.text,
+            side: const BorderSide(color: Ui.fieldBorder),
+            backgroundColor: Colors.white,
+            shape: const StadiumBorder(),
+            textStyle: const TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+          child: Text(_error != null ? 'Thử lại' : 'Tạo mã mới'),
+        ),
+    ];
+    return Scaffold(
+      key: const Key('link-new-page'),
+      backgroundColor: Ui.surfaceAlt,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(40),
+          child: Container(
+            width: 880,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Ui.border),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 56),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(color: Ui.primary, borderRadius: BorderRadius.circular(12)),
+                            child: const Icon(Icons.chat_bubble_outline, size: 22, color: Colors.white),
+                          ),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Đăng nhập trên máy tính',
+                            style: TextStyle(fontSize: 32, fontWeight: FontWeight.w600, letterSpacing: -0.4, height: 1.2, color: Ui.text),
+                          ),
+                          const SizedBox(height: 24),
+                          step(1, 'Mở ứng dụng trên điện thoại và vào Cài đặt.'),
+                          const SizedBox(height: 16),
+                          step(2, 'Chọn Thiết bị đã liên kết, sau đó Liên kết thiết bị mới.'),
+                          const SizedBox(height: 16),
+                          step(3, 'Nhập hoặc dán mã bên cạnh, rồi so khớp mã xác nhận.'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: 440,
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
+                    decoration: const BoxDecoration(
+                      color: Ui.surfaceAlt,
+                      border: Border(left: BorderSide(color: Ui.border)),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (var i = 0; i < panel.length; i++) ...[if (i > 0) const SizedBox(height: 20), panel[i]],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final o = _offer;
+    if (MediaQuery.sizeOf(context).width >= desktopBreakpoint) return _desktop(o);
     return ScreenScaffold(
       key: const Key('link-new-page'),
       title: 'Đăng nhập bằng thiết bị khác',
