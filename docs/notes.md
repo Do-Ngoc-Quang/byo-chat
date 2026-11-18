@@ -195,3 +195,9 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Yêu cầu "làm toàn bộ kế hoạch" vượt một phiên (còn: giai đoạn 5 media, 6 gọi video, 6 màn UI, Desktop nhiều cột, việc hoãn cần thiết bị/hạ tầng thật). Theo CLAUDE.md chọn một mục: màn Cài đặt (S-15).
 - Môi trường mới không có Flutter: cài Flutter 3.47.9 (Dart 3.13.7) vào /opt/fl, `protoc` 28.3 + `protoc_plugin` 22.0.1 để sinh `app/lib/gen` (thay plugin BSR). Sau đó `flutter analyze` sạch, `flutter test` qua.
 - `SettingsPage` + `SettingsRow` (theme.dart) theo `Mobile-Settings.dc.html`; menu thêm "Cài đặt" (giữ nguyên Key cũ). Lệch: chưa chụp đối chiếu; chưa có hồ sơ (tên/số điện thoại), công tắc Thông báo/đã xem/đang nhập, Passkey, Người đã chặn, thanh tab dưới; chưa có bố cục Desktop hai cột. Test: `settings_row_test.dart` (chưa có test widget cho trang vì dựng `ChatEngine` cần nhiều fake).
+
+## Đối chiếu Cài đặt (S-15) với `docs/ui/Mobile-Settings` (18/11/2026)
+- Cách chụp: `SHOT_DIR=/tmp/shots ICON_FONT=<MaterialIcons-Regular.otf> flutter test test/settings_shot_test.dart` (bỏ qua nếu không có `SHOT_DIR`); bản vẽ chụp bằng Playwright, thay `{{accent}}` bằng #2563EB.
+- Khớp: lề 20, tiêu đề 28/600, thẻ tài khoản (nền #F7F8FA, viền, bo 16, avatar 56), hàng cao 56, ô icon 40 bo 12, dòng Đăng xuất đỏ không mũi tên.
+- Còn lệch: (1) thẻ lệch xuống ~18px so với bản vẽ (khoảng cách dưới tiêu đề ở `ScreenScaffold`); (2) thẻ chưa có tên/số điện thoại/mũi tên vì chưa có hồ sơ (Profile) ở server; avatar chữ "T" xanh lá thay "B" xanh dương; (3) thiếu các dòng công tắc Thông báo, Gửi đã xem, Gửi đang nhập, công tắc Sao lưu (chưa có dịch vụ; dòng Sao lưu hiện là mũi tên mở trang); (4) thiếu thanh tab dưới (Tin nhắn/Cuộc gọi/Cài đặt), app mở Cài đặt từ menu ba chấm; (5) độ đậm chữ trong ảnh chụp test nhạt hơn bản vẽ do test nạp Inter tĩnh. Chưa chụp Desktop-Settings.
+- Vì còn lệch (2)-(4) mục Cài đặt chưa tick.
