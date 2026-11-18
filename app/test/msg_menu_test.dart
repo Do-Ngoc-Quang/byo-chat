@@ -19,4 +19,19 @@ void main() {
     expect(find.text('Xóa'), findsNothing);
     expect(find.text('Sao chép'), findsOneWidget);
   });
+
+  testWidgets('MsgMenuPopover: đặt dưới bong bóng, căn mép phải với tin của mình', (t) async {
+    t.view.physicalSize = const Size(1280, 800);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    const anchor = Rect.fromLTWH(700, 300, 300, 40);
+    await t.pumpWidget(
+      MaterialApp(theme: Ui.theme(), home: const MsgMenuPopover(anchor: anchor, mine: true)),
+    );
+    final r = t.getRect(find.byKey(const Key('msg-popover')));
+    expect(r.right, anchor.right);
+    expect(r.top, anchor.bottom + 8);
+    expect(r.width, 220);
+    expect(find.text('Xóa'), findsOneWidget);
+  });
 }

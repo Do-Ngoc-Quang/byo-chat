@@ -271,3 +271,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - `LinkNewDevicePage` từ rộng ≥ 900 là thẻ 880 hai cột: trái hướng dẫn 3 bước, phải (440, nền #F7F8FA) có QR thật 220 + mã xác nhận "481 729" + nút Tạo mã mới; Mobile giữ nguyên.
 - Lệch: QR là mã thật (thiết kế vẽ ô giả); bước 3 viết "Nhập hoặc dán mã" vì app chưa có quét QR (cần camera); chưa có dòng "Mã hết hạn sau mm:ss" (server chưa trả hạn của mã liên kết) nên hiện "Đang chờ phê duyệt…"; nút Chép mã/chuỗi mã không hiện ở Desktop (thiết bị cũ quét hoặc dán từ Mobile).
 - Còn chưa làm: Calls, Call, Incoming, Attach, MsgMenu, States, Viewer (Calls/Call/Incoming cần dịch vụ gọi, hoãn).
+
+## Desktop: menu thao tác tin (Desktop-MsgMenu)
+- Popover (`MsgMenuPopover`) mở bằng bấm phải hoặc giữ lâu, đặt kề bong bóng (dưới, hoặc lật lên trên nếu hết chỗ), căn mép phải với tin của mình, không nền mờ; Mobile giữ nguyên.
+- Còn lệch: bản vẽ có vị trí cố định (không neo theo tin); Trả lời, phản ứng, Chỉnh sửa, Xóa vẫn mờ vì engine chưa có; khung chat hiển thị giờ trong bong bóng và có cột danh sách (đã ghi ở các mục trước).
