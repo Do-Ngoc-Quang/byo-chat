@@ -131,4 +131,5 @@ Quy tắc: mỗi việc UI trong kế hoạch này (ở mọi giai đoạn) ch�
 - [ ] Trò chuyện mới (S-09): đã có `NewChatPage` (ô nhập số/email, Tạo nhóm mới, danh sách gần đây), thay hộp thoại cũ; ĐÃ chụp đối chiếu Mobile-NewChat, còn lệch ghi ở `docs/notes.md` (chưa có Danh bạ, chưa chụp Desktop) nên chưa tick
 - [ ] Hồ sơ liên hệ (S-11): đã có `ContactPage`/`ContactView`, mở từ ⓘ của chat 1-1; ĐÃ chụp đối chiếu Mobile-Contact, còn lệch ghi ở `docs/notes.md` (chưa có số điện thoại, media, Chặn, Gọi video, Tắt tiếng, Tìm kiếm vì thiếu server) nên chưa tick
 - [ ] Menu tin nhắn (S-06): đã có `showMsgMenu`/`MsgMenuView`, giữ lâu bong bóng để mở, Sao chép chạy thật; ĐÃ chụp đối chiếu Mobile-MsgMenu, còn lệch ghi ở `docs/notes.md` (phản ứng, Trả lời, Sửa, Xóa chưa có engine; chưa có Desktop) nên chưa tick
+- [ ] Trạng thái trống/lỗi (S-18): đã có `StateCard`/`StatusBanner`, dùng ở danh sách chat; ĐÃ chụp đối chiếu Mobile-States, còn lệch ghi ở `docs/notes.md` (một số trạng thái chưa nối luồng, chưa Desktop) nên chưa tick
 - [ ] Còn lại: màn thiết kế mà app chưa có (Profile, States, Viewer); bố cục Desktop nhiều cột; so sánh ảnh với thiết kế cho danh sách có dữ liệu và khung chat

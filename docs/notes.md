@@ -216,3 +216,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Giữ lâu bong bóng mở `showMsgMenu` (nền mờ 50%, bong bóng, hàng phản ứng, thẻ 220 bo 16): vị trí, kích thước, màu khớp bản chụp 390×844.
 - Chỉ "Sao chép" chạy thật. Phản ứng, Trả lời, Chỉnh sửa, Xóa hiện mờ vì engine chưa có (giai đoạn Chat 1-1: phản ứng/sửa/xóa).
 - Lệch: menu cố định cách đỉnh 300 chứ chưa neo theo vị trí tin; nền mờ không phủ lên khung chat thật trong bản chụp (chụp riêng view); tin của người khác chỉ có Trả lời/Sao chép; chưa làm bố cục Desktop (menu chuột phải).
+
+## Trạng thái trống và lỗi (S-18) — đối chiếu Mobile-States
+- Thêm `StateCard` (icon tròn 48, tiêu đề, mô tả, nút pill 40) và `StatusBanner` (dải vàng 36) ở `app/lib/ui/states.dart`; chụp đủ 6 thẻ + dải khớp thiết kế (bố cục 2 cột, icon, chữ, khoảng cách).
+- Đã dùng thật ở danh sách chat: "Chưa có cuộc trò chuyện" (nút Soạn tin mới), "Không tìm thấy", dải "Mất kết nối…" khi gateway chưa online.
+- Chưa dùng: "Không tải được/Thử lại", "Đang cập nhật…", "Bạn đã được đăng xuất/Đăng nhập lại" (chưa có luồng tương ứng trong engine; widget đã sẵn). Chưa phủ các vùng khác (khung chat, cuộc gọi), chưa chụp Desktop-States.
