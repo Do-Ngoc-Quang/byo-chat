@@ -9,6 +9,7 @@ import 'device_pages.dart';
 import 'new_chat_page.dart';
 import 'group_pages.dart';
 import 'settings_page.dart';
+import 'states.dart';
 import 'theme.dart';
 
 /// Danh sách hội thoại theo docs/ui (Main.dc.html): tiêu đề "Tin nhắn", ô tìm, lọc Tất cả/Nhóm, hàng 72px.
@@ -74,11 +75,9 @@ class _ConversationsPageState extends State<ConversationsPage> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 2, 20, 8),
-                  child: Text(
-                    _status(engine.connection),
-                    key: const Key('connection-status'),
-                    style: const TextStyle(fontSize: 12, color: Ui.muted),
-                  ),
+                  child: engine.connection == GatewayState.online
+                      ? Text(_status(engine.connection), key: const Key('connection-status'), style: const TextStyle(fontSize: 12, color: Ui.muted))
+                      : StatusBanner(_status(engine.connection), key: const Key('connection-status')),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -123,15 +122,25 @@ class _ConversationsPageState extends State<ConversationsPage> {
                 ),
                 Expanded(
                   child: convs.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
-                            child: Text(
-                              all.isEmpty ? 'Chưa có cuộc trò chuyện. Bấm nút soạn tin để nhắn cho ai đó.' : 'Không có kết quả.',
-                              key: const Key('empty'),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Ui.muted),
-                            ),
+                      ? Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                          child: Align(
+                            alignment: Alignment.topCenter,
+                            child: all.isEmpty
+                                ? StateCard(
+                                    key: const Key('empty'),
+                                    icon: Icons.chat_bubble_outline,
+                                    title: 'Chưa có cuộc trò chuyện',
+                                    message: 'Bắt đầu bằng cách nhắn tin cho ai đó.',
+                                    action: 'Soạn tin mới',
+                                    onAction: () => _newChat(context),
+                                  )
+                                : StateCard(
+                                    key: const Key('empty'),
+                                    icon: Icons.search,
+                                    title: 'Không tìm thấy',
+                                    message: _query.isEmpty ? 'Không có kết quả.' : 'Không có kết quả cho “$_query”.',
+                                  ),
                           ),
                         )
                       : ListView(
