@@ -150,6 +150,22 @@ extension ChatCoreMls on ChatCore {
   }
 
   Future<Uint8List> sframeKey(Uint8List conv, Uint8List callId) async => (await _call('sframe_key', [conv, callId]))[0];
+
+  /// Khóa ngẫu nhiên cho một tệp media: (key 32 byte, nonce_prefix 7 byte).
+  Future<(Uint8List key, Uint8List noncePrefix)> mediaKeyNew() async {
+    final r = await _call('media_key_new', []);
+    return (r[0], r[1]);
+  }
+
+  /// Mã hóa cả tệp (AES-256-GCM theo khối 64 KiB); trả (ciphertext, SHA-256 của ciphertext).
+  Future<(Uint8List ciphertext, Uint8List sha256)> mediaEncrypt(Uint8List key, Uint8List noncePrefix, Uint8List plain) async {
+    final r = await _call('media_encrypt', [key, noncePrefix, plain]);
+    return (r[0], r[1]);
+  }
+
+  /// Kiểm hash rồi giải mã; ném [ChatCoreException] nếu hash sai hoặc dữ liệu bị sửa.
+  Future<Uint8List> mediaDecrypt(Uint8List key, Uint8List noncePrefix, Uint8List sha256, Uint8List ciphertext) async =>
+      (await _call('media_decrypt', [key, noncePrefix, sha256, ciphertext]))[0];
 }
 
 Uint8List _u64(int v) {
