@@ -290,3 +290,57 @@ ButtonStyle dangerOutline({double height = 48}) => OutlinedButton.styleFrom(
   shape: const StadiumBorder(),
   textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
 );
+
+/// Dòng cài đặt theo docs/ui/Mobile-Settings: ô biểu tượng 40px bo 12 (#EEF2FF, hoặc đỏ khi nguy hiểm),
+/// tiêu đề 15/500, mô tả 13 xám, mũi tên phải; cao tối thiểu 56.
+class SettingsRow extends StatelessWidget {
+  const SettingsRow({super.key, required this.icon, required this.title, this.subtitle, this.danger = false, this.onTap});
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final bool danger;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(12),
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 56),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: danger ? const Color(0xFFFEE2E2) : Ui.accentBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 20, color: danger ? const Color(0xFFB91C1C) : Ui.accentFg),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: danger ? const Color(0xFFB91C1C) : Ui.text),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(subtitle!, style: const TextStyle(fontSize: 13, color: Ui.muted)),
+                  ],
+                ],
+              ),
+            ),
+            if (!danger) const Icon(Icons.chevron_right, size: 18, color: Ui.muted),
+          ],
+        ),
+      ),
+    ),
+  );
+}

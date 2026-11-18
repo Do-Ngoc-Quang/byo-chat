@@ -190,3 +190,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Đóng thêm lỗ hổng cũ: `apply_proposal` nhận mọi proposal nên thành viên gửi Remove cho người khác khiến commit-theo-hàng-chờ của admin gỡ nhầm; nay lõi chỉ nhận Remove tự gỡ. Chưa có test âm cho ca này (API lõi không dựng được proposal gỡ người khác).
 - Giới hạn: client chưa kiểm vai trò người commit nên thành viên thường độc hại có thể nhét thêm Remove vào Commit tự rời; hẹn giờ dự phòng không sống qua khởi động lại app. Cả hai nằm trong `docs/ke-hoach.md`.
 - Kiểm: `go test` (bộ nhớ, Postgres, DynamoDB thật), `cargo test --release`, 16 test FFI qua gateway thật, `flutter analyze`/`test` sạch. Chưa kiểm giao diện (không đổi UI).
+
+## Phiên màn Cài đặt (18/11/2026)
+- Yêu cầu "làm toàn bộ kế hoạch" vượt một phiên (còn: giai đoạn 5 media, 6 gọi video, 6 màn UI, Desktop nhiều cột, việc hoãn cần thiết bị/hạ tầng thật). Theo CLAUDE.md chọn một mục: màn Cài đặt (S-15).
+- Môi trường mới không có Flutter: cài Flutter 3.47.9 (Dart 3.13.7) vào /opt/fl, `protoc` 28.3 + `protoc_plugin` 22.0.1 để sinh `app/lib/gen` (thay plugin BSR). Sau đó `flutter analyze` sạch, `flutter test` qua.
+- `SettingsPage` + `SettingsRow` (theme.dart) theo `Mobile-Settings.dc.html`; menu thêm "Cài đặt" (giữ nguyên Key cũ). Lệch: chưa chụp đối chiếu; chưa có hồ sơ (tên/số điện thoại), công tắc Thông báo/đã xem/đang nhập, Passkey, Người đã chặn, thanh tab dưới; chưa có bố cục Desktop hai cột. Test: `settings_row_test.dart` (chưa có test widget cho trang vì dựng `ChatEngine` cần nhiều fake).
