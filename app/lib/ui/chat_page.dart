@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../chat/chat_engine.dart';
 import '../chat/local_doc.dart';
+import 'contact_page.dart';
 import 'group_pages.dart';
 import 'theme.dart';
 
@@ -64,6 +65,15 @@ class _ChatPageState extends State<ChatPage> {
           ],
         ),
         actions: [
+          if (!conv.isGroup)
+            IconButton(
+              key: const Key('contact-info'),
+              tooltip: 'Hồ sơ liên hệ',
+              icon: const Icon(Icons.info_outline),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => ContactPage(conv: conv)),
+              ),
+            ),
           if (conv.isGroup)
             IconButton(
               key: const Key('group-info'),
