@@ -48,6 +48,7 @@ class SettingsPage extends StatelessWidget {
         onClose: () => Navigator.of(context).maybePop(),
         onBackup: () => open(BackupPage(engine: engine)),
         onDevices: () => open(DevicesPage(engine: engine)),
+        devices: DevicesPage(engine: engine, embedded: true),
         onLogout: onLogout == null ? null : () => _logout(context),
       );
     }
@@ -118,15 +119,26 @@ class SettingsView extends StatelessWidget {
   }
 }
 
-enum _Sec { account, notifications }
+enum _Sec { account, notifications, devices }
 
 /// Cài đặt Desktop (docs/ui/Desktop-Settings): thanh điều hướng 72 + danh sách mục 300 + nội dung (tối đa 760).
 /// Thông báo/Quyền riêng tư chưa có dịch vụ nên hiện mờ, không giả chức năng.
 class SettingsDesktopView extends StatefulWidget {
-  const SettingsDesktopView({super.key, required this.accountCode, this.onClose, this.onBackup, this.onDevices, this.onLogout});
+  const SettingsDesktopView({
+    super.key,
+    required this.accountCode,
+    this.onClose,
+    this.onBackup,
+    this.onDevices,
+    this.devices,
+    this.onLogout,
+  });
 
   final String accountCode;
   final VoidCallback? onClose, onLogout, onBackup, onDevices;
+
+  /// Nội dung mục "Thiết bị đã liên kết" nhúng bên phải; null thì bấm mục sẽ mở trang riêng (onDevices).
+  final Widget? devices;
 
   @override
   State<SettingsDesktopView> createState() => _SettingsDesktopViewState();
@@ -250,6 +262,7 @@ class _SettingsDesktopViewState extends State<SettingsDesktopView> {
         _toggleRow(Icons.call_outlined, 'Âm báo cuộc gọi'),
       ],
     ),
+    _Sec.devices => ('Thiết bị đã liên kết', [widget.devices ?? const SizedBox.shrink()]),
   };
 
   @override
@@ -278,7 +291,13 @@ class _SettingsDesktopViewState extends State<SettingsDesktopView> {
                 _item('notifications', Icons.notifications_none, 'Thông báo', sec: _Sec.notifications),
                 _item('privacy', Icons.shield_outlined, 'Quyền riêng tư', dim: true),
                 _item('backup', Icons.cloud_outlined, 'Sao lưu', onTap: widget.onBackup ?? () {}),
-                _item('devices', Icons.desktop_windows_outlined, 'Thiết bị đã liên kết', onTap: widget.onDevices ?? () {}),
+                _item(
+                  'devices',
+                  Icons.desktop_windows_outlined,
+                  'Thiết bị đã liên kết',
+                  sec: widget.devices != null ? _Sec.devices : null,
+                  onTap: widget.devices != null ? null : (widget.onDevices ?? () {}),
+                ),
               ],
             ),
           ),
@@ -293,7 +312,7 @@ class _SettingsDesktopViewState extends State<SettingsDesktopView> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(title, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w600, letterSpacing: -0.3)),
-                      const SizedBox(height: 24),
+                      SizedBox(height: _sec == _Sec.devices ? 18 : 24),
                       ...rows,
                     ],
                   ),
