@@ -294,3 +294,12 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - `nonce_prefix` dài 7 byte; nonce 12 byte = prefix || chỉ số khối (u32 BE) || cờ khối cuối. Spec chưa nêu độ dài tiền tố, ghi ở đây; sửa spec mục 11 nếu muốn cố định.
 - Khối 64 KiB; tệp rỗng vẫn một khối cuối chỉ có tag. Dùng crate `aes-gcm` 0.10, `sha2` 0.10, `getrandom` 0.2.
 - Việc còn: nối vào FFI/WASM, mã hóa thumbnail riêng, truyền stream (hiện mã hóa trong bộ nhớ).
+## Giới hạn tốc độ FetchKeyPackages
+- Cửa sổ trượt 60 lần/phút theo `device_id`, dùng lại `ipLimiter`; vượt thì `RATE_LIMITED` kèm `retry_after_ms`.
+- Còn lệch: đếm trong bộ nhớ từng node (nhiều node cần Valkey, cùng giới hạn với StartLink). Chưa có test cấp handler, chỉ test bộ đếm.
+
+## CallService (server)
+- Cuộc gọi đang diễn ra giữ trong bộ nhớ một node (tối đa 4 giờ, mỗi hội thoại một cuộc); nhiều node cần Valkey.
+- Token LiveKit: JWT HS256 tự ký (iss = API key, sub = device_id, phòng = call_id, hạn 15 phút); chưa thử với LiveKit thật (cần Docker/LiveKit).
+- `IncomingCall` đi qua subject NATS `call.<device_id>` và gateway chuyển thành khung chủ động; không vào hộp thư. Thiết bị không có kết nối chưa được báo (cần FCM/VoIP push thật).
+- Chưa làm: dừng chuông khi thiết bị khác cùng tài khoản trả lời (spec 6.10, chưa có khung), `StartCall` từ chối khi bị chặn (BlockService chưa có), cấu hình LiveKit qua biến môi trường của `cmd/`.

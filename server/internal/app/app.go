@@ -16,6 +16,7 @@ import (
 	"byo-chat/server/internal/api"
 	"byo-chat/server/internal/auth"
 	"byo-chat/server/internal/blob"
+	"byo-chat/server/internal/call"
 	"byo-chat/server/internal/gateway"
 	"byo-chat/server/internal/message"
 	"byo-chat/server/internal/mlswire"
@@ -42,6 +43,7 @@ type Config struct {
 	DevBlobURL     string            // chỉ dev/e2e: URL công khai của chính server; bật kho sao lưu trong bộ nhớ (dùng S3 thì đặt S3)
 	S3             *blob.S3Config    // kho sao lưu/media trên Amazon S3 (ADR 0014); nil = không có (hoặc DevBlobURL)
 	S3Ensure       bool              // dev/test: tạo bucket và quy tắc lifecycle nếu thiếu
+	LiveKit        call.Config       // LiveKit cho CallService; rỗng = StartCall trả UNAVAILABLE
 	EnsureTables   bool              // tạo bảng DynamoDB nếu thiếu (dev/test)
 	RepairEvery    time.Duration
 	Gateway        gateway.Config
@@ -159,6 +161,7 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 		(&api.Profile{Svc: acc, Verifier: tok}).Handler,
 		(&api.Backup{Svc: acc, Verifier: tok}).Handler,
 		(&api.Media{Svc: acc, Verifier: tok}).Handler,
+		(&api.Call{Svc: call.New(meta, svc.Bus, cfg.LiveKit), Meta: meta, Verifier: tok}).Handler,
 	} {
 		p, h := hf()
 		mux.Handle(p, h)

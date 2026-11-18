@@ -11,7 +11,9 @@ import (
 	"byo-chat/server/gen/chat/v1/chatv1connect"
 	"byo-chat/server/internal/account"
 	"byo-chat/server/internal/auth"
+	"byo-chat/server/internal/call"
 	"byo-chat/server/internal/message"
+	"byo-chat/server/internal/store"
 )
 
 // Liên kết thiết bị (giao-thuc.md 6.5): StartLink/CompleteLink chưa đăng nhập, ApproveLink cần access token.
@@ -99,6 +101,52 @@ func (b *Backup) CreateBackupUpload(ctx context.Context, r *connect.Request[chat
 
 func (b *Backup) GetLatestBackup(ctx context.Context, r *connect.Request[chatv1.GetLatestBackupRequest]) (*connect.Response[chatv1.GetLatestBackupResponse], error) {
 	resp, e := b.Svc.GetLatestBackup(ctx, r.Msg)
+	if e != nil {
+		return nil, toConnect(e)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+// Call: CallService (giao-thuc.md 6.9). Mọi RPC cần access token của thiết bị còn hiệu lực.
+type Call struct {
+	chatv1connect.UnimplementedCallServiceHandler
+	Svc      *call.Service
+	Meta     store.MetaStore
+	Verifier auth.Verifier
+}
+
+func (c *Call) Handler() (string, http.Handler) { return chatv1connect.NewCallServiceHandler(c) }
+
+func (c *Call) StartCall(ctx context.Context, r *connect.Request[chatv1.StartCallRequest]) (*connect.Response[chatv1.CallTicket], error) {
+	dev, e := authDevice(ctx, r.Header(), c.Verifier, c.Meta, c.Svc.Now())
+	if e != nil {
+		return nil, toConnect(e)
+	}
+	resp, e := c.Svc.StartCall(ctx, dev, r.Msg)
+	if e != nil {
+		return nil, toConnect(e)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (c *Call) JoinCall(ctx context.Context, r *connect.Request[chatv1.JoinCallRequest]) (*connect.Response[chatv1.CallTicket], error) {
+	dev, e := authDevice(ctx, r.Header(), c.Verifier, c.Meta, c.Svc.Now())
+	if e != nil {
+		return nil, toConnect(e)
+	}
+	resp, e := c.Svc.JoinCall(ctx, dev, r.Msg)
+	if e != nil {
+		return nil, toConnect(e)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (c *Call) EndCall(ctx context.Context, r *connect.Request[chatv1.EndCallRequest]) (*connect.Response[chatv1.EndCallResponse], error) {
+	dev, e := authDevice(ctx, r.Header(), c.Verifier, c.Meta, c.Svc.Now())
+	if e != nil {
+		return nil, toConnect(e)
+	}
+	resp, e := c.Svc.EndCall(ctx, dev, r.Msg)
 	if e != nil {
 		return nil, toConnect(e)
 	}

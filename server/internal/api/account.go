@@ -3,14 +3,19 @@ package api
 import (
 	"context"
 	"net/http"
+	"time"
 
 	chatv1 "byo-chat/server/gen/chat/v1"
 	"byo-chat/server/gen/chat/v1/chatv1connect"
 	"byo-chat/server/internal/account"
 	"byo-chat/server/internal/auth"
+	"byo-chat/server/internal/message"
 	"byo-chat/server/internal/store"
 	"connectrpc.com/connect"
 )
+
+// FetchKeyPackagesPerMinute: số lần gọi FetchKeyPackages tối đa mỗi thiết bị mỗi phút.
+const FetchKeyPackagesPerMinute = 60
 
 // Auth: AuthService. Chỉ OTP và RefreshToken; passkey còn Unimplemented (ADR 0007).
 type Auth struct {
@@ -69,6 +74,8 @@ type Key struct {
 	chatv1connect.UnimplementedKeyServiceHandler
 	Svc      *account.Service
 	Verifier auth.Verifier
+
+	fetchLimit ipLimiter // theo thiết bị gọi, chống vét KeyPackage
 }
 
 func (k *Key) Handler() (string, http.Handler) { return chatv1connect.NewKeyServiceHandler(k) }
@@ -106,8 +113,12 @@ func (k *Key) CountKeyPackages(ctx context.Context, r *connect.Request[chatv1.Co
 }
 
 func (k *Key) FetchKeyPackages(ctx context.Context, r *connect.Request[chatv1.FetchKeyPackagesRequest]) (*connect.Response[chatv1.FetchKeyPackagesResponse], error) {
-	if _, err := k.device(ctx, r.Header()); err != nil {
+	dev, err := k.device(ctx, r.Header())
+	if err != nil {
 		return nil, err
+	}
+	if ok, wait := k.fetchLimit.allow(dev.DeviceID.String(), FetchKeyPackagesPerMinute, time.Minute, k.Svc.Now()); !ok {
+		return nil, toConnect(&message.Error{Code: chatv1.ErrorCode_ERROR_CODE_RATE_LIMITED, Msg: "quá nhiều yêu cầu lấy KeyPackage", RetryAfterMs: uint32(wait.Milliseconds())})
 	}
 	resp, e := k.Svc.FetchKeyPackages(ctx, r.Msg)
 	if e != nil {
