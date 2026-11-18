@@ -5,6 +5,7 @@ import 'chat_page.dart';
 import 'contact_page.dart';
 import 'group_pages.dart';
 import 'conversations_page.dart';
+import 'calls_page.dart';
 import 'settings_page.dart';
 import 'theme.dart';
 
@@ -25,6 +26,7 @@ class DesktopShell extends StatefulWidget {
 class _DesktopShellState extends State<DesktopShell> {
   String? _selected;
   bool _info = false;
+  bool _calls = false; // cột giữa là lịch sử cuộc gọi (S-14) thay vì danh sách chat
 
   @override
   Widget build(BuildContext context) {
@@ -34,12 +36,44 @@ class _DesktopShellState extends State<DesktopShell> {
       body: Row(
         children: [
           DesktopRail(
+            callsActive: _calls,
+            onChat: () => setState(() => _calls = false),
+            onCalls: () => setState(() => _calls = true),
             onSettings: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => SettingsPage(engine: widget.engine, onLogout: widget.onLogout),
               ),
             ),
           ),
+          if (_calls)
+            Expanded(
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 480,
+                    child: DecoratedBox(
+                      decoration: const BoxDecoration(border: Border(right: BorderSide(color: Ui.border))),
+                      child: CallsPage(
+                        engine: widget.engine,
+                        desktop: true,
+                        onOpen: (convHex) => setState(() {
+                          _calls = false;
+                          _selected = convHex;
+                          _info = false;
+                        }),
+                      ),
+                    ),
+                  ),
+                  const Expanded(
+                    child: ColoredBox(
+                      color: Ui.surfaceAlt,
+                      child: Center(child: Text('Chọn một cuộc gọi để xem chi tiết', key: Key('calls-detail-empty'), style: TextStyle(fontSize: 15, color: Ui.muted))),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else ...[
           SizedBox(
             width: 340,
             child: DecoratedBox(
@@ -89,6 +123,7 @@ class _DesktopShellState extends State<DesktopShell> {
               },
             ),
           ),
+          ],
         ],
       ),
     );
@@ -96,9 +131,9 @@ class _DesktopShellState extends State<DesktopShell> {
 }
 
 class DesktopRail extends StatelessWidget {
-  const DesktopRail({super.key, required this.onSettings, this.settingsActive = false, this.onChat});
-  final VoidCallback? onChat;
-  final bool settingsActive;
+  const DesktopRail({super.key, required this.onSettings, this.settingsActive = false, this.onChat, this.onCalls, this.callsActive = false});
+  final VoidCallback? onChat, onCalls;
+  final bool settingsActive, callsActive;
   final VoidCallback onSettings;
 
   @override
@@ -119,14 +154,21 @@ class DesktopRail extends StatelessWidget {
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(color: settingsActive ? null : Ui.primary, borderRadius: BorderRadius.circular(12)),
-              child: Icon(Icons.chat_bubble_outline, size: 22, color: settingsActive ? Ui.muted : Colors.white),
+              decoration: BoxDecoration(color: settingsActive || callsActive ? null : Ui.primary, borderRadius: BorderRadius.circular(12)),
+              child: Icon(Icons.chat_bubble_outline, size: 22, color: settingsActive || callsActive ? Ui.muted : Colors.white),
             ),
           ),
           const SizedBox(height: 8),
-          const Opacity(
-            opacity: 0.45,
-            child: SizedBox(width: 44, height: 44, child: Icon(Icons.videocam_outlined, size: 22, color: Ui.muted)),
+          InkWell(
+            key: const Key('rail-calls'),
+            borderRadius: BorderRadius.circular(12),
+            onTap: onCalls,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(color: callsActive ? Ui.primary : null, borderRadius: BorderRadius.circular(12)),
+              child: Icon(Icons.videocam_outlined, size: 22, color: callsActive ? Colors.white : Ui.muted),
+            ),
           ),
           const Spacer(),
           IconButton(

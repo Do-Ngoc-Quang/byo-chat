@@ -20,6 +20,7 @@ import '../net/gateway_client.dart';
 import '../storage/session_store.dart';
 import 'local_doc.dart';
 import 'call_controller.dart';
+import 'call_history.dart';
 import 'media.dart';
 
 /// Khóa danh tính của người kia khác lần đã thấy (giao-thuc.md 6.2 bước 2): không tự tạo hội thoại.
@@ -900,6 +901,9 @@ class ChatEngine extends ChangeNotifier {
   }
 
   // ---------------------------------------------------------------- cuộc gọi
+
+  /// Lịch sử cuộc gọi (S-14) dựng từ các `CallEvent` trên máy, mới nhất trước.
+  List<CallEntry> callHistory() => buildCallHistory(doc.msgs);
 
   /// Gọi (S-12) và ghi `CallEvent` bắt đầu vào hội thoại. Lỗi thì ném, `calls.error` có thông báo.
   Future<void> startCall(String convHex, CallKind kind) async {
