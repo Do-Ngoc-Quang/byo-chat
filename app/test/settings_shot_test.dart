@@ -7,6 +7,7 @@ import 'package:byo_chat/ui/contact_page.dart';
 import 'package:byo_chat/ui/msg_menu.dart';
 import 'package:byo_chat/ui/states.dart';
 import 'package:byo_chat/ui/theme.dart';
+import 'package:byo_chat/ui/viewer_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -84,9 +85,21 @@ void main() {
                     Expanded(
                       child: Column(
                         children: [
-                          StateCard(icon: Icons.chat_bubble_outline, title: 'Chưa có cuộc trò chuyện', message: 'Bắt đầu bằng cách nhắn tin cho ai đó.', action: 'Soạn tin mới', onAction: _noop),
+                          StateCard(
+                            icon: Icons.chat_bubble_outline,
+                            title: 'Chưa có cuộc trò chuyện',
+                            message: 'Bắt đầu bằng cách nhắn tin cho ai đó.',
+                            action: 'Soạn tin mới',
+                            onAction: _noop,
+                          ),
                           const SizedBox(height: 12),
-                          StateCard(icon: Icons.error_outline, title: 'Không tải được', message: 'Đã có lỗi xảy ra. Vui lòng thử lại.', action: 'Thử lại', onAction: _noop),
+                          StateCard(
+                            icon: Icons.error_outline,
+                            title: 'Không tải được',
+                            message: 'Đã có lỗi xảy ra. Vui lòng thử lại.',
+                            action: 'Thử lại',
+                            onAction: _noop,
+                          ),
                           const SizedBox(height: 12),
                           const StateCard(icon: Icons.sync, title: 'Đang cập nhật…', message: 'Đang tải các tin nhắn mới.'),
                         ],
@@ -98,9 +111,19 @@ void main() {
                         children: [
                           const StateCard(icon: Icons.search, title: 'Không tìm thấy', message: 'Không có kết quả cho “thiết kế”.'),
                           const SizedBox(height: 12),
-                          const StateCard(icon: Icons.wifi, title: 'Đang chờ kết nối', message: 'Tin nhắn sẽ được gửi khi có mạng trở lại.'),
+                          const StateCard(
+                            icon: Icons.wifi,
+                            title: 'Đang chờ kết nối',
+                            message: 'Tin nhắn sẽ được gửi khi có mạng trở lại.',
+                          ),
                           const SizedBox(height: 12),
-                          StateCard(icon: Icons.lock_outline, title: 'Bạn đã được đăng xuất', message: 'Phiên đăng nhập đã hết hạn.', action: 'Đăng nhập lại', onAction: _noop),
+                          StateCard(
+                            icon: Icons.lock_outline,
+                            title: 'Bạn đã được đăng xuất',
+                            message: 'Phiên đăng nhập đã hết hạn.',
+                            action: 'Đăng nhập lại',
+                            onAction: _noop,
+                          ),
                         ],
                       ),
                     ),
@@ -112,6 +135,11 @@ void main() {
         ),
       ),
     ),
+    skip: dir == null,
+  );
+  testWidgets(
+    'chụp Trình xem',
+    (t) => shot(t, 'flutter-viewer', ViewerView(sender: 'Minh Anh', when: 'Hôm nay, 09:41', index: 3, total: 12, onClose: _noop)),
     skip: dir == null,
   );
 }

@@ -221,3 +221,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Thêm `StateCard` (icon tròn 48, tiêu đề, mô tả, nút pill 40) và `StatusBanner` (dải vàng 36) ở `app/lib/ui/states.dart`; chụp đủ 6 thẻ + dải khớp thiết kế (bố cục 2 cột, icon, chữ, khoảng cách).
 - Đã dùng thật ở danh sách chat: "Chưa có cuộc trò chuyện" (nút Soạn tin mới), "Không tìm thấy", dải "Mất kết nối…" khi gateway chưa online.
 - Chưa dùng: "Không tải được/Thử lại", "Đang cập nhật…", "Bạn đã được đăng xuất/Đăng nhập lại" (chưa có luồng tương ứng trong engine; widget đã sẵn). Chưa phủ các vùng khác (khung chat, cuộc gọi), chưa chụp Desktop-States.
+
+## Trình xem ảnh và tệp (S-08) — đối chiếu Mobile-Viewer
+- Thêm `ViewerView` (`app/lib/ui/viewer_page.dart`): nền #0E1016, thanh đầu (đóng, người gửi, "thời gian · i / n"), vùng xem 420 bo 12, Lưu/Chia sẻ; chụp 390×844 khớp thiết kế.
+- Chưa nối vào chat: chưa có media (giai đoạn 5, `MediaService`), nên không có mục để chạm. Lưu/Chia sẻ hiện mờ; chưa có vuốt chuyển mục, trạng thái đang tải/lỗi/tệp không xem trước. Chưa có Desktop-Viewer. Lệch nhỏ: biểu tượng đóng/lưu/chia sẻ dùng bộ Material.

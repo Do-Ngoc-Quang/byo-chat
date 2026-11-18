@@ -8,10 +8,17 @@ void main() {
     String? sent;
     var group = false;
     int? picked;
-    await t.pumpWidget(MaterialApp(
-      theme: Ui.theme(),
-      home: NewChatView(recent: const ['An', 'Bình'], onSubmit: (v) => sent = v, onGroup: () => group = true, onPickRecent: (i) => picked = i),
-    ));
+    await t.pumpWidget(
+      MaterialApp(
+        theme: Ui.theme(),
+        home: NewChatView(
+          recent: const ['An', 'Bình'],
+          onSubmit: (v) => sent = v,
+          onGroup: () => group = true,
+          onPickRecent: (i) => picked = i,
+        ),
+      ),
+    );
     expect(find.byKey(const Key('peer-ok')), findsNothing);
     await t.enterText(find.byKey(const Key('peer-field')), '+84912345678');
     await t.pump();
