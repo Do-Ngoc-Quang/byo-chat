@@ -50,6 +50,7 @@ class StateCard extends StatelessWidget {
               onPressed: onAction,
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(0, 40),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 foregroundColor: Ui.text,
                 side: const BorderSide(color: Ui.fieldBorder),
@@ -71,8 +72,11 @@ class StatusBanner extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Container(
-    height: 36,
+  Widget build(BuildContext context) {
+    // Desktop (≥900): dải cao 40, chữ 14 (docs/ui/Desktop-States).
+    final wide = MediaQuery.sizeOf(context).width >= 900;
+    return Container(
+    height: wide ? 40 : 36,
     alignment: Alignment.center,
     decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(10)),
     child: Row(
@@ -82,9 +86,10 @@ class StatusBanner extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           text,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF78350F)),
+          style: TextStyle(fontSize: wide ? 14 : 13, fontWeight: FontWeight.w500, color: const Color(0xFF78350F)),
         ),
       ],
     ),
   );
+  }
 }
