@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../chat/chat_engine.dart';
 import '../chat/local_doc.dart';
+import '../gen/chat/v1/common.pbenum.dart' show CallKind;
 import 'call_label.dart';
 import 'contact_page.dart';
 import 'group_pages.dart';
@@ -60,6 +61,16 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  Future<void> _call(ConvState conv) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await widget.engine.startCall(conv.hexId, CallKind.CALL_KIND_VIDEO);
+    } on Exception {
+      // Lỗi hiện ngay trên màn gọi (`calls.error`); ChatException (bị gỡ khỏi nhóm) hiện ở thanh thông báo.
+      if (widget.engine.calls.error == null) messenger.showSnackBar(const SnackBar(content: Text('Không gọi được lúc này')));
+    }
+  }
+
   Future<void> _send() async {
     final t = _text.text.trim();
     if (t.isEmpty) return;
@@ -101,6 +112,7 @@ class _ChatPageState extends State<ChatPage> {
                 ],
               ),
               actions: [
+                IconButton(key: const Key('call-video'), tooltip: 'Gọi video', icon: const Icon(Icons.videocam_outlined), onPressed: () => _call(conv)),
                 if (!conv.isGroup)
                   IconButton(
                     key: const Key('contact-info'),
@@ -123,7 +135,7 @@ class _ChatPageState extends State<ChatPage> {
             ),
       body: Column(
         children: [
-          if (widget.embedded) _DesktopHeader(engine: widget.engine, conv: conv, onInfo: widget.onInfo),
+          if (widget.embedded) _DesktopHeader(engine: widget.engine, conv: conv, onInfo: widget.onInfo, onCall: () => _call(conv)),
           Expanded(
             child: Container(
               color: Ui.surfaceAlt,
@@ -348,8 +360,8 @@ class _Bubble extends StatelessWidget {
 
 /// Đầu khung chat Desktop (docs/ui/Desktop-Inbox): avatar 40, tên, nút Gọi video (mờ, chưa có cuộc gọi) và Thông tin.
 class _DesktopHeader extends StatelessWidget {
-  const _DesktopHeader({required this.engine, required this.conv, this.onInfo});
-  final VoidCallback? onInfo;
+  const _DesktopHeader({required this.engine, required this.conv, this.onInfo, this.onCall});
+  final VoidCallback? onInfo, onCall;
 
   final ChatEngine engine;
   final ConvState conv;
@@ -380,7 +392,7 @@ class _DesktopHeader extends StatelessWidget {
               ],
             ),
           ),
-          const Opacity(opacity: 0.45, child: _RoundIcon(Icons.videocam_outlined, color: Ui.primary)),
+          _RoundIcon(Icons.videocam_outlined, color: Ui.primary, tooltip: 'Gọi video', onTap: onCall),
           const SizedBox(width: 8),
           _RoundIcon(
             Icons.info_outline,
