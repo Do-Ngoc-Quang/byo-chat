@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 
 import 'package:byo_chat/auth/session.dart';
 import 'package:byo_chat/chat/chat_engine.dart';
