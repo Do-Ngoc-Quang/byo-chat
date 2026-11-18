@@ -225,22 +225,37 @@ class _Item extends StatelessWidget {
 }
 
 /// Bảng đính kèm Desktop (docs/ui/Desktop-Attach): 240 rộng, nổi ngay trên nút +, không nền mờ.
-/// Chưa có dịch vụ media nên cả ba mục mờ (xem docs/notes.md).
-Future<void> showAttachMenu(BuildContext context, Rect anchor) {
+/// Ảnh/Tệp chạy khi có `onPick*`; Chụp ảnh còn mờ (cần camera thật, xem docs/notes.md).
+Future<void> showAttachMenu(BuildContext context, Rect anchor, {VoidCallback? onPickImage, VoidCallback? onPickFile}) {
   return showGeneralDialog<void>(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Đóng',
     barrierColor: Colors.transparent,
     transitionDuration: const Duration(milliseconds: 120),
-    pageBuilder: (ctx, a1, a2) => AttachMenuView(anchor: anchor, onClose: () => Navigator.of(ctx).pop()),
+    pageBuilder: (ctx, a1, a2) => AttachMenuView(
+      anchor: anchor,
+      onClose: () => Navigator.of(ctx).pop(),
+      onPickImage: onPickImage == null
+          ? null
+          : () {
+              Navigator.of(ctx).pop();
+              onPickImage();
+            },
+      onPickFile: onPickFile == null
+          ? null
+          : () {
+              Navigator.of(ctx).pop();
+              onPickFile();
+            },
+    ),
   );
 }
 
 class AttachMenuView extends StatelessWidget {
-  const AttachMenuView({super.key, required this.anchor, this.onClose});
+  const AttachMenuView({super.key, required this.anchor, this.onClose, this.onPickImage, this.onPickFile});
   final Rect anchor;
-  final VoidCallback? onClose;
+  final VoidCallback? onClose, onPickImage, onPickFile;
 
   @override
   Widget build(BuildContext context) {
@@ -260,11 +275,11 @@ class AttachMenuView extends StatelessWidget {
                 width: 240,
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: _shadow),
-                child: const Column(
+                child: Column(
                   children: [
-                    _Item(Icons.image_outlined, 'Ảnh và video'),
-                    _Item(Icons.insert_drive_file_outlined, 'Tệp'),
-                    _Item(Icons.photo_camera_outlined, 'Chụp ảnh'),
+                    _Item(Icons.image_outlined, 'Ảnh và video', key: const Key('attach-image'), onTap: onPickImage),
+                    _Item(Icons.insert_drive_file_outlined, 'Tệp', key: const Key('attach-file'), onTap: onPickFile),
+                    const _Item(Icons.photo_camera_outlined, 'Chụp ảnh'),
                   ],
                 ),
               ),

@@ -4,12 +4,17 @@ import '../chat/chat_engine.dart';
 import '../chat/local_doc.dart';
 import 'contact_page.dart';
 import 'group_pages.dart';
+import 'media_bubble.dart';
+import 'media_picker.dart';
 import 'msg_menu.dart';
 import 'theme.dart';
 
 /// Khung chat theo docs/ui (Mobile-Chat.dc.html): thanh đầu có avatar, nền xám nhạt, bong bóng bo 18, ô nhập tròn.
 class ChatPage extends StatefulWidget {
-  const ChatPage({super.key, required this.engine, required this.conv, this.embedded = false, this.onInfo});
+  const ChatPage({super.key, required this.engine, required this.conv, this.embedded = false, this.onInfo, this.picker = const FileSelectorPicker()});
+
+  /// Chọn ảnh/tệp để gửi; test thay bằng bản giả.
+  final MediaPicker picker;
 
   final ChatEngine engine;
   final ConvState conv;
@@ -31,6 +36,27 @@ class _ChatPageState extends State<ChatPage> {
   void dispose() {
     _text.dispose();
     super.dispose();
+  }
+
+  Future<void> _sendPicked(Future<PickedMedia?> Function() pick) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final p = await pick();
+      if (p == null) return;
+      await widget.engine.sendMedia(widget.conv.hexId, p.bytes, mime: p.mime, name: p.name, width: p.width, height: p.height);
+    } on ChatException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  void _openAttach(BuildContext bctx) {
+    final b = bctx.findRenderObject() as RenderBox;
+    showAttachMenu(
+      bctx,
+      b.localToGlobal(Offset.zero) & b.size,
+      onPickImage: () => _sendPicked(widget.picker.pickImage),
+      onPickFile: () => _sendPicked(widget.picker.pickFile),
+    );
   }
 
   Future<void> _send() async {
@@ -113,6 +139,8 @@ class _ChatPageState extends State<ChatPage> {
                       final m = msgs[k];
                       return _Bubble(
                         m,
+                        engine: widget.engine,
+                        peerName: conv.title,
                         onMenu: m.state == MsgState.undecryptable ? null : (r) => showMsgMenu(context, text: m.text, mine: m.mine, anchor: r),
                         who: m.sender == null ? null : widget.engine.displayName(m.sender!),
                         maxWidth: widget.embedded ? 460 : 320,
@@ -141,26 +169,18 @@ class _ChatPageState extends State<ChatPage> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      if (widget.embedded) ...[
-                        Builder(
-                          builder: (bctx) => Opacity(
-                            opacity: 0.45,
-                            child: InkResponse(
-                              key: const Key('attach-button'),
-                              onTap: () {
-                                final b = bctx.findRenderObject() as RenderBox;
-                                showAttachMenu(bctx, b.localToGlobal(Offset.zero) & b.size);
-                              },
-                              child: const SizedBox(
-                                width: Ui.tap,
-                                height: Ui.tap,
-                                child: Icon(Icons.add, size: 22, color: Ui.muted),
-                              ),
-                            ),
+                      Builder(
+                        builder: (bctx) => InkResponse(
+                          key: const Key('attach-button'),
+                          onTap: () => _openAttach(bctx),
+                          child: const SizedBox(
+                            width: Ui.tap,
+                            height: Ui.tap,
+                            child: Icon(Icons.add, size: 22, color: Ui.muted),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                      ],
+                      ),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: TextField(
                           key: const Key('message-field'),
@@ -225,9 +245,13 @@ class _Banner extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble(this.m, {this.who, this.lastOfRun = true, this.onMenu, this.maxWidth = 320});
+  const _Bubble(this.m, {required this.engine, required this.peerName, this.who, this.lastOfRun = true, this.onMenu, this.maxWidth = 320});
 
   final double maxWidth;
+  final ChatEngine engine;
+
+  /// Tên người đối diện (hội thoại 1-1), dùng làm người gửi trong trình xem ảnh.
+  final String peerName;
 
   /// Mở menu thao tác (giữ lâu hoặc bấm phải) kèm khung bong bóng trên màn hình.
   final void Function(Rect)? onMenu;
@@ -294,6 +318,9 @@ class _Bubble extends StatelessWidget {
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Ui.avatarFg),
                   ),
                 ),
+              if (m.media != null && !broken)
+                MediaBubbleBody(engine: engine, m: m, sender: m.mine ? 'Bạn' : (who ?? peerName), maxWidth: maxWidth),
+              if (m.media == null || (text.isNotEmpty && !broken))
               Text(
                 text,
                 style: TextStyle(

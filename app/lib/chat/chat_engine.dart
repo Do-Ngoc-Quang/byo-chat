@@ -19,6 +19,7 @@ import '../net/connect_client.dart' show ConnectException;
 import '../net/gateway_client.dart';
 import '../storage/session_store.dart';
 import 'local_doc.dart';
+import 'media.dart';
 
 /// Khóa danh tính của người kia khác lần đã thấy (giao-thuc.md 6.2 bước 2): không tự tạo hội thoại.
 class IdentityChangedException implements Exception {
@@ -87,6 +88,11 @@ class ChatEngine extends ChangeNotifier {
   StreamSubscription<GatewayState>? _gwSub;
   var _started = false;
   final _flushing = <String>{};
+
+  /// Bản đã giải mã của media (theo id tin), chỉ trong bộ nhớ; tải lại khi mở lại app (docs/notes.md).
+  final _mediaCache = <String, Uint8List>{};
+  final _mediaLoading = <String, Future<Uint8List>>{};
+  late final MediaTransfer _media = MediaTransfer(core: session.core, api: api);
 
   /// Báo cho app khi thiết bị bị thu hồi (mã đóng 4003): app xóa dữ liệu, về màn đăng nhập.
   void Function()? onRevoked;
@@ -835,14 +841,17 @@ class ChatEngine extends ChangeNotifier {
     try {
       final pt = await _core.decrypt(cs.convId, Uint8List.fromList(e.ct));
       final p = Payload.fromBuffer(pt);
-      if (p.whichContent() != Payload_Content.text) return; // phản ứng, sửa, xóa... làm sau
+      final kind = p.whichContent();
+      if (kind != Payload_Content.text && kind != Payload_Content.media) return; // phản ứng, sửa, xóa... làm sau
       final id = hex(p.clientMsgId);
       if (list.any((m) => m.id == id)) return; // khử trùng theo client_msg_id
+      final media = kind == Payload_Content.media ? MediaRef.fromProto(p.media) : null;
       list.add(
         ChatMessage(
           id: id,
           mine: false,
-          text: p.text.body,
+          media: media,
+          text: media?.caption ?? p.text.body,
           tsMs: e.tsMs,
           seq: e.seq,
           state: MsgState.received,
@@ -871,6 +880,55 @@ class ChatEngine extends ChangeNotifier {
     await _flush(convHex);
   }
 
+  /// Mã hóa và tải một tệp lên, rồi xếp tin media vào hàng chờ gửi. Tải lên lỗi thì ném, không để lại tin.
+  Future<void> sendMedia(
+    String convHex,
+    Uint8List bytes, {
+    required String mime,
+    String name = '',
+    String caption = '',
+    int width = 0,
+    int height = 0,
+  }) async {
+    final cs = doc.convs[convHex] ?? (throw ChatException('Hội thoại không tồn tại'));
+    if (cs.removed) throw ChatException('Bạn đã bị gỡ khỏi nhóm');
+    final MediaRef ref;
+    try {
+      ref = await _media.upload(bytes, mime: mime, name: name, caption: caption, width: width, height: height);
+    } on MediaException catch (e) {
+      throw ChatException(e.message);
+    } on ConnectException catch (e) {
+      throw ChatException('Không tải lên được: ${e.message}');
+    }
+    await _mu.run(() async {
+      final m = ChatMessage(id: hex(newUuidV7()), mine: true, text: caption, tsMs: _nowMs, media: ref);
+      _mediaCache[m.id] = bytes; // bản gốc của mình, không cần tải lại
+      doc.msgs.putIfAbsent(convHex, () => []).add(m);
+      cs.lastActivityMs = m.tsMs;
+      await _persist();
+      notifyListeners();
+    });
+    await _flush(convHex);
+  }
+
+  /// Bản đã giải mã của media trong tin `m` (tải, kiểm hash, giải mã; nhớ trong bộ nhớ, gộp các lần gọi đồng thời).
+  Future<Uint8List> mediaBytes(ChatMessage m) {
+    final ref = m.media ?? (throw ChatException('Tin không có tệp đính kèm'));
+    final hit = _mediaCache[m.id];
+    if (hit != null) return Future.value(hit);
+    return _mediaLoading[m.id] ??= _media.download(ref).then(
+      (b) {
+        _mediaCache[m.id] = b;
+        _mediaLoading.remove(m.id);
+        return b;
+      },
+      onError: (Object e) {
+        _mediaLoading.remove(m.id);
+        throw e is MediaException ? ChatException(e.message) : e;
+      },
+    );
+  }
+
   /// Gửi lần lượt các tin đang chờ của một hội thoại (giao-thuc.md 7.1).
   Future<void> _flush(String convHex) async {
     if (!_flushing.add(convHex)) return;
@@ -887,7 +945,8 @@ class ChatEngine extends ChangeNotifier {
             version: 1,
             clientMsgId: _unhex(m.id),
             sentAtMs: Int64(m.tsMs),
-            text: TextContent(body: m.text),
+            text: m.media == null ? TextContent(body: m.text) : null,
+            media: m.media?.toProto(),
           );
           m.epoch = await _core.epoch(cs.convId);
           m.ct = await _core.encrypt(cs.convId, Uint8List.fromList(p.writeToBuffer()));

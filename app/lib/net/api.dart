@@ -65,4 +65,19 @@ class ChatApi {
 
   Future<ListConversationsResponse> listConversations() =>
       client.unary('ConversationService', 'ListConversations', ListConversationsRequest(), ListConversationsResponse.new);
+
+  Future<CreateUploadResponse> createUpload(CreateUploadRequest r) =>
+      client.unary('MediaService', 'CreateUpload', r, CreateUploadResponse.new);
+
+  Future<CompleteUploadResponse> completeUpload(CompleteUploadRequest r) =>
+      client.unary('MediaService', 'CompleteUpload', r, CompleteUploadResponse.new);
+
+  Future<GetDownloadUrlResponse> getDownloadUrl(GetDownloadUrlRequest r) =>
+      client.unary('MediaService', 'GetDownloadUrl', r, GetDownloadUrlResponse.new);
+
+  Future<CallTicket> startCall(StartCallRequest r) => client.unary('CallService', 'StartCall', r, CallTicket.new);
+
+  Future<CallTicket> joinCall(JoinCallRequest r) => client.unary('CallService', 'JoinCall', r, CallTicket.new);
+
+  Future<EndCallResponse> endCall(EndCallRequest r) => client.unary('CallService', 'EndCall', r, EndCallResponse.new);
 }
