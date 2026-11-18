@@ -266,3 +266,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Mục "Thiết bị đã liên kết" trong Cài đặt Desktop hiện ngay bên phải (`DevicesPage(embedded: true)`: mô tả, danh sách thẻ, nút Liên kết thiết bị mới rộng vừa chữ) thay vì mở trang riêng; Mobile giữ nguyên.
 - Lệch: dòng phụ của thiết bị là "Đăng ký <ngày>" (server chưa trả "Đang hoạt động/nơi đăng nhập"); biểu tượng Web là quả cầu, thiết kế dùng máy tính; thanh bên còn mục "Sao lưu" (thiết kế không có) và thứ tự mục khác; nhấn mạnh mục đang chọn khớp. Chữ ô vuông ở nút Gỡ/Liên kết trong ảnh chụp là do font môi trường test.
 - Còn chưa làm: Link, Calls, Call, Incoming, Attach, MsgMenu, States, Viewer.
+
+## Desktop: đăng nhập trên máy tính (Desktop-Link)
+- `LinkNewDevicePage` từ rộng ≥ 900 là thẻ 880 hai cột: trái hướng dẫn 3 bước, phải (440, nền #F7F8FA) có QR thật 220 + mã xác nhận "481 729" + nút Tạo mã mới; Mobile giữ nguyên.
+- Lệch: QR là mã thật (thiết kế vẽ ô giả); bước 3 viết "Nhập hoặc dán mã" vì app chưa có quét QR (cần camera); chưa có dòng "Mã hết hạn sau mm:ss" (server chưa trả hạn của mã liên kết) nên hiện "Đang chờ phê duyệt…"; nút Chép mã/chuỗi mã không hiện ở Desktop (thiết bị cũ quét hoặc dán từ Mobile).
+- Còn chưa làm: Calls, Call, Incoming, Attach, MsgMenu, States, Viewer (Calls/Call/Incoming cần dịch vụ gọi, hoãn).
