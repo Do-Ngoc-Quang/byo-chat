@@ -6,6 +6,7 @@ import '../gen/chat/v1/common.pbenum.dart' show Role;
 import '../gen/chat/v1/services.pbenum.dart';
 import 'contact_dialog.dart';
 import 'errors.dart';
+import 'contact_page.dart' show InfoTile;
 import 'theme.dart';
 
 /// Tạo nhóm (giao-thuc.md 6.2) theo docs/ui: tên nhóm + thành viên theo số điện thoại/email; mình là OWNER.
@@ -127,10 +128,13 @@ class _ActionRow extends StatelessWidget {
 /// Thông tin nhóm (Mobile-Group.dc.html): avatar lớn, tên, số thành viên, danh sách thành viên đọc từ MLS,
 /// thêm/gỡ/đổi vai trò (cần ADMIN/OWNER) và nút Rời nhóm.
 class GroupInfoPage extends StatefulWidget {
-  const GroupInfoPage({super.key, required this.engine, required this.conv});
+  const GroupInfoPage({super.key, required this.engine, required this.conv, this.embedded = false});
 
   final ChatEngine engine;
   final ConvState conv;
+
+  /// Desktop: bảng 340 bên phải khung chat (Desktop-Group) thay vì trang riêng.
+  final bool embedded;
 
   @override
   State<GroupInfoPage> createState() => _GroupInfoPageState();
@@ -208,94 +212,143 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       future: _members,
       builder: (context, snap) {
         final list = (snap.data ?? <String>{}).toList()..sort();
-        return ScreenScaffold(
-          key: const Key('group-info-page'),
-          header: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Avatar(conv.title, size: 88),
-              const SizedBox(height: 12),
-              Text(conv.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 4),
-              Text(
-                snap.hasData ? 'Nhóm · ${list.length} thành viên · tối đa 256 thiết bị' : 'Nhóm',
-                style: const TextStyle(fontSize: 13, color: Ui.muted),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
-          bottom: !conv.removed && !conv.leaving
-              ? OutlinedButton(
-                  key: const Key('leave-group'),
-                  onPressed: conv.owner ? null : _leave,
-                  style: dangerOutline(),
-                  child: Text(conv.owner ? 'Rời nhóm (chủ nhóm cần chuyển quyền trước)' : 'Rời nhóm'),
-                )
-              : null,
+        final header = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (conv.removed)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 16),
-                child: Text('Bạn đã bị gỡ khỏi nhóm này. Chỉ đọc được lịch sử.', style: TextStyle(color: Ui.muted)),
-              ),
-            if (conv.leaving)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 16),
-                child: Row(
-                  key: Key('leaving-note'),
-                  children: [
-                    Icon(Icons.hourglass_top, color: Ui.muted),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text('Đang chờ quản trị viên xác nhận bạn rời nhóm', style: TextStyle(color: Ui.muted)),
-                    ),
-                  ],
-                ),
-              ),
-            const Text(
-              'Thành viên',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Ui.muted),
+            Avatar(conv.title, size: 88),
+            const SizedBox(height: 12),
+            Text(conv.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text(
+              snap.hasData ? 'Nhóm · ${list.length} thành viên · tối đa 256 thiết bị' : 'Nhóm',
+              style: const TextStyle(fontSize: 13, color: Ui.muted),
             ),
-            if (!snap.hasData)
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            for (final a in list)
-              SizedBox(
-                key: Key('member-$a'),
-                height: 56,
-                child: Row(
-                  children: [
-                    Avatar(a == me ? 'Bạn' : widget.engine.displayName(a)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        a == me ? 'Bạn' : widget.engine.displayName(a),
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                    if (canEdit && a != me)
-                      PopupMenuButton<String>(
-                        key: Key('member-menu-$a'),
-                        onSelected: (v) => switch (v) {
-                          'remove' => _remove(a),
-                          'transfer' => _role(a, owner: true),
-                          _ => _role(a, admin: v == 'admin'),
-                        },
-                        itemBuilder: (_) => [
-                          const PopupMenuItem(value: 'remove', child: Text('Gỡ khỏi nhóm')),
-                          const PopupMenuItem(value: 'admin', child: Text('Đặt làm quản trị viên')),
-                          const PopupMenuItem(value: 'member', child: Text('Đặt làm thành viên')),
-                          if (conv.owner) const PopupMenuItem(value: 'transfer', child: Text('Chuyển quyền chủ nhóm')),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            if (canEdit) _ActionRow(key: const Key('add-to-group'), icon: Icons.person_add_alt, label: 'Thêm thành viên', onTap: _add),
+            const SizedBox(height: 24),
           ],
         );
+        final bottom = !conv.removed && !conv.leaving
+            ? OutlinedButton(
+                key: const Key('leave-group'),
+                onPressed: conv.owner ? null : _leave,
+                style: dangerOutline(),
+                child: Text(conv.owner ? 'Rời nhóm (chủ nhóm cần chuyển quyền trước)' : 'Rời nhóm'),
+              )
+            : null;
+        final children = <Widget>[
+          if (conv.removed)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 16),
+              child: Text('Bạn đã bị gỡ khỏi nhóm này. Chỉ đọc được lịch sử.', style: TextStyle(color: Ui.muted)),
+            ),
+          if (conv.leaving)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 16),
+              child: Row(
+                key: Key('leaving-note'),
+                children: [
+                  Icon(Icons.hourglass_top, color: Ui.muted),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text('Đang chờ quản trị viên xác nhận bạn rời nhóm', style: TextStyle(color: Ui.muted)),
+                  ),
+                ],
+              ),
+            ),
+          const Text(
+            'Thành viên',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Ui.muted),
+          ),
+          if (!snap.hasData)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          for (final a in list)
+            SizedBox(
+              key: Key('member-$a'),
+              height: 56,
+              child: Row(
+                children: [
+                  Avatar(a == me ? 'Bạn' : widget.engine.displayName(a)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      a == me ? 'Bạn' : widget.engine.displayName(a),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  if (canEdit && a != me)
+                    PopupMenuButton<String>(
+                      key: Key('member-menu-$a'),
+                      onSelected: (v) => switch (v) {
+                        'remove' => _remove(a),
+                        'transfer' => _role(a, owner: true),
+                        _ => _role(a, admin: v == 'admin'),
+                      },
+                      itemBuilder: (_) => [
+                        const PopupMenuItem(value: 'remove', child: Text('Gỡ khỏi nhóm')),
+                        const PopupMenuItem(value: 'admin', child: Text('Đặt làm quản trị viên')),
+                        const PopupMenuItem(value: 'member', child: Text('Đặt làm thành viên')),
+                        if (conv.owner) const PopupMenuItem(value: 'transfer', child: Text('Chuyển quyền chủ nhóm')),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          if (canEdit) _ActionRow(key: const Key('add-to-group'), icon: Icons.person_add_alt, label: 'Thêm thành viên', onTap: _add),
+        ];
+        if (widget.embedded) {
+          return Container(
+            key: const Key('group-panel'),
+            width: 340,
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(left: BorderSide(color: Ui.border)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: ListView(
+                    children: [
+                      Center(child: Avatar(conv.title, size: 88)),
+                      const SizedBox(height: 14),
+                      Text(
+                        conv.title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        snap.hasData ? 'Nhóm · ${list.length} thành viên' : 'Nhóm',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 13, color: Ui.muted),
+                      ),
+                      const SizedBox(height: 20),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          children: [
+                            InfoTile(Icons.videocam_outlined, 'Gọi video'),
+                            SizedBox(width: 12),
+                            InfoTile(Icons.notifications_off_outlined, 'Tắt tiếng'),
+                            SizedBox(width: 12),
+                            InfoTile(Icons.search, 'Tìm kiếm'),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ...children,
+                    ],
+                  ),
+                ),
+                if (bottom != null) ...[const SizedBox(height: 12), bottom],
+              ],
+            ),
+          );
+        }
+        return ScreenScaffold(key: const Key('group-info-page'), header: header, bottom: bottom, children: children);
       },
     );
   }

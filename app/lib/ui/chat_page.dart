@@ -338,13 +338,13 @@ class _DesktopHeader extends StatelessWidget {
           _RoundIcon(
             Icons.info_outline,
             tooltip: conv.isGroup ? 'Thông tin nhóm' : 'Hồ sơ liên hệ',
-            onTap: (!conv.isGroup && onInfo != null)
-                ? onInfo
-                : () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => conv.isGroup ? GroupInfoPage(engine: engine, conv: conv) : ContactPage(conv: conv),
-                    ),
+            onTap:
+                onInfo ??
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => conv.isGroup ? GroupInfoPage(engine: engine, conv: conv) : ContactPage(conv: conv),
                   ),
+                ),
           ),
         ],
       ),
