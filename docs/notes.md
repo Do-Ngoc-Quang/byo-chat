@@ -22,8 +22,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - CI (commit 123f846): wasm (Node, Chrome, wasm-pack build) và android xanh. Android x86_64 API 34: 17 test qua, trang bộ nhớ 4096 B (chưa phải 16 KB). Chưa in số đo thực Commit trên WASM/Android. Còn: trang 16 KB, aarch64, ARM thật.
 
 ## Bối cảnh môi trường (06/11/2026)
-- Không dùng máy thật; mọi thứ chạy mô phỏng: emulator Android x86_64 (trang 4 KB), Chrome/Node headless, runner GitHub Actions. Số đo hiệu năng từ môi trường này không so trực tiếp với mốc Windows native, chỉ dùng để bắt suy giảm lớn.
-- Quy tắc: mục cần thiết bị thật (MLS trên ARM thật, Flutter trên Android/Safari thật, trang 16 KB, ngưỡng payload FCM thật, đo pin/mạng) ghi "hoãn, cần thiết bị thật" trong `ke-hoach.md`, nêu rõ giới hạn của kiểm thử mô phỏng, và không chặn "xong" của giai đoạn. Mô phỏng được thì làm (ví dụ aarch64 qua emulator ARM nếu CI có).
+- Không dùng máy thật; mọi thứ chạy mô phỏng: emulator Android x86_64 (trang 4 KB), Chrome/Node headless. Số đo hiệu năng từ môi trường này không so trực tiếp với mốc Windows native, chỉ dùng để bắt suy giảm lớn.
+- Quy tắc: mục cần thiết bị thật (MLS trên ARM thật, Flutter trên Android/Safari thật, trang 16 KB, ngưỡng payload FCM thật, đo pin/mạng) ghi "hoãn, cần thiết bị thật" trong `ke-hoach.md`, nêu rõ giới hạn của kiểm thử mô phỏng, và không chặn "xong" của giai đoạn. Mô phỏng được thì làm (ví dụ aarch64 qua emulator ARM nếu có).
 - Áp dụng ngay: cổng giai đoạn 1 chỉ cần emulator; điểm hở còn lại là `buf breaking` chưa chạy thật (không liên quan thiết bị) và merge PR #3.
 
 ## Kết thúc giai đoạn 1 (06/11/2026)
@@ -47,7 +47,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Nhánh `feat/app-skeleton`, chưa commit/push (chờ lệnh). ADR 0006: cầu nối chatcore sang Dart (FFI viết tay + WASM trong Web Worker).
 - Đã làm: `flutter create` (Android, Web) vào `app/`; `chatcore/ffi` (cdylib) và `chatcore::version()` dùng chung với `wasm`; `ChatCore` + hai cài đặt Dart; `app.yml`.
 - Đã kiểm thật: `flutter analyze` sạch; `flutter test` qua (có test FFI với dll trên Windows); `flutter build web` + Chrome (Worker nạp WASM, hiện `chatcore 0.1.0`); `flutter test integration_test` qua trên emulator Android x86_64 API 37 (`getconf PAGE_SIZE` = 16384).
-- Giới hạn: mới chỉ có `version()` qua cầu nối, chưa có API MLS; chưa kiểm aarch64/ARM thật/Safari; `app.yml` chưa chạy trên GitHub; emulator có trang 16 KB nhưng chỉ x86_64, chưa phải bằng chứng cho mục "trang 16 KB" của chatcore.
+- Giới hạn: mới chỉ có `version()` qua cầu nối, chưa có API MLS; chưa kiểm aarch64/ARM thật/Safari; emulator có trang 16 KB nhưng chỉ x86_64, chưa phải bằng chứng cho mục "trang 16 KB" của chatcore.
 - Còn thiếu cho lát cắt dọc (theo thứ tự đề xuất): (1) API MLS qua cầu nối; (2) server `AuthService` (OTP chế độ dev), `DeviceService.RegisterDevice`, `KeyService`; (3) màn đăng nhập, danh sách chat, chat 1-1 trên Android và Web; (4) passkey; (5) đo payload FCM (cần thiết bị thật: hoãn).
 - Lưu ý: Gradle lần đầu mất ~8 phút (tải SDK Platform 36); `flutter create` ghi `.metadata`, `byo_chat.iml` có thể thừa, kiểm khi commit.
 
@@ -56,7 +56,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - KeyPackage trao đổi dạng `MLSMessage` (kiểm chữ ký bằng `KeyPackageIn::validate`).
 - Phát hiện: dart2js không hỗ trợ `ByteData.getUint64` (`Unsupported operation`), lỗi chỉ lộ khi chạy thật trên Chrome; đã đọc epoch bằng hai nửa 32 bit. Flutter không chạy `integration_test` trên Web nếu thiếu chromedriver, nên dùng `integration_test/web_smoke.dart` (in `MLS OK` lên màn hình).
 - Đã kiểm: `cargo test --release` toàn bộ qua; `flutter analyze` sạch; `flutter test` (FFI Windows) 4 qua; Chrome thấy `MLS OK` (3 Worker); emulator Android x86_64: 2 test tích hợp qua.
-- Giới hạn: trạng thái MLS chỉ trong bộ nhớ (chưa lưu bền, mất khi tắt app); chưa có remove/update/resync qua cầu nối; credential chỉ là byte danh tính thô (chưa có chữ ký khóa danh tính tài khoản theo 6.1); chưa dùng `Payload` protobuf; CI `app.yml` chưa chạy Android/Web smoke. Một HTTP server tĩnh (python, cổng 8138) có thể còn chạy nền từ lúc kiểm Web.
+- Giới hạn: trạng thái MLS chỉ trong bộ nhớ (chưa lưu bền, mất khi tắt app); chưa có remove/update/resync qua cầu nối; credential chỉ là byte danh tính thô (chưa có chữ ký khóa danh tính tài khoản theo 6.1); chưa dùng `Payload` protobuf. Một HTTP server tĩnh (python, cổng 8138) có thể còn chạy nền từ lúc kiểm Web.
 
 ## Phiên giai đoạn 3, bước 3 (server Auth/Device/Key, 07/11/2026)
 - Spec 1.1.1 (ADR 0007): credential 136 byte bố cục cố định (account_id, device_id, khóa thiết bị, created_ms, chữ ký Ed25519 của khóa danh tính lên "chat.v1.credential" + 72 byte đầu); tham số OTP (6 số, 5 phút, 5 lần sai, cách nhau 30 giây), ticket 10 phút dùng một lần, access 15 phút, refresh 30 ngày xoay vòng.
@@ -84,7 +84,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - ADR 0008. chatcore: `MemoryStorage.values` của openmls là `pub` nên snapshot/khôi phục không cần feature test-utils; khôi phục dựng lại signer bằng `SignatureKeyPair::read`, nhóm bằng `MlsGroup::load`. Test `tests/persist.rs`: khởi động lại giữa cuộc trò chuyện (ratchet đúng), KeyPackage/last resort sinh TRƯỚC khi tắt app vẫn dùng để vào nhóm (cần khóa init riêng đã lưu), credential và khóa danh tính giữ nguyên, sai khóa/sửa bất kỳ byte/cắt cụt/sai phiên bản đều bị từ chối, snapshot không chứa khóa ở dạng rõ, nonce khác nhau mỗi lần.
 - App: `SessionStore` (ghi snapshot rồi metadata; khôi phục có làm mới token, dọn sạch khi hỏng/bị thu hồi, offline vẫn vào), `LoginController` ghi bền TRƯỚC khi báo đã đăng nhập (server đã tiêu thụ ticket), khôi phục khi mở app, nút đăng xuất. 9 test đơn vị mới với kho bộ nhớ và server giả.
 - Kiểm thật: `persist_e2e` (đăng nhập thật, tạo nhóm, tắt lõi, mở lại chỉ bằng kho: nhóm còn nguyên, vào nhóm của người khác bằng KeyPackage đã tải lên trước đó, token gọi được server) qua trên FFI Windows (kho tệp), emulator Android (Keystore thật + tệp thật), Chrome (localStorage + flutter_secure_storage web). `cargo test --release` toàn bộ qua; `flutter analyze` sạch.
-- Giới hạn: snapshot ghi cả trạng thái mỗi lần; Web localStorage ~5 MB và khóa cùng origin (không chống XSS); chưa có cơ chế tự động gọi `save` sau mỗi thao tác MLS (chưa có thao tác nào ngoài đăng ký, việc của bước chat); chưa kiểm xóa dữ liệu app/Keystore bị mất; chưa tự refresh token khi chạy lâu (chỉ khi mở app); `app.yml` chưa chạy trên GitHub kể từ khi thêm gói lưu trữ (cần `buf generate` và có thể cần cấu hình Android).
+- Giới hạn: snapshot ghi cả trạng thái mỗi lần; Web localStorage ~5 MB và khóa cùng origin (không chống XSS); chưa có cơ chế tự động gọi `save` sau mỗi thao tác MLS (chưa có thao tác nào ngoài đăng ký, việc của bước chat); chưa kiểm xóa dữ liệu app/Keystore bị mất; chưa tự refresh token khi chạy lâu (chỉ khi mở app).
 - Cần làm tiếp: chat 1-1 qua WebSocket (ListConversations, CreateConversation + Welcome, SendMessage/Deliver, giải mã, hộp thư cục bộ), gọi `SessionStore.save` sau mỗi thay đổi MLS.
 
 ## Phiên giai đoạn 3, bước 7 (chat 1-1 WebSocket, 07/11/2026)
@@ -92,8 +92,8 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Server: `ProfileService.LookupAccount` (`AccountByContact` ở kho, giới hạn 30/giờ theo tài khoản, bộ nhớ trong tiến trình: nhiều node cần Valkey); `OriginPatterns` cho WebSocket (phát hiện khi chạy Chrome: `websocket.Accept` mặc định từ chối khác origin, 403, không thấy request nào ở tab mạng); spec 1.1.2.
 - App: `GatewayClient`, `ChatEngine`, `LocalDoc`, `ConversationsPage`, `ChatPage`, mutex bất đồng bộ cho mọi thay đổi trạng thái; `SessionStore.namespace` để nhiều phiên trong một kho (test).
 - Kiểm thật (server Go thật + Postgres/DynamoDB/NATS thật): `runChatE2E` hai thiết bị: Welcome live, 3 tin liên tiếp đúng thứ tự, trả lời, mở trùng không tạo hội thoại thứ hai (`existed`/có sẵn), Bob tắt app + Alice gửi + Bob mở lại nhận đúng một lần, lịch sử còn, gửi tiếp sau khôi phục (ratchet đúng), khoảng trống seq ép bằng cách lùi `lastSeq` rồi lấp bằng FetchLog, tin gửi lúc gateway chưa sẵn sàng được gửi khi online. Qua trên FFI Windows (3 giây), emulator Android (11 giây), Chrome. `go test ./...` toàn bộ, `cargo test --release`, `flutter test` (23) qua. Giao diện thật trên Chrome: đăng nhập OTP, "Đã kết nối", danh sách trống, hộp thoại chat mới.
-- Giới hạn: kiểm chưa phủ giao diện chat thật hai người (e2e chạy ở tầng engine); kho ghi lại toàn bộ mỗi lần; chưa gửi DeliveredReceipt/ReadUpTo; giải mã lỗi mới chỉ có chỗ giữ chỗ; tài khoản đã có vẫn không vào lại được (cần liên kết/khôi phục, giai đoạn 4) nên đăng xuất là mất hội thoại; không tự làm mới token giữa phiên (chỉ khi mở app hoặc đóng 4002 thì gateway gọi làm mới); trong lần thử snackbar trên Chrome nhập số bằng tay bị sai (lỗi thao tác kiểm thử, hiện lỗi INVALID_ARGUMENT đúng); `app.yml` chưa chạy trên GitHub.
-- Cần làm tiếp (hết lát cắt dọc ngoại trừ đo FCM cần máy thật): chạy `app.yml` trên GitHub và thêm job Android; kiểm lại cổng giai đoạn 3 với người dùng; passkey; sau đó giai đoạn 4 (nhóm, đa thiết bị, liên kết/khôi phục).
+- Giới hạn: kiểm chưa phủ giao diện chat thật hai người (e2e chạy ở tầng engine); kho ghi lại toàn bộ mỗi lần; chưa gửi DeliveredReceipt/ReadUpTo; giải mã lỗi mới chỉ có chỗ giữ chỗ; tài khoản đã có vẫn không vào lại được (cần liên kết/khôi phục, giai đoạn 4) nên đăng xuất là mất hội thoại; không tự làm mới token giữa phiên (chỉ khi mở app hoặc đóng 4002 thì gateway gọi làm mới); trong lần thử snackbar trên Chrome nhập số bằng tay bị sai (lỗi thao tác kiểm thử, hiện lỗi INVALID_ARGUMENT đúng).
+- Cần làm tiếp (hết lát cắt dọc ngoại trừ đo FCM cần máy thật): kiểm lại cổng giai đoạn 3 với người dùng; passkey; sau đó giai đoạn 4 (nhóm, đa thiết bị, liên kết/khôi phục).
 
 ## Phiên giai đoạn 4, bước 1 (nhóm, thêm/gỡ thành viên, 07/11/2026)
 - Server không đổi (đã có phân quyền `SubmitCommit` từ giai đoạn 2). chatcore: Commit thêm/gỡ trên nhóm đã có được DỰNG nhưng CHƯA áp dụng (`stage_add`, `stage_remove` gỡ mọi thiết bị của tài khoản), rồi `merge_commit` sau khi server nhận hoặc `clear_commit` khi bị từ chối (EPOCH_MISMATCH), để không lệch epoch với server; `is_active` cho biết mình đã bị gỡ. `stage_*` tự hủy Commit chờ cũ.
@@ -126,7 +126,7 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 ## Quyết định hạ giới hạn nhóm xuống 256 thiết bị (07/11/2026)
 - ADR 0011, spec 1.2.0, CLAUDE.md. Lý do và số đo ở ADR; thay cho hướng "một Welcome nhiều người nhận" (không làm, ghi ở Hệ quả của ADR).
 - Mã: `MAX_DEVICES_PER_GROUP` 1000 -> 256 (lõi), `MaxGroupDevs`/`maxMembersCall` -> 256 (server). Sửa lệch một ở server: kiểm giới hạn nhóm tính cả thiết bị gửi Commit (`recips` không gồm nó), trước đó nhóm có thể đạt 1.001. Test `TestGroupDeviceLimit` (nhóm đầy đúng 256, thiết bị 257 bị từ chối) và `sizes.rs` giờ khẳng định nghiêm (Welcome/GroupInfo < 128 KiB, 50 phong bì < 3 MiB). `group_of_1000_devices` đổi tên `group_at_device_limit`.
-- Mốc hiệu năng mới (Windows native, nhóm đầy 256): Commit cuối 22 KB, tạo 8 ms, nhận 2 ms. Ngưỡng CI: Commit < 40 KB, tạo < 60 ms, nhận < 25 ms (x3 Android, x3 WASM theo `k` trong scenarios). Rủi ro: runner CI dùng chung từng nhiễu 33-533 ms nên ngưỡng 60/25 ms có thể đỏ giả; đã so bằng giá trị tốt nhất của 4 Commit cuối, theo dõi trong CI.
+- Mốc hiệu năng mới (Windows native, nhóm đầy 256): Commit cuối 22 KB, tạo 8 ms, nhận 2 ms. Ngưỡng test: Commit < 40 KB, tạo < 60 ms, nhận < 25 ms (x3 Android, x3 WASM theo `k` trong scenarios). Rủi ro: máy dùng chung có thể nhiễu nên ngưỡng 60/25 ms đỏ giả; đã so bằng giá trị tốt nhất của 4 Commit cuối.
 - Việc dở: `thiet-ke-chinh.md` (tài liệu chính, mục PoC MLS) còn ghi nhóm 1.000 thiết bị; sửa khi cập nhật tài liệu chính. Chưa chạy lại test Android/WASM với mốc mới.
 
 ## Phiên giai đoạn 4, bước 5 (thu hồi thiết bị, sao lưu và khôi phục, 07/11/2026)
@@ -334,3 +334,6 @@ Cuối mỗi phiên Claude Code ghi: đã làm gì, quyết định nào, việc
 - Lệch còn lại: Mobile chưa có thanh tab dưới (Tin nhắn / Cuộc gọi / Cài đặt) của thiết kế; app mở lịch sử từ menu ⋮ của danh sách chat. Biểu tượng hướng gọi dùng Material (`call_made/received/missed`) thay SVG của thiết kế; avatar dùng bảng màu theo tên.
 - Desktop: ô phải chỉ có chữ "Chọn một cuộc gọi để xem chi tiết" như thiết kế (chưa có trang chi tiết); chạm hàng chuyển về khung chat của hội thoại đó.
 - `CallEvent` không mang loại cuộc gọi (thoại/video) nên nút gọi lại luôn gọi video. Thời lượng làm tròn lên theo phút.
+
+## Xóa CI (24/11/2026)
+- Đã xóa `.github/workflows` (PR 41); dọn CLAUDE.md, ke-hoach.md, quy-uoc-to-chuc.md. Repo không còn CI: tự chạy lệnh kiểm ở mục "Lệnh" của CLAUDE.md trước khi PR. Các mục nhật ký phiên cũ ở trên giữ nguyên làm lịch sử (còn nhắc CI/`*.yml` đã xóa).
