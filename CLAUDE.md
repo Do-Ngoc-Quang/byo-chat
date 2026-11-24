@@ -28,7 +28,7 @@ Một người phát triển. Trả lời tiếng Việt, ngắn, gạch đầu 
 - Giới hạn: 50 thiết bị mỗi Commit, 256 thiết bị mỗi nhóm (ADR 0011; đã hạ từ 1.000 vì Welcome/GroupInfo vượt hạn mức).
 - Khóa SFrame = `Exporter("call", call_id, 32)`. Đổi khóa khi có người vào/ra; bên gửi chuyển khóa mới sau ~1 giây, bên nhận giữ khóa cũ và mới theo chỉ số khóa.
 - Không tự viết primitive mật mã. Không log plaintext, khóa, ciphertext.
-- Số trường Protobuf không bao giờ dùng lại; CI chạy `buf breaking`.
+- Số trường Protobuf không bao giờ dùng lại; chạy `buf breaking` trước khi PR.
 
 ## Lệnh (tạo dần khi có mã)
 - `proto/`: `buf lint && buf breaking --against .git#branch=main`
@@ -37,30 +37,30 @@ Một người phát triển. Trả lời tiếng Việt, ngắn, gạch đầu 
 - `app/`: `flutter analyze && flutter test`
 
 ## Thứ tự làm (theo mục 16 của tài liệu chính)
-1. Proto + CI + `chatcore` (viết lại theo spec, `poc/` đã xóa; biến ca recovery, resync, scale, exporter thành test).
+1. Proto + `chatcore` (viết lại theo spec, `poc/` đã xóa; biến ca recovery, resync, scale, exporter thành test).
 2. Server tối thiểu: gateway, Message Service, hộp thư (DynamoDB local, Postgres trong Docker).
 3. Lát cắt dọc: đăng nhập, chat 1-1 có E2EE trên Android và Web.
 4. Nhóm, đa thiết bị, backup. 5. Media. 6. Gọi video (bắt đầu sau khi chat ổn định).
-Môi trường: KHÔNG có máy thật, chỉ mô phỏng (emulator, Chrome/Node headless, CI). Mục cần máy thật là "hoãn, cần thiết bị thật": ghi rõ giới hạn của kiểm thử mô phỏng, không dùng để chặn "xong" của giai đoạn.
+Môi trường: KHÔNG có máy thật, chỉ mô phỏng (emulator, Chrome/Node headless). Mục cần máy thật là "hoãn, cần thiết bị thật": ghi rõ giới hạn của kiểm thử mô phỏng, không dùng để chặn "xong" của giai đoạn.
 Chưa kiểm chứng, làm ở cổng tương ứng (cần thiết bị thật thì hoãn): MLS trên máy ARM thật, video trên Flutter Android và Safari, kích thước Welcome, Commit thêm 1 thiết bị, ngưỡng payload push FCM.
 
 ## Quy trình làm việc
 - Tiến độ và checklist: `docs/ke-hoach.md` (nơi duy nhất). Đầu phiên đọc, cuối phiên tick; không theo dõi việc ở chỗ khác.
 - Git: Claude TỰ commit, push và tạo PR khi xong một việc (đã qua `flutter analyze`/test liên quan); không cần người dùng nói "cp" hay "pr". Làm từng bước nhỏ, mỗi việc một commit, báo ngắn sau khi xong. Không commit file bí mật (`.env`, khóa, token).
-- Git: không bao giờ push thẳng vào `main`, không force-push, không viết lại lịch sử nhánh đã push; làm trên nhánh, tạo PR vào `main` (quy ước ở `docs/quy-uoc-to-chuc.md`, mục "Quy trình git"). Tự theo dõi PR: CI đỏ thì sửa tận gốc. Người dùng đã cho phép TỰ MERGE (squash) khi CI xanh, không có xung đột và không có review chặn: không chờ "merge PR đi" nữa; merge xong thì tách nhánh mới từ `origin/main` và làm việc tiếp, không hỏi lại. CI đỏ hoặc có xung đột/review chặn thì KHÔNG merge.
+- Git: không bao giờ push thẳng vào `main`, không force-push, không viết lại lịch sử nhánh đã push; làm trên nhánh, tạo PR vào `main` (quy ước ở `docs/quy-uoc-to-chuc.md`, mục "Quy trình git"). Repo không có CI (đã xóa): tự chạy lệnh kiểm ở mục "Lệnh" trước khi PR. Người dùng đã cho phép TỰ MERGE (squash) khi kiểm cục bộ xanh, không có xung đột và không có review chặn: không chờ "merge PR đi" nữa; merge xong thì tách nhánh mới từ `origin/main` và làm việc tiếp, không hỏi lại. Kiểm đỏ hoặc có xung đột/review chặn thì KHÔNG merge.
 - Git: ĐẦU PHIÊN, trước khi sửa gì, `git fetch --all --prune` rồi tách nhánh mới từ `origin/main` mới nhất (`git switch -c <nhánh> origin/main`); không làm tiếp trên nhánh cũ đã merge. Nhánh mặc định là `main`.
 - Mặc định mỗi phiên một mục tiêu nhỏ. Khi người dùng bảo "làm hết việc có thể" thì theo mục "Chế độ làm hết" bên dưới. Cuối phiên ghi quyết định và việc dở vào `docs/notes.md`; quyết định kiến trúc vào `docs/decisions/`.
 - Số phiên bản tài liệu: đổi phạm vi đổi số đầu; thêm thiết kế đổi số giữa; làm rõ đổi số cuối.
 - Số đo hiệu năng mốc (Windows native): 256 thiết bị, Commit cuối 22 KB, tạo 8 ms, nhận 2 ms (Welcome 48 KB). Mốc cũ ở 1.000 thiết bị: 92 KB, 33 ms, 11 ms. Android emulator chậm ~3 lần khi tạo; WASM ~5 lần. Test hiệu năng không được tệ hơn mốc đáng kể.
 
 ## Chế độ làm hết (khi người dùng bảo "làm hết việc có thể")
-- Việc "có thể làm" = chạy và kiểm được trong môi trường mô phỏng (Linux container, Chrome/Node headless, CI). Mục cần máy thật, hạ tầng AWS thật, SMS/email thật, camera thì giữ "hoãn", không làm giả để tick.
+- Việc "có thể làm" = chạy và kiểm được trong môi trường mô phỏng (Linux container, Chrome/Node headless). Mục cần máy thật, hạ tầng AWS thật, SMS/email thật, camera thì giữ "hoãn", không làm giả để tick.
 - Đầu phiên đọc `docs/ke-hoach.md`, lập danh sách việc có thể làm theo thứ tự giai đoạn (1→6), rồi làm lần lượt từng việc, không hỏi lại giữa chừng trừ khi cần quyết định thuộc về người dùng (đổi spec, đổi phạm vi, lệch thiết kế).
 - Mỗi việc: làm xong thì chạy lệnh kiểm tương ứng (mục "Lệnh"), sửa tới khi xanh, rồi tick trong `docs/ke-hoach.md`. Việc UI vẫn phải chụp đối chiếu `docs/ui/` mới được tick.
 - Git: tự commit/push/PR theo mục "Quy trình làm việc"; mỗi việc một commit riêng, nhánh tách từ `origin/main`, PR vào `main`, không gộp việc không liên quan.
 - Cuối phiên báo ngắn: đã xong gì, còn hoãn gì và vì sao, việc dở ghi vào `docs/notes.md`.
 
 ## Môi trường dev (đã kiểm ở phiên Cài đặt)
-- Flutter ghim 3.47.9 (CI `app.yml`); 3.50 làm `flutter analyze` đỏ vì `material.dart` bị đánh dấu deprecated. Đổi phiên bản phải sửa cả CI và ghi vào `docs/notes.md`.
-- `app/lib/gen` (Dart từ proto) không nằm trong git: máy local sinh bằng `protoc` + `protoc_plugin`; CI dùng `buf generate --template buf.gen.app.yaml`.
+- Flutter ghim 3.47.9; 3.50 làm `flutter analyze` đỏ vì `material.dart` bị đánh dấu deprecated. Đổi phiên bản phải ghi vào `docs/notes.md`.
+- `app/lib/gen` (Dart từ proto) không nằm trong git: máy local sinh bằng `protoc` + `protoc_plugin` (hoặc `buf generate --template buf.gen.app.yaml`).
 - Nhiều file trong repo dùng CRLF: dùng Edit hoặc kiểm kỹ khi thay chuỗi bằng script.
